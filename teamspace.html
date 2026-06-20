@@ -1,0 +1,2995 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚓ WAY OF BOATS — The Immortal Typhoon</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Kalam:wght@400;700&family=Patrick+Hand&display=swap');
+
+  :root {
+    --strawberry: #E8536A;
+    --strawberry-light: #F7A8B5;
+    --strawberry-pale: #FDE8EC;
+    --matcha: #7AAF72;
+    --matcha-light: #B5D4A8;
+    --matcha-pale: #E8F5E4;
+    --cream: #FDF6F0;
+    --warm-white: #FFFEF9;
+    --milk: #F9F3ED;
+    --paper: #FFF8F0;
+    --ink: #3D2B1F;
+    --ink-light: #6B4E3D;
+    --peach: #F4A460;
+    --peach-light: #FAD4B0;
+    --lavender: #C9B8E8;
+    --lavender-light: #EDE8F8;
+    --butter: #F7E98E;
+    --butter-light: #FDF6C3;
+    --sky: #87CEEB;
+    --sky-light: #D6F0FA;
+    /* ── OCEAN / BOAT THEME ── */
+    --ocean: #3B9BD4;
+    --ocean-deep: #2876B0;
+    --ocean-light: #8FD0F0;
+    --ocean-pale: #DCF1FB;
+    --wave: #6CC4E8;
+    --sail-red: #E8536A;
+    --sail-yellow: #F7E98E;
+    /* accent + panel */
+    --sunset: #FF7A3C;
+    --sunset-deep: #E85F22;
+    --sunset-light: #FFB088;
+    --teal-panel: #1E5E63;
+    --sidebar-w: 220px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background-color: #C5E8F7;
+    background-image:
+      linear-gradient(rgba(40,118,176,0.12) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(40,118,176,0.12) 1px, transparent 1px),
+      radial-gradient(circle at 20% 80%, rgba(40,118,176,0.22), transparent 45%),
+      radial-gradient(circle at 80% 30%, rgba(59,155,212,0.22), transparent 45%);
+    background-size: 32px 32px, 32px 32px, 100% 100%, 100% 100%;
+    color: var(--ink);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── WAVE STRIP at bottom of page ── */
+  #wave-band {
+    position: fixed;
+    bottom: 0; left: 0; width: 100%;
+    height: 90px;
+    pointer-events: none;
+    z-index: 5;
+    overflow: hidden;
+  }
+  #wave-band svg { width: 200%; height: 100%; animation: waveDrift 14s linear infinite; }
+  @keyframes waveDrift { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+  /* ── FLOATING PAPER BOATS ── */
+  .floaty-boat {
+    position: fixed;
+    z-index: 7;
+    pointer-events: none;
+    animation: bob 4s ease-in-out infinite;
+    opacity: 0.9;
+  }
+  @keyframes bob {
+    0%, 100% { transform: translateY(0) rotate(-3deg); }
+    50% { transform: translateY(-10px) rotate(3deg); }
+  }
+
+  /* ── CURSOR LAYER ── */
+  #cursor-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999; }
+  .remote-cursor {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    pointer-events: none;
+    transition: left 0.1s linear, top 0.1s linear;
+  }
+  .remote-cursor svg { filter: drop-shadow(1px 2px 2px rgba(0,0,0,0.18)); }
+  .cursor-label {
+    font-family: 'Nunito', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 20px;
+    color: white;
+    margin-top: -4px;
+    margin-left: 14px;
+    white-space: nowrap;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  }
+
+  /* ── LAYOUT ── */
+  #app { display: flex; min-height: 100vh; }
+
+  /* ── SIDEBAR ── */
+  #sidebar {
+    width: var(--sidebar-w);
+    min-height: 100vh;
+    background: var(--ocean-pale);
+    border-right: 3px solid var(--ocean-light);
+    display: flex;
+    flex-direction: column;
+    padding: 18px 12px 24px;
+    position: fixed;
+    top: 0; left: 0;
+    z-index: 100;
+    box-shadow: 3px 0 12px rgba(59,155,212,0.12);
+  }
+  .sidebar-logo {
+    font-family: 'Kalam', cursive;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--ocean-deep);
+    text-align: center;
+    margin-bottom: 28px;
+    line-height: 1.2;
+  }
+  .sidebar-logo span { display: block; font-size: 13px; color: var(--sail-red); font-weight: 600; }
+  .ws-title, .ws-sub { border-radius: 6px; outline: none; transition: background 0.15s; cursor: text; }
+  .ws-title:hover, .ws-sub:hover { background: rgba(255,255,255,0.4); }
+  .ws-title:focus, .ws-sub:focus { background: white; box-shadow: 0 0 0 2px var(--ocean-light); }
+  .nav-section { margin-bottom: 8px; }
+  .nav-label {
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ocean-deep);
+    padding: 0 6px;
+    margin-bottom: 4px;
+  }
+  .nav-btn {
+    display: flex; align-items: center; gap: 8px;
+    width: 100%;
+    padding: 10px 12px;
+    border: none; background: transparent;
+    font-family: 'Nunito', sans-serif;
+    font-size: 14px; font-weight: 700;
+    color: var(--ink);
+    border-radius: 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: left;
+  }
+  .nav-btn:hover { background: var(--ocean-light); color: white; transform: translateX(3px); }
+  .nav-btn.active { background: var(--ocean); color: white; box-shadow: 0 3px 10px rgba(59,155,212,0.4); }
+  .nav-btn .emoji { font-size: 17px; }
+
+  .sidebar-divider { border: none; border-top: 2px dashed var(--ocean-light); margin: 12px 0; }
+
+  /* Online users */
+  .online-label {
+    font-size: 10px; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--matcha); padding: 0 6px; margin-bottom: 6px;
+  }
+  .online-user {
+    display: flex; align-items: center; gap: 7px;
+    padding: 5px 8px;
+    border-radius: 10px;
+    font-size: 12px; font-weight: 700;
+    margin-bottom: 3px;
+    cursor: default;
+  }
+  .online-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: 0 0 5px currentColor;
+  }
+
+  /* ── MAIN ── */
+  #main {
+    margin-left: var(--sidebar-w);
+    flex: 1;
+    padding: 28px 32px 120px;
+    min-height: 100vh;
+    position: relative;
+    z-index: 3;
+    background-color: var(--teal-panel);
+    background-image:
+      linear-gradient(rgba(255,255,255,0.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.07) 1px, transparent 1px);
+    background-size: 32px 32px;
+    box-shadow: inset 0 0 60px rgba(0,0,0,0.18);
+  }
+  /* Lighten page titles for contrast on dark panel */
+  #main .page-title { color: #FFFFFF; }
+  #main .page-title span { color: var(--sail-yellow); }
+  #main .page-header > span,
+  #main .page-header div span[style*="ink-light"] { color: #E8F1F8 !important; }
+
+  /* ── PAGE HEADER ── */
+  .page-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 28px;
+  }
+  .page-title {
+    font-family: 'Kalam', cursive;
+    font-size: 32px; font-weight: 700;
+    color: var(--ocean-deep);
+  }
+  .page-title span { color: var(--sail-red); }
+
+  /* ── PAPER CARD ── */
+  .paper-card {
+    background: var(--warm-white);
+    border-radius: 20px;
+    border: 2.5px solid var(--ocean-light);
+    box-shadow: 4px 6px 0 var(--ocean-light), 0 2px 12px rgba(59,155,212,0.10);
+    padding: 24px;
+    margin-bottom: 24px;
+    position: relative;
+  }
+  .paper-card::before {
+    content: '';
+    position: absolute;
+    top: 18px; left: 0;
+    width: 4px; height: calc(100% - 36px);
+    background: var(--ocean);
+    border-radius: 0 4px 4px 0;
+  }
+
+  /* ── TABS ── */
+  .tab-bar {
+    display: flex; gap: 8px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  .tab-btn {
+    padding: 8px 18px;
+    border: 2.5px solid var(--ocean-light);
+    background: white;
+    border-radius: 40px;
+    font-family: 'Nunito', sans-serif;
+    font-size: 13px; font-weight: 800;
+    color: var(--ocean);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .tab-btn:hover { background: var(--ocean-light); color: white; }
+  .tab-btn.active { background: var(--ocean); color: white; border-color: var(--ocean); box-shadow: 0 3px 10px rgba(59,155,212,0.3); }
+
+  /* ── MEETING NOTES ── */
+  .meeting-toolbar {
+    display: flex; gap: 10px; align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .btn-primary {
+    padding: 9px 18px;
+    background: var(--sunset);
+    color: white;
+    border: none;
+    border-radius: 40px;
+    font-family: 'Nunito', sans-serif;
+    font-size: 13px; font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 3px 0 var(--sunset-deep);
+    transition: all 0.15s;
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 5px 0 var(--sunset-deep); }
+  .btn-primary:active { transform: translateY(1px); box-shadow: none; }
+  .btn-secondary {
+    padding: 9px 18px;
+    background: white;
+    color: var(--sunset-deep);
+    border: 2.5px solid var(--sunset);
+    border-radius: 40px;
+    font-family: 'Nunito', sans-serif;
+    font-size: 13px; font-weight: 800;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-secondary:hover { background: var(--sunset); color: white; }
+
+  .template-select {
+    padding: 9px 14px;
+    border: 2.5px solid var(--lavender);
+    border-radius: 40px;
+    background: var(--lavender-light);
+    font-family: 'Nunito', sans-serif;
+    font-size: 13px; font-weight: 700;
+    color: var(--ink);
+    cursor: pointer;
+  }
+
+  /* Meeting notes grid */
+  #meeting-notes-container { display: flex; flex-direction: column; gap: 20px; }
+  .meeting-note-card {
+    background: var(--warm-white);
+    border-radius: 18px;
+    border: 2.5px solid var(--ocean-light);
+    box-shadow: 3px 5px 0 var(--ocean-light);
+    overflow: hidden;
+  }
+  .meeting-note-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px;
+    background: var(--ocean-pale);
+    border-bottom: 2px dashed var(--ocean-light);
+  }
+  .meeting-note-title {
+    font-family: 'Kalam', cursive;
+    font-size: 18px; font-weight: 700;
+    color: var(--ocean-deep);
+    border: none; background: transparent;
+    width: 100%;
+  }
+  .meeting-note-title:focus { outline: none; }
+  .meeting-note-date { font-size: 12px; font-weight: 700; color: var(--ink-light); white-space: nowrap; }
+  .meeting-note-body { padding: 16px 20px; }
+
+  /* Person columns */
+  .people-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+  }
+  .person-col {
+    border-radius: 14px;
+    padding: 12px;
+    border: 2px solid transparent;
+  }
+  .person-col-header {
+    font-family: 'Kalam', cursive;
+    font-size: 14px; font-weight: 700;
+    margin-bottom: 8px;
+    padding-bottom: 5px;
+    border-bottom: 2px dashed currentColor;
+  }
+  .person-notes-area {
+    width: 100%;
+    min-height: 80px;
+    background: rgba(255,255,255,0.6);
+    border: 1.5px solid rgba(0,0,0,0.08);
+    border-radius: 8px;
+    padding: 7px;
+    font-family: 'Patrick Hand', cursive;
+    font-size: 13px;
+    color: var(--ink);
+    resize: vertical;
+  }
+  .person-notes-area:focus { outline: none; background: rgba(255,255,255,0.9); }
+  .task-count-badge {
+    font-size: 11px; font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.7);
+    display: inline-block;
+    margin-top: 5px;
+  }
+
+  /* ── TASKS ── */
+  .tasks-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .task-input-row {
+    display: flex; gap: 10px; margin-bottom: 18px;
+  }
+  .task-input {
+    flex: 1;
+    padding: 10px 16px;
+    border: 2.5px solid var(--ocean-light);
+    border-radius: 40px;
+    font-family: 'Nunito', sans-serif;
+    font-size: 14px;
+    background: white;
+    color: var(--ink);
+  }
+  .task-input:focus { outline: none; border-color: var(--ocean); }
+  .assignee-select {
+    padding: 10px 14px;
+    border: 2.5px solid var(--lavender);
+    border-radius: 40px;
+    background: var(--lavender-light);
+    font-family: 'Nunito', sans-serif;
+    font-size: 13px; font-weight: 700;
+    color: var(--ink);
+  }
+
+  .task-list { display: flex; flex-direction: column; gap: 8px; }
+  .task-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 16px;
+    background: white;
+    border-radius: 14px;
+    border: 2px solid var(--peach-light);
+    transition: all 0.15s;
+    cursor: default;
+  }
+  .task-item:hover { border-color: var(--peach); transform: translateX(2px); }
+  .task-item.done { opacity: 0.55; background: var(--ocean-pale); }
+  .task-check {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 2.5px solid var(--ocean);
+    background: white;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-size: 13px;
+    transition: all 0.15s;
+  }
+  .task-check:hover { background: var(--ocean-pale); }
+  .task-check.checked { background: var(--ocean); border-color: var(--ocean); color: white; }
+  .task-text { flex: 1; font-size: 14px; font-weight: 600; }
+  .task-item.done .task-text { text-decoration: line-through; }
+  .task-assignee-pill {
+    font-size: 11px; font-weight: 800;
+    padding: 3px 10px;
+    border-radius: 20px;
+    color: white;
+    white-space: nowrap;
+  }
+  .task-meta-pill {
+    font-size: 14px;
+    flex-shrink: 0;
+    cursor: default;
+  }
+  .task-mini-select {
+    border: 2px solid var(--ocean-light);
+    border-radius: 20px;
+    background: white;
+    font-family: 'Nunito', sans-serif;
+    font-size: 11px; font-weight: 700;
+    color: var(--ink);
+    padding: 3px 4px;
+    max-width: 92px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .task-mini-select:focus { outline: none; border-color: var(--sunset); }
+  .task-delete {
+    background: none; border: none;
+    color: var(--strawberry-light);
+    font-size: 16px; cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+  }
+  .task-delete:hover { color: var(--strawberry); }
+
+  /* ── LEADERBOARD ── */
+  #leaderboard-panel {
+    background: var(--ocean-pale);
+    border-radius: 20px;
+    border: 2.5px solid var(--ocean-light);
+    box-shadow: 4px 6px 0 var(--ocean-light);
+    padding: 24px;
+  }
+  .leaderboard-title {
+    font-family: 'Kalam', cursive;
+    font-size: 26px; font-weight: 700;
+    color: var(--ocean-deep);
+    text-align: center;
+    margin-bottom: 4px;
+  }
+  .leaderboard-sub {
+    text-align: center; font-size: 12px; font-weight: 600;
+    color: var(--ink-light); margin-bottom: 20px;
+  }
+  .leaderboard-list { display: flex; flex-direction: column; gap: 10px; }
+  .lb-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 16px;
+    border-radius: 16px;
+    background: white;
+    border: 2px solid var(--peach-light);
+    transition: all 0.2s;
+  }
+  .lb-row.rank-1 {
+    background: linear-gradient(135deg, #FFF9E6, #FDEAB0);
+    border-color: var(--butter);
+    box-shadow: 0 3px 10px rgba(247,233,142,0.5);
+  }
+  .lb-row.rank-2 { background: linear-gradient(135deg, #F0F0F0, #E0E0E0); border-color: #C8C8C8; }
+  .lb-row.rank-3 { background: linear-gradient(135deg, #FFF0E6, #FAD4B0); border-color: var(--peach-light); }
+  .lb-rank { font-family: 'Kalam', cursive; font-size: 20px; font-weight: 700; width: 32px; text-align: center; }
+  .lb-stars { font-size: 14px; letter-spacing: -2px; }
+  .lb-name { flex: 1; font-size: 15px; font-weight: 800; }
+  .lb-score {
+    font-family: 'Kalam', cursive;
+    font-size: 22px; font-weight: 700;
+    color: var(--ocean-deep);
+  }
+  .lb-score span { font-size: 12px; font-weight: 700; color: var(--ink-light); }
+  .lb-bar-wrap { width: 80px; background: var(--ocean-pale); border-radius: 20px; height: 8px; overflow: hidden; }
+  .lb-bar { height: 100%; border-radius: 20px; background: var(--ocean); transition: width 0.4s; }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(61,43,31,0.35);
+    z-index: 500;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(2px);
+  }
+  .modal {
+    background: var(--paper);
+    border-radius: 24px;
+    border: 3px solid var(--peach-light);
+    box-shadow: 6px 8px 0 var(--peach-light);
+    padding: 28px;
+    max-width: 520px; width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  .modal-title {
+    font-family: 'Kalam', cursive;
+    font-size: 22px; font-weight: 700;
+    color: var(--strawberry);
+    margin-bottom: 18px;
+  }
+  .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+  .form-group { margin-bottom: 14px; }
+  .form-label { font-size: 12px; font-weight: 800; color: var(--ink-light); margin-bottom: 5px; display: block; }
+  .form-input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 2px solid var(--peach-light);
+    border-radius: 12px;
+    font-family: 'Nunito', sans-serif;
+    font-size: 14px;
+    background: white;
+    color: var(--ink);
+  }
+  .form-input:focus { outline: none; border-color: var(--matcha); }
+
+  /* Template cards */
+  .template-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+  .template-card {
+    padding: 14px;
+    border-radius: 14px;
+    border: 2.5px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+  }
+  .template-card:hover { transform: translateY(-2px); }
+  .template-card.selected { border-color: var(--strawberry); box-shadow: 0 0 0 2px var(--strawberry-light); }
+  .template-card .t-emoji { font-size: 28px; margin-bottom: 5px; }
+  .template-card .t-name { font-size: 12px; font-weight: 800; color: var(--ink); }
+
+  /* ── PEOPLE CONFIG ── */
+  .people-config-list { display: flex; flex-direction: column; gap: 6px; max-height: 300px; overflow-y: auto; }
+  .people-config-row { display: flex; align-items: center; gap: 8px; }
+  .people-config-row input { flex: 1; }
+  .color-dot { width: 18px; height: 18px; border-radius: 50%; cursor: pointer; border: 2px solid rgba(0,0,0,0.1); flex-shrink: 0; }
+
+  /* ── EMPTY STATE ── */
+  .empty-state {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--ink-light);
+  }
+  .empty-state .empty-emoji { font-size: 48px; margin-bottom: 12px; }
+  .empty-state p { font-size: 15px; font-weight: 700; }
+  .empty-state small { font-size: 13px; font-weight: 600; opacity: 0.7; }
+
+  /* Page sections */
+  .page-section { display: none; }
+  .page-section.active { display: block; }
+
+  /* ── MISC ── */
+  .week-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    background: var(--ocean-pale);
+    color: var(--ocean-deep);
+    font-size: 12px; font-weight: 800;
+    border: 2px solid var(--ocean-light);
+  }
+  .delete-note-btn {
+    background: none; border: none;
+    font-size: 18px; cursor: pointer;
+    color: var(--strawberry-light);
+    padding: 2px 6px;
+  }
+  .delete-note-btn:hover { color: var(--strawberry); }
+
+  .confetti-emoji { animation: spin 2s linear infinite; display: inline-block; }
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+  .pulse { animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+
+  /* Sticky tape effect on cards */
+  .tape {
+    position: absolute;
+    top: -10px; left: 50%;
+    transform: translateX(-50%);
+    width: 48px; height: 20px;
+    border-radius: 3px;
+    opacity: 0.6;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--ocean);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 40px;
+    font-size: 13px; font-weight: 800;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+    z-index: 999;
+    animation: slideUp 0.3s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+  /* Filter bar for tasks */
+  .filter-row {
+    display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;
+  }
+  .filter-chip {
+    padding: 5px 14px;
+    border-radius: 30px;
+    border: 2px solid var(--peach-light);
+    background: white;
+    font-size: 12px; font-weight: 800;
+    cursor: pointer;
+    color: var(--ink-light);
+    transition: all 0.15s;
+  }
+  .filter-chip.active { background: var(--peach); border-color: var(--peach); color: white; }
+  .filter-chip:hover:not(.active) { border-color: var(--peach); color: var(--peach); }
+
+  summary { cursor: pointer; list-style: none; }
+  summary::-webkit-details-marker { display: none; }
+
+  /* ── SLASH COMMAND HINT ── */
+  .slash-hint {
+    position: absolute;
+    background: var(--ocean-deep);
+    color: white;
+    font-size: 12px; font-weight: 800;
+    padding: 6px 12px;
+    border-radius: 10px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+    z-index: 300;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  .slash-hint::after {
+    content: '';
+    position: absolute;
+    bottom: -5px; left: 14px;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 5px solid var(--ocean-deep);
+  }
+  .slash-hint kbd {
+    background: white; color: var(--ocean-deep);
+    padding: 1px 5px; border-radius: 4px;
+    font-size: 11px; font-family: inherit;
+  }
+
+  /* Checkbox lines inside person notes */
+  .checks-label, .things-header {
+    font-size: 11px; font-weight: 800;
+    margin: 8px 0 4px;
+    letter-spacing: 0.03em;
+  }
+  .things-box {
+    margin-top: 8px;
+    border: 1.5px dashed currentColor;
+    border-radius: 10px;
+    padding: 7px 8px;
+    background: rgba(255,255,255,0.45);
+  }
+  .things-header { margin: 0 0 5px; }
+  .thing-row { display: flex; align-items: center; gap: 5px; margin-bottom: 3px; }
+  .thing-dot { font-size: 16px; line-height: 1; flex-shrink: 0; }
+  .thing-text {
+    flex: 1; border: none; background: transparent;
+    font-family: 'Patrick Hand', cursive; font-size: 13px; color: var(--ink);
+    border-bottom: 1px dotted rgba(0,0,0,0.18);
+  }
+  .thing-text:focus { outline: none; border-bottom-color: currentColor; }
+  .thing-add {
+    background: none; border: none; cursor: pointer;
+    font-size: 11px; font-weight: 800; padding: 3px 4px;
+    opacity: 0.75;
+  }
+  .thing-add:hover { opacity: 1; text-decoration: underline; }
+  .person-checks { margin-top: 4px; display: flex; flex-direction: column; gap: 4px; }
+  .pcheck-row { display: flex; align-items: center; gap: 6px; }
+  .pcheck-box {
+    width: 16px; height: 16px; border-radius: 5px;
+    border: 2px solid currentColor; background: rgba(255,255,255,0.6);
+    cursor: pointer; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px;
+  }
+  .pcheck-box.checked { background: currentColor; }
+  .pcheck-box.checked::after { content: '✓'; color: white; }
+  .pcheck-text {
+    flex: 1; border: none; background: transparent;
+    font-family: 'Patrick Hand', cursive; font-size: 13px; color: var(--ink);
+  }
+  .pcheck-text:focus { outline: none; }
+  .pcheck-text.done { text-decoration: line-through; opacity: 0.6; }
+  .pcheck-del { background: none; border: none; color: var(--sail-red); cursor: pointer; font-size: 13px; opacity: 0.5; }
+  .pcheck-del:hover { opacity: 1; }
+
+  /* Floaty fish */
+  .floaty-fish {
+    position: fixed;
+    left: 0;
+    z-index: 6;
+    pointer-events: none;
+    opacity: 0.85;
+    will-change: transform;
+  }
+  /* fish SVG faces RIGHT by default → moving left-to-right needs no flip */
+  .floaty-fish.ltr { animation: swimLTR linear infinite; }
+  @keyframes swimLTR {
+    from { transform: translateX(-90px) scaleX(1); }
+    to   { transform: translateX(calc(100vw + 90px)) scaleX(1); }
+  }
+  /* moving right-to-left → flip horizontally so the nose leads */
+  .floaty-fish.rtl { animation: swimRTL linear infinite; }
+  @keyframes swimRTL {
+    from { transform: translateX(calc(100vw + 90px)) scaleX(-1); }
+    to   { transform: translateX(-90px) scaleX(-1); }
+  }
+
+  /* Jellyfish drift */
+  .floaty-jelly {
+    position: fixed;
+    z-index: 6;
+    pointer-events: none;
+    opacity: 0.8;
+    animation: jellyDrift linear infinite, jellyPulse 2.4s ease-in-out infinite;
+  }
+  @keyframes jellyDrift {
+    from { transform: translateY(0); }
+    to   { transform: translateY(-60vh); }
+  }
+  @keyframes jellyPulse {
+    0%, 100% { filter: none; }
+    50% { filter: brightness(1.12); }
+  }
+
+  /* Boat message popup */
+  .boat-msg {
+    position: fixed;
+    bottom: 130px;
+    background: white;
+    border: 2.5px solid var(--ocean);
+    border-radius: 16px;
+    padding: 14px 18px;
+    max-width: 280px;
+    box-shadow: 4px 6px 0 var(--ocean-light);
+    z-index: 400;
+    font-size: 14px; font-weight: 700;
+    color: var(--ink);
+    animation: slideUp 0.3s ease;
+  }
+  .boat-msg .bm-book { display:block; font-size:11px; font-weight:800; color:var(--ocean); margin-top:6px; font-style:italic; }
+  .floaty-boat { cursor: pointer !important; pointer-events: auto !important; }
+  .floaty-boat:hover { filter: brightness(1.08); }
+
+  /* ── FISHING FOCUS TIMER ── */
+  #pomodoro {
+    position: fixed;
+    bottom: 110px; right: 22px;
+    z-index: 50;
+    display: flex; flex-direction: column; align-items: flex-end;
+    gap: 8px;
+  }
+  #pomo-toggle {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    border: 3px solid white;
+    background: var(--ocean);
+    font-size: 26px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    transition: transform 0.15s;
+  }
+  #pomo-toggle:hover { transform: scale(1.08) rotate(-6deg); }
+  #pomo-toggle.casting { animation: castBob 1.4s ease-in-out infinite; }
+  @keyframes castBob { 0%,100%{transform:rotate(-6deg)} 50%{transform:rotate(8deg) translateY(-3px)} }
+  #pomo-panel {
+    background: var(--warm-white);
+    border: 2.5px solid var(--ocean-light);
+    border-radius: 18px;
+    box-shadow: 4px 6px 0 var(--ocean-light), 0 4px 14px rgba(0,0,0,0.12);
+    padding: 16px;
+    width: 220px;
+    text-align: center;
+    display: none;
+  }
+  #pomodoro:not(.pomo-collapsed) #pomo-panel { display: block; }
+  .pomo-title { font-family:'Kalam',cursive; font-size:16px; font-weight:700; color:var(--ocean-deep); margin-bottom:10px; }
+  .pomo-goal {
+    width: 100%; padding: 8px 10px; margin-bottom: 10px;
+    border: 2px solid var(--ocean-light); border-radius: 12px;
+    font-family: 'Nunito', sans-serif; font-size: 12px; font-weight: 600;
+    background: white; color: var(--ink); text-align: center;
+  }
+  .pomo-goal:focus { outline: none; border-color: var(--sunset); }
+  .pomo-set-row { display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 6px; }
+  .pomo-step {
+    width: 26px; height: 26px; border-radius: 50%;
+    border: 2px solid var(--ocean-light); background: white; color: var(--ocean-deep);
+    font-size: 16px; font-weight: 800; cursor: pointer; line-height: 1;
+  }
+  .pomo-step:hover { background: var(--ocean-light); color: white; }
+  .pomo-minutes {
+    width: 52px; text-align: center;
+    border: 2px solid var(--ocean-light); border-radius: 10px;
+    font-family: 'Nunito', sans-serif; font-size: 14px; font-weight: 800; color: var(--ink);
+    padding: 4px;
+  }
+  .pomo-minutes:focus { outline: none; border-color: var(--sunset); }
+  #pomo-time {
+    font-family: 'Kalam', cursive;
+    font-size: 46px; font-weight: 700;
+    color: var(--ocean-deep);
+    line-height: 1.1; margin: 6px 0 2px;
+  }
+  .pomo-goal-display { font-size: 11px; font-weight: 700; color: var(--sunset-deep); min-height: 14px; margin-bottom: 10px; font-style: italic; }
+  .pomo-btn-row { display: flex; gap: 6px; }
+  .pomo-ctrl {
+    flex: 1; padding: 9px 0;
+    border: none; border-radius: 30px;
+    background: var(--sunset); color: white;
+    font-family: 'Nunito', sans-serif; font-size: 13px; font-weight: 800;
+    cursor: pointer; box-shadow: 0 3px 0 var(--sunset-deep);
+    transition: all 0.1s;
+  }
+  .pomo-ctrl:active { transform: translateY(2px); box-shadow: none; }
+  .pomo-ctrl.ghost { flex: 0 0 44px; background: white; color: var(--ocean); border: 2px solid var(--ocean-light); box-shadow: none; }
+  .pomo-running #pomo-time { color: var(--sunset-deep); }
+  .pomo-catch { margin-top: 12px; padding-top: 10px; border-top: 2px dashed var(--ocean-light); }
+  #pomo-fish-tank {
+    background: var(--ocean-pale); border-radius: 12px; padding: 8px;
+    min-height: 38px; font-size: 20px; line-height: 1.5;
+    display: flex; flex-wrap: wrap; gap: 2px; justify-content: center; align-items: center;
+  }
+
+  /* fish caught celebration */
+  .fish-caught {
+    position: fixed; bottom: 180px; right: 90px; z-index: 500;
+    background: white; border: 3px solid var(--ocean); border-radius: 18px;
+    padding: 16px 22px; text-align: center;
+    box-shadow: 5px 7px 0 var(--ocean-light);
+    animation: caughtPop 0.4s cubic-bezier(.2,1.4,.5,1);
+  }
+  @keyframes caughtPop { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .fc-fish { font-size: 48px; animation: wiggle 0.5s ease-in-out infinite; }
+  @keyframes wiggle { 0%,100%{transform:rotate(-8deg)} 50%{transform:rotate(8deg)} }
+  .fc-name { font-family:'Kalam',cursive; font-size: 18px; font-weight: 700; color: var(--ocean-deep); margin-top: 4px; }
+  .fc-sub { font-size: 11px; font-weight: 700; color: var(--sunset-deep); }
+
+  /* ── CALENDAR ── */
+  #calendar-grid { display: flex; user-select: none; }
+  .cal-time-col { width: 56px; flex-shrink: 0; padding-top: 30px; }
+  .cal-time-label {
+    height: 48px; font-size: 10px; font-weight: 800; color: var(--ink-light);
+    text-align: right; padding-right: 6px; transform: translateY(-7px);
+  }
+  .cal-day-col { flex: 1; border-left: 2px solid var(--ocean-pale); position: relative; }
+  .cal-day-head {
+    height: 30px; text-align: center; font-family: 'Kalam', cursive;
+    font-size: 15px; font-weight: 700; color: var(--ocean-deep);
+    border-bottom: 2px solid var(--ocean-light);
+  }
+  .cal-slots { position: relative; }
+  .cal-slot {
+    height: 48px; border-bottom: 1px dashed var(--ocean-pale);
+    cursor: crosshair;
+  }
+  .cal-slot:nth-child(odd) { background: rgba(140,208,240,0.05); }
+  .cal-slot:hover { background: rgba(255,122,60,0.08); }
+  .cal-event {
+    position: absolute; left: 3px; right: 3px;
+    border-radius: 8px; padding: 4px 6px;
+    font-size: 11px; font-weight: 800; color: white;
+    overflow: hidden; cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+    border: 1.5px solid rgba(255,255,255,0.5);
+  }
+  .cal-event .ce-task { display:block; font-size:9px; font-weight:700; opacity:0.92; margin-top:2px; }
+  .cal-event-resize {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 7px;
+    cursor: ns-resize; border-radius: 0 0 8px 8px;
+  }
+  .cal-event-resize:hover { background: rgba(255,255,255,0.35); }
+  .cal-drag-ghost {
+    position: absolute; left: 3px; right: 3px;
+    background: rgba(255,122,60,0.35); border: 2px dashed var(--sunset-deep);
+    border-radius: 8px; pointer-events: none;
+  }
+  .event-color-dot { width: 26px; height: 26px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; }
+  .event-color-dot.sel { border-color: var(--ink); }
+
+  @media (max-width: 700px) {
+    #sidebar { width: 60px; padding: 12px 6px; }
+    #sidebar .nav-btn span:not(.emoji) { display: none; }
+    #sidebar .sidebar-logo span { display: none; }
+    #sidebar .sidebar-logo { font-size: 16px; }
+    #sidebar .online-label, #sidebar .online-user .online-name { display: none; }
+    #main { margin-left: 60px; padding: 16px; }
+    .people-grid { grid-template-columns: 1fr 1fr; }
+    .template-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Remote cursor layer -->
+<div id="cursor-layer"></div>
+
+<!-- Animated water at the bottom -->
+<div id="wave-band">
+  <svg viewBox="0 0 1440 90" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0,40 C180,10 360,70 540,45 C720,20 900,75 1080,45 C1260,15 1380,55 1440,40 L1440,90 L0,90 Z" fill="#8FD0F0" opacity="0.55"/>
+    <path d="M0,55 C200,30 400,80 600,55 C800,30 1000,80 1200,55 C1320,40 1400,60 1440,55 L1440,90 L0,90 Z" fill="#6CC4E8" opacity="0.7"/>
+    <path d="M0,70 C240,55 480,85 720,70 C960,55 1200,85 1440,70 L1440,90 L0,90 Z" fill="#3B9BD4" opacity="0.85"/>
+  </svg>
+</div>
+
+<!-- Floating paper boats -->
+<div class="floaty-boat" style="bottom:50px; left:8%; animation-delay:0s">
+  <svg width="56" height="44" viewBox="0 0 56 44">
+    <polygon points="28,2 28,26 10,26" fill="#E8536A" stroke="white" stroke-width="1.5"/>
+    <polygon points="30,6 30,26 46,26" fill="#F7E98E" stroke="white" stroke-width="1.5"/>
+    <rect x="27.5" y="2" width="2" height="26" fill="#8B5E3C"/>
+    <path d="M6,28 L50,28 L43,42 L13,42 Z" fill="#FFFFFF" stroke="#3B9BD4" stroke-width="1.5"/>
+    <path d="M6,28 L50,28 L47,33 L9,33 Z" fill="#DCF1FB"/>
+  </svg>
+</div>
+<div class="floaty-boat" style="bottom:40px; right:12%; animation-delay:1.2s">
+  <svg width="48" height="38" viewBox="0 0 56 44">
+    <polygon points="28,2 28,26 12,26" fill="#3B9BD4" stroke="white" stroke-width="1.5"/>
+    <rect x="27.5" y="2" width="2" height="26" fill="#8B5E3C"/>
+    <path d="M6,28 L50,28 L43,42 L13,42 Z" fill="#FFFFFF" stroke="#E8536A" stroke-width="1.5"/>
+    <path d="M6,28 L50,28 L47,33 L9,33 Z" fill="#FDE8EC"/>
+  </svg>
+</div>
+<div class="floaty-boat" style="bottom:58px; left:46%; animation-delay:2.4s">
+  <svg width="40" height="32" viewBox="0 0 56 44">
+    <polygon points="28,4 28,26 14,26" fill="#7AAF72" stroke="white" stroke-width="1.5"/>
+    <rect x="27.5" y="4" width="2" height="24" fill="#8B5E3C"/>
+    <path d="M8,28 L48,28 L42,42 L14,42 Z" fill="#FFFFFF" stroke="#3B9BD4" stroke-width="1.5"/>
+  </svg>
+</div>
+
+<!-- Floating paper fish -->
+<div id="fish-layer"></div>
+
+<!-- FISHING FOCUS TIMER -->
+<div id="pomodoro" class="pomo-collapsed">
+  <button id="pomo-toggle" onclick="togglePomo()" title="Fishing focus timer">🎣</button>
+  <div id="pomo-panel">
+    <div class="pomo-title">🎣 Cast a Focus Line</div>
+
+    <!-- goal -->
+    <input id="pomo-goal" class="pomo-goal" placeholder="What are you fishing for? (your goal)" maxlength="80">
+
+    <!-- editable minutes -->
+    <div class="pomo-set-row">
+      <span style="font-size:11px;font-weight:800;color:var(--ink-light)">Minutes:</span>
+      <button class="pomo-step" onclick="bumpPomoMinutes(-5)">−</button>
+      <input id="pomo-minutes" class="pomo-minutes" type="number" min="1" max="180" value="25" onchange="setPomoMinutes(this.value)">
+      <button class="pomo-step" onclick="bumpPomoMinutes(5)">＋</button>
+    </div>
+
+    <div id="pomo-time">25:00</div>
+    <div id="pomo-goal-display" class="pomo-goal-display"></div>
+
+    <div class="pomo-btn-row">
+      <button class="pomo-ctrl" id="pomo-startbtn" onclick="startPausePomo()">🎣 Cast</button>
+      <button class="pomo-ctrl ghost" onclick="resetPomo()" title="Reset">↺</button>
+    </div>
+
+    <div class="pomo-catch">
+      <div style="font-size:11px;font-weight:800;color:var(--ink-light);margin-bottom:4px;">Your catch today</div>
+      <div id="pomo-fish-tank">🌊</div>
+    </div>
+  </div>
+</div>
+
+<!-- fish-caught popup -->
+<div id="fish-caught" class="fish-caught" style="display:none">
+  <div class="fc-fish" id="fc-fish-emoji">🐟</div>
+  <div class="fc-name" id="fc-fish-name">A fish!</div>
+  <div class="fc-sub">added to your catch 🎣</div>
+</div>
+
+<!-- App -->
+<div id="app">
+
+  <!-- SIDEBAR -->
+  <nav id="sidebar">
+    <div class="sidebar-logo">
+      <div style="font-size:34px; line-height:1; margin-bottom:6px;">⚓</div>
+      <div class="ws-title" contenteditable="true" spellcheck="false"
+        onblur="saveWorkspaceName(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"
+        title="Click to rename">WAY OF BOATS</div>
+      <span class="ws-sub" contenteditable="true" spellcheck="false"
+        onblur="saveWorkspaceSub(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"
+        title="Click to edit">the immortal typhoon 🌊</span>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Menu</div>
+      <button class="nav-btn active" onclick="showSection('meetings')" id="nav-meetings">
+        <span class="emoji">📋</span> <span>Meetings</span>
+      </button>
+      <button class="nav-btn" onclick="showSection('tasks')" id="nav-tasks">
+        <span class="emoji">✅</span> <span>Tasks</span>
+      </button>
+      <button class="nav-btn" onclick="showSection('leaderboard')" id="nav-leaderboard">
+        <span class="emoji">🏆</span> <span>Leaderboard</span>
+      </button>
+      <button class="nav-btn" onclick="showSection('calendar')" id="nav-calendar">
+        <span class="emoji">🗓️</span> <span>Calendar</span>
+      </button>
+    </div>
+
+    <hr class="sidebar-divider">
+
+    <div class="nav-section">
+      <div class="online-label">🟢 Online now</div>
+      <div id="online-users-list"></div>
+    </div>
+
+    <hr class="sidebar-divider">
+
+    <div style="margin-top: auto;">
+      <button class="nav-btn" onclick="openPeopleConfig()">
+        <span class="emoji">👥</span> <span>Edit People</span>
+      </button>
+      <button class="nav-btn" onclick="openMyNameModal()">
+        <span class="emoji">🪪</span> <span>My Name</span>
+      </button>
+      <button class="nav-btn" onclick="openSyncModal()">
+        <span class="emoji">☁️</span> <span>Live Sync</span>
+      </button>
+      <div id="sync-status" style="font-size:10px; font-weight:800; text-align:center; padding:6px; border-radius:10px; margin-top:6px; background:rgba(0,0,0,0.05); color:var(--ink-light);">
+        ⚪ Local only
+      </div>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <main id="main">
+
+    <!-- MEETINGS SECTION -->
+    <div id="section-meetings" class="page-section active">
+      <div class="page-header">
+        <div class="page-title">📋 Meeting <span>Notes</span></div>
+        <div style="display:flex; gap:8px">
+          <button class="btn-secondary" onclick="openTemplatesModal()">✏️ Templates</button>
+          <button class="btn-primary" onclick="openNewMeetingModal()">＋ New Meeting</button>
+        </div>
+      </div>
+
+      <div class="tab-bar" id="week-tabs"></div>
+
+      <div id="meeting-notes-container">
+        <div class="empty-state">
+          <div class="empty-emoji">📝</div>
+          <p>No meetings yet!</p>
+          <small>Click "New Meeting" to get started.</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- TASKS SECTION -->
+    <div id="section-tasks" class="page-section">
+      <div class="page-header">
+        <div class="page-title">✅ Task <span>Board</span></div>
+      </div>
+
+      <div class="paper-card">
+        <div class="task-input-row">
+          <input class="task-input" id="task-input" placeholder="Add a new task…" onkeydown="if(event.key==='Enter') addTask()">
+          <select class="assignee-select" id="task-assignee"></select>
+          <select class="assignee-select" id="task-priority" title="Priority">
+            <option value="high">🔴 High</option>
+            <option value="medium" selected>🟡 Medium</option>
+            <option value="low">🟢 Low</option>
+          </select>
+          <select class="assignee-select" id="task-type" title="Activity type"></select>
+          <button class="btn-primary" onclick="addTask()">＋ Add</button>
+        </div>
+
+        <div class="filter-row" id="task-filters">
+          <button class="filter-chip active" onclick="filterTasks('all', this)">All</button>
+          <button class="filter-chip" onclick="filterTasks('open', this)">Open</button>
+          <button class="filter-chip" onclick="filterTasks('done', this)">Done</button>
+          <span style="flex:1"></span>
+          <button class="filter-chip" onclick="openTypesModal()" title="Edit activity types">⚙️ Activities</button>
+          <select class="assignee-select" id="sort-priority" onchange="changeSort()" title="Sort by priority">
+            <option value="">Sort: Priority ▾</option>
+            <option value="high-first">High → Low</option>
+            <option value="low-first">Low → High</option>
+          </select>
+          <select class="assignee-select" id="sort-type" onchange="changeSort()" title="Filter by activity"></select>
+        </div>
+
+        <div class="task-list" id="task-list"></div>
+      </div>
+    </div>
+
+    <!-- LEADERBOARD SECTION -->
+    <div id="section-leaderboard" class="page-section">
+      <div class="page-header">
+        <div class="page-title">🏆 Leader<span>board</span></div>
+        <span style="font-size:13px; font-weight:700; color:var(--ink-light);">Based on completed tasks</span>
+      </div>
+      <div id="leaderboard-panel"></div>
+    </div>
+
+    <!-- CALENDAR SECTION -->
+    <div id="section-calendar" class="page-section">
+      <div class="page-header">
+        <div class="page-title">🗓️ Time<span>blocks</span></div>
+        <span style="font-size:13px; font-weight:700; color:#E8F1F8;">Click + drag on the grid to block out time</span>
+      </div>
+      <div class="paper-card" style="padding:14px;">
+        <div id="calendar-grid"></div>
+        <div style="font-size:12px; font-weight:600; color:var(--ink-light); margin-top:10px;">
+          Tip: drag down a column to create a block. Click a block to rename it or link a task. Drag the bottom edge to resize.
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- EVENT EDIT MODAL -->
+<div class="modal-overlay" id="event-modal" style="display:none" onclick="if(event.target===this) closeModal('event-modal')">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-title">🗓️ Time Block</div>
+    <div class="form-group">
+      <label class="form-label">What are you doing?</label>
+      <input class="form-input" id="event-title" placeholder="e.g. Deep work, Gym, Lunch…">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Link a task (optional)</label>
+      <select class="form-input" id="event-task"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Color</label>
+      <div id="event-colors" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="deleteEvent()" style="color:var(--sail-red); border-color:var(--sail-red)">Delete</button>
+      <button class="btn-primary" onclick="saveEvent()">Save 💾</button>
+    </div>
+  </div>
+</div>
+
+<!-- NEW MEETING MODAL -->
+<div class="modal-overlay" id="new-meeting-modal" style="display:none" onclick="if(event.target===this) closeModal('new-meeting-modal')">
+  <div class="modal">
+    <div class="modal-title">📋 New Meeting</div>
+
+    <div class="form-group">
+      <label class="form-label">Meeting Title</label>
+      <input class="form-input" id="nm-title" placeholder="e.g. Weekly Sync, Sprint Planning…">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Week / Date</label>
+      <input class="form-input" type="date" id="nm-date">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Template</label>
+      <div class="template-grid" id="template-grid"></div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('new-meeting-modal')">Cancel</button>
+      <button class="btn-primary" onclick="createMeeting()">Create Meeting ✨</button>
+    </div>
+  </div>
+</div>
+
+<!-- ACTIVITY TYPES MODAL -->
+<div class="modal-overlay" id="types-modal" style="display:none" onclick="if(event.target===this) closeModal('types-modal')">
+  <div class="modal">
+    <div class="modal-title">⚙️ Activity Types</div>
+    <p style="font-size:13px; font-weight:600; color:var(--ink-light); margin-bottom:14px;">Edit the emoji and name of each activity. Add or remove as you like.</p>
+    <div id="types-edit-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+    <button class="btn-secondary" style="margin-top:12px; width:100%" onclick="addActivityType()">＋ Add Activity</button>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="resetActivityTypes()">↺ Reset</button>
+      <button class="btn-primary" onclick="saveActivityTypes()">Save 💾</button>
+    </div>
+  </div>
+</div>
+
+<!-- TEMPLATES EDITOR MODAL -->
+<div class="modal-overlay" id="templates-modal" style="display:none" onclick="if(event.target===this) closeModal('templates-modal')">
+  <div class="modal">
+    <div class="modal-title">✏️ Meeting Templates</div>
+    <p style="font-size:13px; font-weight:600; color:var(--ink-light); margin-bottom:14px;">Edit the name, emoji, and the prompt line shown in each person's column. Changes save for everyone.</p>
+    <div id="templates-edit-list" style="display:flex; flex-direction:column; gap:10px;"></div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="resetTemplates()">↺ Reset</button>
+      <button class="btn-primary" onclick="saveTemplates()">Save Templates 💾</button>
+    </div>
+  </div>
+</div>
+
+<!-- PEOPLE CONFIG MODAL -->
+<div class="modal-overlay" id="people-modal" style="display:none" onclick="if(event.target===this) closeModal('people-modal')">
+  <div class="modal">
+    <div class="modal-title">👥 Edit Team Members</div>
+    <p style="font-size:13px; font-weight:600; color:var(--ink-light); margin-bottom:14px;">These names appear as columns in every meeting note.</p>
+    <div class="people-config-list" id="people-config-list"></div>
+    <button class="btn-secondary" style="margin-top:12px; width:100%" onclick="addPersonConfig()">＋ Add Person</button>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('people-modal')">Cancel</button>
+      <button class="btn-primary" onclick="savePeople()">Save Team 💾</button>
+    </div>
+  </div>
+</div>
+
+<!-- MY NAME MODAL -->
+<div class="modal-overlay" id="myname-modal" style="display:none" onclick="if(event.target===this) closeModal('myname-modal')">
+  <div class="modal">
+    <div class="modal-title">🪪 Who are you?</div>
+    <div class="form-group">
+      <label class="form-label">Your display name (shown as your cursor)</label>
+      <input class="form-input" id="myname-input" placeholder="e.g. Alex 🌸" maxlength="20">
+    </div>
+    <div class="modal-footer">
+      <button class="btn-primary" onclick="saveMyName()">Save ✨</button>
+    </div>
+  </div>
+</div>
+
+<!-- LIVE SYNC MODAL -->
+<div class="modal-overlay" id="sync-modal" style="display:none" onclick="if(event.target===this) closeModal('sync-modal')">
+  <div class="modal">
+    <div class="modal-title">☁️ Live Sync Setup</div>
+    <p style="font-size:13px; font-weight:600; color:var(--ink-light); margin-bottom:14px;">
+      Connect a free Supabase project so everyone shares the same live data and cursors.
+      Paste your <b>Project URL</b> and <b>anon public key</b> below. Setup steps are at the bottom.
+    </p>
+    <div class="form-group">
+      <label class="form-label">Project URL</label>
+      <input class="form-input" id="sync-url" placeholder="https://xxxxxxxx.supabase.co">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Anon public key</label>
+      <input class="form-input" id="sync-key" placeholder="eyJhbGciOi...">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Room name (any word — your team shares this)</label>
+      <input class="form-input" id="sync-room" placeholder="our-crew" value="our-crew">
+    </div>
+
+    <details style="margin-top:8px; background:var(--ocean-pale); border-radius:12px; padding:12px;">
+      <summary style="font-weight:800; color:var(--ocean-deep); font-size:13px;">📖 One-time setup steps (click)</summary>
+      <ol style="font-size:12px; font-weight:600; color:var(--ink); line-height:1.7; margin:10px 0 0 18px;">
+        <li>Go to <b>supabase.com</b> → sign up free → <b>New Project</b>.</li>
+        <li>Wait ~2 min for it to build.</li>
+        <li>Left sidebar → <b>SQL Editor</b> → paste &amp; run this:
+          <div style="background:white; border-radius:8px; padding:8px; margin:6px 0; font-family:monospace; font-size:11px; user-select:all;">create table boats_state (room text primary key, data jsonb);<br>alter table boats_state enable row level security;<br>create policy "all" on boats_state for all using (true) with check (true);<br>alter publication supabase_realtime add table boats_state;</div>
+        </li>
+        <li>Left sidebar → <b>Project Settings</b> → <b>API</b>.</li>
+        <li>Copy <b>Project URL</b> → paste above.</li>
+        <li>Copy the <b>anon / public</b> key → paste above.</li>
+        <li>Pick a room name, share it + this page's link with your team, and hit Connect!</li>
+      </ol>
+    </details>
+
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="disconnectSync()">Disconnect</button>
+      <button class="btn-primary" onclick="connectSync()">Connect ☁️</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+const STORAGE_KEY = 'teamspace_v9';
+let state = {
+  people: [],
+  meetings: [],
+  tasks: [],
+  myName: '',
+  currentFilter: 'all',
+  sortPriority: '',
+  sortType: '',
+  selectedTemplate: 'weekly',
+  templates: null, // populated below if null
+  wsName: 'WAY OF BOATS',
+  wsSub: 'the immortal typhoon 🌊',
+  activityTypes: null,
+  events: []
+};
+
+const DEFAULT_TEMPLATES = [
+  { id: 'weekly', name: 'Weekly Sync', emoji: '📅', prompt: 'Updates · Blockers · Next steps' },
+  { id: 'retro', name: 'Retro', emoji: '🔄', prompt: 'Went well · Improve · Action items' }
+];
+
+// ══════════════════════════════════════════════
+// PERSIST  (local + optional Supabase live sync)
+// ══════════════════════════════════════════════
+let sb = null;            // supabase client
+let sbChannel = null;     // realtime channel
+let sbConfig = null;      // { url, key, room }
+let applyingRemote = false; // guard so remote writes don't echo back
+let pushTimer = null;
+
+function save() {
+  // always keep a local copy
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  localStorage.setItem(STORAGE_KEY + '_broadcast', Date.now());
+  // if connected and this isn't a remote-applied change, push to cloud (debounced)
+  if (sb && !applyingRemote) {
+    clearTimeout(pushTimer);
+    pushTimer = setTimeout(pushState, 350);
+  }
+}
+
+function load() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (raw) {
+    try { state = { ...state, ...JSON.parse(raw) }; } catch(e) {}
+  }
+  if (!state.templates || !state.templates.length) {
+    state.templates = JSON.parse(JSON.stringify(DEFAULT_TEMPLATES));
+  }
+  if (!state.activityTypes || !state.activityTypes.length) {
+    state.activityTypes = JSON.parse(JSON.stringify(DEFAULT_ACTIVITY_TYPES));
+  }
+  const savedName = localStorage.getItem('boats_myname');
+  if (savedName) state.myName = savedName;
+  // load saved sync config (kept separately so it isn't shared into the cloud doc)
+  try {
+    const cfg = localStorage.getItem('boats_sync_cfg');
+    if (cfg) sbConfig = JSON.parse(cfg);
+  } catch(e) {}
+}
+function getTemplates() { return state.templates || DEFAULT_TEMPLATES; }
+
+// cross-tab sync for the local-only case
+window.addEventListener('storage', (e) => {
+  if (e.key === STORAGE_KEY && !sb) {
+    load();
+    renderAll();
+  }
+});
+
+// ── SUPABASE ──
+function setSyncStatus(text, color) {
+  const el = document.getElementById('sync-status');
+  if (el) { el.textContent = text; el.style.color = color || 'var(--ink-light)'; }
+}
+
+// Only the shareable parts of state go to the cloud (not myName/filter/selectedTemplate)
+function sharedSlice() {
+  return { people: state.people, meetings: state.meetings, tasks: state.tasks, templates: state.templates, wsName: state.wsName, wsSub: state.wsSub, activityTypes: state.activityTypes, events: state.events };
+}
+function mergeShared(data) {
+  if (!data) return;
+  applyingRemote = true;
+  if (data.people) state.people = data.people;
+  if (data.meetings) state.meetings = data.meetings;
+  if (data.tasks) state.tasks = data.tasks;
+  if (data.templates) state.templates = data.templates;
+  if (data.activityTypes) state.activityTypes = data.activityTypes;
+  if (data.events) state.events = data.events;
+  if (data.wsName) state.wsName = data.wsName;
+  if (data.wsSub) state.wsSub = data.wsSub;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  // Avoid yanking focus if the user is actively typing in a field.
+  const active = document.activeElement;
+  const isTyping = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
+  if (isTyping) {
+    // re-render only the leaderboard (safe), defer full render until they blur
+    try { renderLeaderboard(); } catch(e){}
+    pendingRemoteRender = true;
+  } else {
+    renderAll();
+  }
+  applyingRemote = false;
+}
+let pendingRemoteRender = false;
+document.addEventListener('focusout', () => {
+  if (pendingRemoteRender) {
+    pendingRemoteRender = false;
+    setTimeout(() => { if (!document.activeElement || (document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA')) renderAll(); }, 150);
+  }
+});
+
+async function pushState() {
+  if (!sb || !sbConfig) return;
+  try {
+    await sb.from('boats_state').upsert({ room: sbConfig.room, data: sharedSlice() });
+  } catch (e) { console.error('push failed', e); }
+}
+
+async function pullState() {
+  if (!sb || !sbConfig) return;
+  try {
+    const { data, error } = await sb.from('boats_state').select('data').eq('room', sbConfig.room).maybeSingle();
+    if (error) throw error;
+    if (data && data.data) {
+      mergeShared(data.data);
+    } else {
+      // no row yet — seed the room with whatever we have locally
+      await pushState();
+    }
+  } catch (e) { console.error('pull failed', e); }
+}
+
+function openSyncModal() {
+  if (sbConfig) {
+    document.getElementById('sync-url').value = sbConfig.url || '';
+    document.getElementById('sync-key').value = sbConfig.key || '';
+    document.getElementById('sync-room').value = sbConfig.room || 'our-crew';
+  }
+  document.getElementById('sync-modal').style.display = 'flex';
+}
+
+async function connectSync() {
+  const url = document.getElementById('sync-url').value.trim();
+  const key = document.getElementById('sync-key').value.trim();
+  const room = (document.getElementById('sync-room').value.trim() || 'our-crew').toLowerCase().replace(/\s+/g, '-');
+  if (!url || !key) { showToast('Paste both URL and key ☁️'); return; }
+  if (typeof window.supabase === 'undefined') { showToast('Supabase library not loaded (check connection)'); return; }
+
+  sbConfig = { url, key, room };
+  localStorage.setItem('boats_sync_cfg', JSON.stringify(sbConfig));
+  setSyncStatus('🟡 Connecting…', 'var(--peach)');
+  closeModal('sync-modal');
+  await startSync();
+}
+
+async function startSync() {
+  if (!sbConfig) return;
+  try {
+    sb = window.supabase.createClient(sbConfig.url, sbConfig.key);
+    await pullState();
+
+    // Realtime: listen for changes to our room's row + presence/cursors via broadcast
+    if (sbChannel) { try { await sb.removeChannel(sbChannel); } catch(e){} }
+    sbChannel = sb.channel('boats-' + sbConfig.room, { config: { broadcast: { self: false }, presence: { key: myUserId } } });
+
+    sbChannel.on('postgres_changes',
+      { event: '*', schema: 'public', table: 'boats_state', filter: 'room=eq.' + sbConfig.room },
+      (payload) => { if (payload.new && payload.new.data) mergeShared(payload.new.data); }
+    );
+
+    // live cursors over broadcast
+    sbChannel.on('broadcast', { event: 'cursor' }, ({ payload }) => {
+      if (payload.id !== myUserId) renderRemoteCursor(payload);
+    });
+
+    // presence → online list
+    sbChannel.on('presence', { event: 'sync' }, () => {
+      const stateP = sbChannel.presenceState();
+      const users = [];
+      Object.values(stateP).forEach(arr => arr.forEach(u => users.push(u)));
+      renderOnlineFromPresence(users);
+    });
+
+    sbChannel.subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        setSyncStatus('🟢 Live · ' + sbConfig.room, 'var(--matcha)');
+        showToast('Connected! Live sync on ☁️');
+        await sbChannel.track({ id: myUserId, name: state.myName || 'Anonymous', color: myColor });
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        setSyncStatus('🔴 Connection error', 'var(--sail-red)');
+      }
+    });
+  } catch (e) {
+    console.error(e);
+    setSyncStatus('🔴 Failed — check keys', 'var(--sail-red)');
+    showToast('Connection failed — check your URL/key');
+  }
+}
+
+async function disconnectSync() {
+  if (sbChannel && sb) { try { await sb.removeChannel(sbChannel); } catch(e){} }
+  sb = null; sbChannel = null; sbConfig = null;
+  localStorage.removeItem('boats_sync_cfg');
+  setSyncStatus('⚪ Local only');
+  closeModal('sync-modal');
+  showToast('Disconnected — local only');
+  // clear any remote cursors
+  document.querySelectorAll('.remote-cursor[data-remote]').forEach(el => el.remove());
+  renderOnlineUsers();
+}
+
+let presentNames = new Set();
+function renderOnlineFromPresence(users) {
+  presentNames = new Set(users.map(u => (u.name || '').trim().toLowerCase()));
+  renderOnlineUsers();
+}
+
+
+// ══════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════
+function showSection(name) {
+  document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+  document.getElementById('section-' + name).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('nav-' + name).classList.add('active');
+  if (name === 'leaderboard') renderLeaderboard();
+  if (name === 'tasks') renderTasks();
+  if (name === 'calendar') renderCalendar();
+}
+
+// ══════════════════════════════════════════════
+// CURSORS (real, over Supabase broadcast when connected)
+// ══════════════════════════════════════════════
+const myUserId = 'u' + Math.random().toString(36).slice(2, 9);
+const CURSOR_COLORS = ['#E8536A','#7AAF72','#C9B8E8','#F4A460','#3B9BD4','#F4823C','#2876B0','#E8A8D8'];
+const myColor = CURSOR_COLORS[Math.floor(Math.random() * CURSOR_COLORS.length)];
+
+function boatCursorSvg(color) {
+  return `<svg width="26" height="22" viewBox="0 0 26 22" fill="none">
+    <polygon points="13,1 13,11 5,11" fill="${color}" stroke="white" stroke-width="1"/>
+    <rect x="12.3" y="1" width="1.4" height="11" fill="#8B5E3C"/>
+    <path d="M2,12 L24,12 L20,20 L6,20 Z" fill="white" stroke="${color}" stroke-width="1.3"/>
+  </svg>`;
+}
+
+let lastCursorSend = 0;
+function initCursors() {
+  document.addEventListener('mousemove', (e) => {
+    updateMyLabel(e.clientX, e.clientY);
+    // broadcast my cursor (throttled) when connected
+    if (sbChannel && Date.now() - lastCursorSend > 60) {
+      lastCursorSend = Date.now();
+      sbChannel.send({
+        type: 'broadcast', event: 'cursor',
+        payload: { id: myUserId, name: state.myName || 'Anonymous', color: myColor,
+                   xr: e.clientX / window.innerWidth, yr: e.clientY / window.innerHeight }
+      });
+    }
+  });
+}
+
+// render a remote person's cursor from a broadcast payload
+const remoteCursors = {};
+const remoteTimers = {};
+function renderRemoteCursor(p) {
+  const layer = document.getElementById('cursor-layer');
+  let el = remoteCursors[p.id];
+  if (!el) {
+    el = document.createElement('div');
+    el.className = 'remote-cursor';
+    el.setAttribute('data-remote', p.id);
+    el.innerHTML = `${boatCursorSvg(p.color)}<span class="cursor-label" style="background:${p.color}">${escHtml(p.name)}</span>`;
+    layer.appendChild(el);
+    remoteCursors[p.id] = el;
+  }
+  el.style.left = (p.xr * window.innerWidth) + 'px';
+  el.style.top = (p.yr * window.innerHeight) + 'px';
+  // auto-remove if they go quiet for 5s
+  clearTimeout(remoteTimers[p.id]);
+  remoteTimers[p.id] = setTimeout(() => {
+    if (remoteCursors[p.id]) { remoteCursors[p.id].remove(); delete remoteCursors[p.id]; }
+  }, 5000);
+}
+
+let myLabelEl = null;
+function updateMyLabel(x, y) {
+  if (!state.myName) return;
+  if (!myLabelEl) {
+    myLabelEl = document.createElement('div');
+    myLabelEl.className = 'remote-cursor';
+    myLabelEl.innerHTML = `${boatCursorSvg(myColor)}<span class="cursor-label" style="background:${myColor}">${escHtml(state.myName)} (you)</span>`;
+    document.getElementById('cursor-layer').appendChild(myLabelEl);
+  }
+  myLabelEl.style.left = x + 'px';
+  myLabelEl.style.top = y + 'px';
+}
+
+// ══════════════════════════════════════════════
+// MEETINGS
+// ══════════════════════════════════════════════
+function openNewMeetingModal() {
+  playSound('seagull');
+  // Set default date to today
+  const d = new Date();
+  document.getElementById('nm-date').value = d.toISOString().split('T')[0];
+  document.getElementById('nm-title').value = '';
+  renderTemplateGrid();
+  document.getElementById('new-meeting-modal').style.display = 'flex';
+}
+
+function renderTemplateGrid() {
+  const grid = document.getElementById('template-grid');
+  const tints = ['var(--ocean-pale)','var(--matcha-pale)','var(--sky-light)','var(--butter-light)','var(--lavender-light)','var(--milk)'];
+  if (!getTemplates().some(t => t.id === state.selectedTemplate)) state.selectedTemplate = getTemplates()[0]?.id;
+  grid.innerHTML = getTemplates().map((t, i) => `
+    <div class="template-card ${state.selectedTemplate === t.id ? 'selected' : ''}"
+         onclick="selectTemplate('${t.id}')"
+         style="background:${tints[i % tints.length]}">
+      <div class="t-emoji">${t.emoji}</div>
+      <div class="t-name">${escHtml(t.name)}</div>
+    </div>`).join('');
+}
+
+function selectTemplate(id) {
+  state.selectedTemplate = id;
+  renderTemplateGrid();
+}
+
+function createMeeting() {
+  const title = document.getElementById('nm-title').value.trim() || 'Team Meeting';
+  const date = document.getElementById('nm-date').value;
+  const tmpl = getTemplates().find(t => t.id === state.selectedTemplate);
+  const meeting = {
+    id: Date.now(),
+    title,
+    date,
+    template: state.selectedTemplate,
+    prompt: tmpl?.prompt || '',
+    notes: {},   // { personId: text }
+    checks: {},  // { personId: [{text, done, linkId}] }
+    things: {}   // { personId: [str, ...] }
+  };
+  state.meetings.unshift(meeting);
+  save();
+  closeModal('new-meeting-modal');
+  renderMeetings();
+  showToast('Meeting created! 📋');
+}
+
+function renderMeetings() {
+  const container = document.getElementById('meeting-notes-container');
+  const tabs = document.getElementById('week-tabs');
+
+  if (state.meetings.length === 0) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-emoji">📝</div><p>No meetings yet!</p><small>Click "New Meeting" to get started.</small></div>`;
+    tabs.innerHTML = '';
+    return;
+  }
+
+  // Week tabs
+  const weeks = [...new Set(state.meetings.map(m => getWeekLabel(m.date)))];
+  tabs.innerHTML = `<button class="tab-btn active" onclick="filterWeek(null, this)">All</button>` +
+    weeks.map(w => `<button class="tab-btn" onclick="filterWeek('${w}', this)">${w}</button>`).join('');
+
+  renderMeetingCards(state.meetings);
+}
+
+function getWeekLabel(dateStr) {
+  if (!dateStr) return 'Undated';
+  const d = new Date(dateStr + 'T00:00:00');
+  const start = new Date(d);
+  start.setDate(d.getDate() - d.getDay());
+  return `Week of ${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+}
+
+function filterWeek(week, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const filtered = week ? state.meetings.filter(m => getWeekLabel(m.date) === week) : state.meetings;
+  renderMeetingCards(filtered);
+}
+
+function renderMeetingCards(meetings) {
+  const container = document.getElementById('meeting-notes-container');
+  const taskCounts = getTaskCountsByPerson();
+  container.innerHTML = meetings.map(m => {
+    const tmpl = getTemplates().find(t => t.id === m.template);
+
+    let peopleCols;
+    if (state.people.length === 0) {
+      peopleCols = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-emoji">⚓</div><p>No crew yet!</p><small>Add people in "Edit People" and they'll appear here as columns.</small></div>`;
+    } else {
+      peopleCols = state.people.map(p => {
+        const hsl = hexToHsl(p.color);
+        const bg = `hsl(${hsl[0]},${hsl[1]}%,${Math.min(96, hsl[2] + 22)}%)`;
+        const border = p.color;
+        const c = taskCounts[p.id] || { done: 0, total: 0 };
+        const pct = c.total > 0 ? Math.round((c.done / c.total) * 100) : 0;
+
+        const checks = (m.checks && m.checks[p.id]) || [];
+        const checksHtml = checks.map((chk, ci) => `
+          <div class="pcheck-row">
+            <div class="pcheck-box ${chk.done ? 'checked' : ''}" style="color:${border}" onclick="togglePCheck(${m.id}, '${p.id}', ${ci})"></div>
+            <input class="pcheck-text ${chk.done ? 'done' : ''}" value="${escAttr(chk.text)}"
+              placeholder="task item…"
+              onkeydown="pcheckKey(event, ${m.id}, '${p.id}', ${ci})"
+              onchange="editPCheck(${m.id}, '${p.id}', ${ci}, this.value)">
+            <button class="pcheck-del" onclick="delPCheck(${m.id}, '${p.id}', ${ci})">×</button>
+          </div>`).join('');
+
+        // 3 THINGS box — up to 6 bullet lines
+        const things = (m.things && m.things[p.id]) || ['', '', ''];
+        const thingsHtml = things.map((tval, ti) => `
+          <div class="thing-row">
+            <span class="thing-dot" style="color:${border}">•</span>
+            <input class="thing-text" value="${escAttr(tval)}" placeholder="${ti < 3 ? 'thing ' + (ti+1) : 'more…'}"
+              onchange="editThing(${m.id}, '${p.id}', ${ti}, this.value)">
+          </div>`).join('');
+
+        return `<div class="person-col" style="background:${bg}; border-color:${border}; border-width:2px; border-style:solid;">
+          <div class="person-col-header" style="color:${border}; border-color:${border}">
+            ${escHtml(p.name)}
+          </div>
+          ${tmpl && tmpl.prompt ? `<div style="font-size:11px; font-weight:700; color:var(--ink-light); margin-bottom:5px; font-style:italic">${escHtml(tmpl.prompt)}</div>` : ''}
+          <textarea class="person-notes-area"
+            placeholder="Notes for ${escAttr(p.name)}…  (type /checkbox)"
+            oninput="handleSlashInput(event, ${m.id}, '${p.id}')"
+            onkeydown="handleSlashKey(event, ${m.id}, '${p.id}')"
+            onchange="updatePersonNote(${m.id}, '${p.id}', this.value)"
+          >${escHtml(m.notes[p.id] || '')}</textarea>
+
+          <div class="things-box" style="border-color:${border}">
+            <div class="things-header" style="color:${border}">⭐ 3 THINGS</div>
+            ${thingsHtml}
+            ${things.length < 6 ? `<button class="thing-add" style="color:${border}" onclick="addThing(${m.id}, '${p.id}')">＋ add a thing</button>` : ''}
+          </div>
+
+          <div class="checks-label" style="color:${border}">✅ Tasks (sync to board)</div>
+          <div class="person-checks">${checksHtml}</div>
+          <button class="thing-add" style="color:${border}" onclick="addPCheck(${m.id}, '${p.id}')">＋ add checkbox</button>
+
+          <span class="task-count-badge" style="border:1.5px solid ${border}; color:${border}">
+            ✅ ${c.done}/${c.total} done · ${pct}%
+          </span>
+        </div>`;
+      }).join('');
+    }
+
+    return `<div class="meeting-note-card" id="meeting-${m.id}">
+      <div class="meeting-note-header">
+        <div style="display:flex; align-items:center; gap:10px; flex:1; min-width:0">
+          <span style="font-size:20px">${tmpl?.emoji || '📋'}</span>
+          <input class="meeting-note-title" value="${escAttr(m.title)}"
+            onchange="updateMeetingTitle(${m.id}, this.value)"
+            placeholder="Meeting title…">
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; flex-shrink:0">
+          <span class="week-badge">📅 ${m.date ? new Date(m.date + 'T00:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric'}) : 'No date'}</span>
+          <button class="delete-note-btn" onclick="deleteMeeting(${m.id})" title="Delete meeting">🗑️</button>
+        </div>
+      </div>
+      <div class="meeting-note-body">
+        <div class="people-grid">${peopleCols}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function updatePersonNote(meetingId, personId, value) {
+  const m = state.meetings.find(x => x.id === meetingId);
+  if (m) { if (!m.notes) m.notes = {}; m.notes[personId] = value; save(); }
+}
+
+// ── SLASH COMMAND: /checkbox ──
+let slashHintEl = null;
+function showSlashHint(target) {
+  hideSlashHint();
+  slashHintEl = document.createElement('div');
+  slashHintEl.className = 'slash-hint';
+  slashHintEl.innerHTML = '➕ Add checkbox — press <kbd>Enter</kbd>';
+  document.body.appendChild(slashHintEl);
+  const r = target.getBoundingClientRect();
+  slashHintEl.style.left = (window.scrollX + r.left + 8) + 'px';
+  slashHintEl.style.top = (window.scrollY + r.top - 36) + 'px';
+}
+function hideSlashHint() {
+  if (slashHintEl) { slashHintEl.remove(); slashHintEl = null; }
+}
+function handleSlashInput(e, meetingId, personId) {
+  const val = e.target.value;
+  const lastLine = val.split('\n').pop().trim().toLowerCase();
+  if (lastLine === '/checkbox' || lastLine === '/check') {
+    showSlashHint(e.target);
+  } else {
+    hideSlashHint();
+  }
+}
+function handleSlashKey(e, meetingId, personId) {
+  if (e.key === 'Enter') {
+    const val = e.target.value;
+    const lines = val.split('\n');
+    const lastLine = lines[lines.length - 1].trim().toLowerCase();
+    if (lastLine === '/checkbox' || lastLine === '/check') {
+      e.preventDefault();
+      lines.pop();
+      e.target.value = lines.join('\n');
+      updatePersonNote(meetingId, personId, e.target.value);
+      addPCheck(meetingId, personId);
+      hideSlashHint();
+    }
+  }
+}
+
+// ── PER-PERSON CHECKBOXES (linked to task board) ──
+function ensureChecks(m, personId) {
+  if (!m.checks) m.checks = {};
+  if (!m.checks[personId]) m.checks[personId] = [];
+  return m.checks[personId];
+}
+function addPCheck(meetingId, personId) {
+  const m = state.meetings.find(x => x.id === meetingId);
+  if (!m) return;
+  // create the linked board task immediately, with a shared link id
+  const linkId = 'lk' + Date.now() + Math.floor(Math.random()*999);
+  const task = { id: Date.now() + Math.floor(Math.random()*999), text: '', assigneeId: personId, done: false, priority: 'medium', type: 'general', source: 'meeting', linkedCheck: linkId, meetingId };
+  state.tasks.push(task);
+  ensureChecks(m, personId).push({ text: '', done: false, linkId });
+  save();
+  renderMeetings();
+  renderTasks();
+  renderLeaderboard();
+  // focus the new empty checkbox input
+  setTimeout(() => {
+    const card = document.getElementById('meeting-' + meetingId);
+    if (card) {
+      const inputs = card.querySelectorAll(`.pcheck-text`);
+      if (inputs.length) inputs[inputs.length - 1].focus();
+    }
+  }, 50);
+}
+// Pressing Enter inside a checkbox text field adds another checkbox
+function pcheckKey(e, meetingId, personId, idx) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    editPCheck(meetingId, personId, idx, e.target.value);
+    addPCheck(meetingId, personId);
+  }
+}
+function findLinkedTask(linkId) {
+  return state.tasks.find(t => t.linkedCheck === linkId);
+}
+function togglePCheck(meetingId, personId, idx) {
+  const m = state.meetings.find(x => x.id === meetingId);
+  const chk = m?.checks?.[personId]?.[idx];
+  if (!chk) return;
+  chk.done = !chk.done;
+  if (chk.done) playSound('ding');
+  // sync the linked board task
+  const task = findLinkedTask(chk.linkId);
+  if (task) task.done = chk.done;
+  save();
+  renderMeetings();
+  renderTasks();
+  renderLeaderboard();
+}
+function editPCheck(meetingId, personId, idx, value) {
+  const m = state.meetings.find(x => x.id === meetingId);
+  const chk = m?.checks?.[personId]?.[idx];
+  if (!chk) return;
+  chk.text = value;
+  const task = findLinkedTask(chk.linkId);
+  if (task) task.text = value;
+  save();
+  renderTasks();
+}
+function delPCheck(meetingId, personId, idx) {
+  const m = state.meetings.find(x => x.id === meetingId);
+  if (!m?.checks?.[personId]) return;
+  const chk = m.checks[personId][idx];
+  // remove linked board task
+  if (chk?.linkId) state.tasks = state.tasks.filter(t => t.linkedCheck !== chk.linkId);
+  m.checks[personId].splice(idx, 1);
+  save();
+  renderMeetings();
+  renderTasks();
+  renderLeaderboard();
+}
+// Called when a board task linked to a check is toggled/edited from the task page
+function syncCheckFromTask(task) {
+  const m = state.meetings.find(x => x.id === task.meetingId);
+  const arr = m?.checks?.[task.assigneeId];
+  if (!arr) return;
+  const chk = arr.find(c => c.linkId === task.linkedCheck);
+  if (chk) chk.done = task.done;
+}
+function removeLinkedCheck(task) {
+  const m = state.meetings.find(x => x.id === task.meetingId);
+  const arr = m?.checks?.[task.assigneeId];
+  if (!arr) return;
+  const i = arr.findIndex(c => c.linkId === task.linkedCheck);
+  if (i > -1) arr.splice(i, 1);
+}
+
+// ── 3 THINGS box (up to 6) ──
+function ensureThings(m, personId) {
+  if (!m.things) m.things = {};
+  if (!m.things[personId]) m.things[personId] = ['', '', ''];
+  return m.things[personId];
+}
+function editThing(meetingId, personId, idx, value) {
+  const m = state.meetings.find(x => x.id === meetingId);
+  if (!m) return;
+  const arr = ensureThings(m, personId);
+  arr[idx] = value;
+  save();
+}
+function addThing(meetingId, personId) {
+  const m = state.meetings.find(x => x.id === meetingId);
+  if (!m) return;
+  const arr = ensureThings(m, personId);
+  if (arr.length < 6) arr.push('');
+  save();
+  renderMeetings();
+}
+
+// ── TEMPLATE EDITING ──
+function openTemplatesModal() {
+  const list = document.getElementById('templates-edit-list');
+  list.innerHTML = getTemplates().map((t, i) => `
+    <div style="display:flex; gap:8px; align-items:center; background:var(--ocean-pale); padding:10px; border-radius:12px;">
+      <input class="form-input" style="width:54px; text-align:center; font-size:20px; padding:6px" value="${escAttr(t.emoji)}" id="tpl-emoji-${i}" maxlength="3">
+      <div style="flex:1; display:flex; flex-direction:column; gap:6px;">
+        <input class="form-input" value="${escAttr(t.name)}" id="tpl-name-${i}" placeholder="Template name">
+        <input class="form-input" value="${escAttr(t.prompt)}" id="tpl-prompt-${i}" placeholder="Column prompt (e.g. Wins · Blockers · Next)">
+      </div>
+    </div>`).join('');
+  document.getElementById('templates-modal').style.display = 'flex';
+}
+function saveTemplates() {
+  getTemplates().forEach((t, i) => {
+    t.emoji = document.getElementById('tpl-emoji-' + i).value.trim() || '📋';
+    t.name = document.getElementById('tpl-name-' + i).value.trim() || t.name;
+    t.prompt = document.getElementById('tpl-prompt-' + i).value.trim();
+  });
+  save();
+  closeModal('templates-modal');
+  renderMeetings();
+  showToast('Templates saved! ✏️');
+}
+function resetTemplates() {
+  state.templates = JSON.parse(JSON.stringify(DEFAULT_TEMPLATES));
+  save();
+  openTemplatesModal();
+  showToast('Templates reset ↺');
+}
+
+// ── ACTIVITY TYPES EDITOR ──
+function openTypesModal() {
+  const list = document.getElementById('types-edit-list');
+  list.innerHTML = getActivityTypes().map((t, i) => `
+    <div style="display:flex; gap:8px; align-items:center; background:var(--ocean-pale); padding:8px; border-radius:12px;" data-tid="${t.id}">
+      <input class="form-input at-emoji" style="width:50px; text-align:center; font-size:18px; padding:6px" value="${escAttr(t.emoji)}" maxlength="3">
+      <input class="form-input at-label" style="flex:1" value="${escAttr(t.label)}" placeholder="Activity name">
+      <button class="task-delete" onclick="removeActivityType('${t.id}')">×</button>
+    </div>`).join('');
+  document.getElementById('types-modal').style.display = 'flex';
+}
+function commitTypesInputs() {
+  const rows = document.querySelectorAll('#types-edit-list [data-tid]');
+  const updated = [];
+  rows.forEach(row => {
+    const id = row.getAttribute('data-tid');
+    const emoji = row.querySelector('.at-emoji').value.trim() || '📌';
+    const label = row.querySelector('.at-label').value.trim();
+    if (label) updated.push({ id, emoji, label });
+  });
+  return updated;
+}
+function addActivityType() {
+  const current = commitTypesInputs();
+  current.push({ id: 'a' + Date.now() + Math.floor(Math.random()*999), emoji: '✨', label: '' });
+  state.activityTypes = current;
+  openTypesModal();
+  setTimeout(() => {
+    const labels = document.querySelectorAll('.at-label');
+    if (labels.length) labels[labels.length - 1].focus();
+  }, 30);
+}
+function removeActivityType(id) {
+  state.activityTypes = commitTypesInputs().filter(t => t.id !== id);
+  if (state.activityTypes.length === 0) {
+    state.activityTypes = [{ id: 'general', emoji: '📌', label: 'General' }];
+  }
+  openTypesModal();
+}
+function saveActivityTypes() {
+  const updated = commitTypesInputs();
+  if (updated.length === 0) { showToast('Keep at least one activity!'); return; }
+  state.activityTypes = updated;
+  // any task pointing at a now-deleted type → reassign to first type
+  const validIds = new Set(updated.map(t => t.id));
+  state.tasks.forEach(t => { if (!validIds.has(t.type)) t.type = updated[0].id; });
+  save();
+  closeModal('types-modal');
+  renderTasks();
+  showToast('Activities saved! ⚙️');
+}
+function resetActivityTypes() {
+  state.activityTypes = JSON.parse(JSON.stringify(DEFAULT_ACTIVITY_TYPES));
+  save();
+  openTypesModal();
+  showToast('Activities reset ↺');
+}
+
+
+function updateMeetingTitle(meetingId, value) {
+  const m = state.meetings.find(x => x.id === meetingId);
+  if (m) { m.title = value; save(); }
+}
+
+function deleteMeeting(id) {
+  const m = state.meetings.find(x => x.id === id);
+  if (!m) return;
+  showConfirm('Delete this meeting and its checkboxes?', () => {
+    // remove tasks linked to this meeting
+    state.tasks = state.tasks.filter(t => t.meetingId !== id);
+    state.meetings = state.meetings.filter(mm => mm.id !== id);
+    save();
+    renderMeetings();
+    renderTasks();
+    renderLeaderboard();
+    showToast('Meeting deleted 🗑️');
+  });
+}
+
+// Custom in-app confirm (works in sandboxed iframes where window.confirm is blocked)
+function showConfirm(message, onYes) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.style.zIndex = 600;
+  overlay.innerHTML = `<div class="modal" style="max-width:360px; text-align:center">
+    <div style="font-size:40px; margin-bottom:8px">🗑️</div>
+    <div style="font-weight:800; font-size:15px; margin-bottom:18px; color:var(--ink)">${escHtml(message)}</div>
+    <div style="display:flex; gap:10px; justify-content:center">
+      <button class="btn-secondary" id="cf-no">Cancel</button>
+      <button class="btn-primary" id="cf-yes" style="background:var(--sail-red); box-shadow:0 3px 0 #b53b4e">Delete</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector('#cf-no').onclick = () => overlay.remove();
+  overlay.querySelector('#cf-yes').onclick = () => { overlay.remove(); onYes(); };
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+}
+
+// ══════════════════════════════════════════════
+// TASKS
+// ══════════════════════════════════════════════
+function renderAssigneeSelect() {
+  const sel = document.getElementById('task-assignee');
+  if (sel) {
+    if (state.people.length === 0) {
+      sel.innerHTML = `<option value="">— add crew first —</option>`;
+    } else {
+      const cur = sel.value;
+      sel.innerHTML = state.people.map(p => `<option value="${p.id}">${escHtml(p.name)}</option>`).join('');
+      if (cur) sel.value = cur;
+    }
+  }
+  // activity type dropdown (add row)
+  const tsel = document.getElementById('task-type');
+  if (tsel) {
+    const cur = tsel.value;
+    tsel.innerHTML = getActivityTypes().map(t => `<option value="${t.id}">${t.emoji} ${escHtml(t.label)}</option>`).join('');
+    if (cur && getActivityTypes().some(t => t.id === cur)) tsel.value = cur;
+  }
+  // sort/filter by activity dropdown
+  const ssel = document.getElementById('sort-type');
+  if (ssel) {
+    const cur = state.sortType || '';
+    ssel.innerHTML = `<option value="">All activities</option>` +
+      getActivityTypes().map(t => `<option value="${t.id}">${t.emoji} ${escHtml(t.label)}</option>`).join('');
+    ssel.value = cur;
+  }
+}
+
+function personById(id) { return state.people.find(p => p.id === id); }
+
+// Activity types are user-editable; ids are stable, labels/emojis editable.
+const DEFAULT_ACTIVITY_TYPES = [
+  { id: 'health',    emoji: '🩺', label: 'Health' },
+  { id: 'work',      emoji: '💼', label: 'Work' },
+  { id: 'personal',  emoji: '🌷', label: 'Personal' },
+  { id: 'money',     emoji: '💰', label: 'Money' },
+  { id: 'gym',       emoji: '🏋️', label: 'Gym' },
+  { id: 'freelance', emoji: '🧑‍💻', label: 'Freelance' }
+];
+function getActivityTypes() { return state.activityTypes || DEFAULT_ACTIVITY_TYPES; }
+function typeMeta(id) {
+  return getActivityTypes().find(t => t.id === id) || { emoji: '📌', label: 'Other' };
+}
+const PRIORITY_META = {
+  high:   { emoji: '🔴', label: 'High', rank: 0 },
+  medium: { emoji: '🟡', label: 'Medium', rank: 1 },
+  low:    { emoji: '🟢', label: 'Low', rank: 2 }
+};
+const PRIORITY_ORDER = ['high', 'medium', 'low'];
+
+function addTask() {
+  const input = document.getElementById('task-input');
+  const text = input.value.trim();
+  if (!text) return;
+  const assigneeId = document.getElementById('task-assignee').value;
+  if (!assigneeId) { showToast('Add a crew member first! ⚓'); return; }
+  const priority = document.getElementById('task-priority').value;
+  const type = document.getElementById('task-type').value;
+  state.tasks.push({ id: Date.now(), text, assigneeId, priority, type, done: false, source: 'board' });
+  input.value = '';
+  save();
+  renderTasks();
+  renderLeaderboard();
+  showToast('Task added! ✅');
+}
+
+function changeSort() {
+  state.sortPriority = document.getElementById('sort-priority').value;
+  state.sortType = document.getElementById('sort-type').value;
+  renderTasks();
+}
+
+function toggleTask(id) {
+  const t = state.tasks.find(x => x.id === id);
+  if (!t) return;
+  t.done = !t.done;
+  if (t.done) playSound('ding');
+  // keep linked meeting checkbox in sync
+  if (t.linkedCheck) syncCheckFromTask(t);
+  save();
+  renderTasks();
+  renderLeaderboard();
+  if (t.linkedCheck) renderMeetings();
+}
+
+function deleteTask(id) {
+  const t = state.tasks.find(x => x.id === id);
+  // if linked to a meeting checkbox, remove that too
+  if (t && t.linkedCheck) removeLinkedCheck(t);
+  state.tasks = state.tasks.filter(x => x.id !== id);
+  save();
+  renderTasks();
+  renderLeaderboard();
+  if (t && t.linkedCheck) renderMeetings();
+}
+
+function filterTasks(f, btn) {
+  state.currentFilter = f;
+  document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTasks();
+}
+
+function renderTasks() {
+  renderAssigneeSelect();
+  const list = document.getElementById('task-list');
+  let tasks = state.tasks.slice();
+  if (state.currentFilter === 'open') tasks = tasks.filter(t => !t.done);
+  if (state.currentFilter === 'done') tasks = tasks.filter(t => t.done);
+
+  // filter by activity type
+  if (state.sortType) tasks = tasks.filter(t => (t.type || getActivityTypes()[0].id) === state.sortType);
+
+  // sort by priority
+  if (state.sortPriority === 'high-first') {
+    tasks.sort((a, b) => (PRIORITY_META[a.priority||'medium'].rank) - (PRIORITY_META[b.priority||'medium'].rank));
+  } else if (state.sortPriority === 'low-first') {
+    tasks.sort((a, b) => (PRIORITY_META[b.priority||'medium'].rank) - (PRIORITY_META[a.priority||'medium'].rank));
+  }
+
+  if (tasks.length === 0) {
+    list.innerHTML = `<div class="empty-state" style="padding:24px"><div class="empty-emoji">✅</div><p>${state.currentFilter==='done'?'No completed tasks yet!':'No tasks match — try clearing a filter!'}</p></div>`;
+    return;
+  }
+
+  list.innerHTML = tasks.map(t => {
+    const p = personById(t.assigneeId);
+    const color = p?.color || '#999';
+    const name = p?.name || 'Unassigned';
+    const curPrio = t.priority || 'medium';
+    const curType = t.type || getActivityTypes()[0].id;
+    const prioOpts = PRIORITY_ORDER.map(k => `<option value="${k}" ${k===curPrio?'selected':''}>${PRIORITY_META[k].emoji} ${PRIORITY_META[k].label}</option>`).join('');
+    const typeOpts = getActivityTypes().map(at => `<option value="${at.id}" ${at.id===curType?'selected':''}>${at.emoji} ${escHtml(at.label)}</option>`).join('');
+    return `<div class="task-item ${t.done ? 'done' : ''}" id="task-item-${t.id}">
+      <div class="task-check ${t.done ? 'checked' : ''}" onclick="toggleTask(${t.id})">
+        ${t.done ? '✓' : ''}
+      </div>
+      <span class="task-text">${escHtml(t.text)}${t.linkedCheck ? ' <span style="font-size:11px;color:var(--ocean)" title="Linked to a meeting checkbox">🔗</span>' : ''}</span>
+      <select class="task-mini-select" title="Priority" onchange="setTaskPriority(${t.id}, this.value)">${prioOpts}</select>
+      <select class="task-mini-select" title="Activity" onchange="setTaskType(${t.id}, this.value)">${typeOpts}</select>
+      <span class="task-assignee-pill" style="background:${color}">${escHtml(name)}</span>
+      <button class="task-delete" onclick="deleteTask(${t.id})">×</button>
+    </div>`;
+  }).join('');
+}
+
+function setTaskPriority(id, value) {
+  const t = state.tasks.find(x => x.id === id);
+  if (t) { t.priority = value; save(); if (state.sortPriority) renderTasks(); }
+}
+function setTaskType(id, value) {
+  const t = state.tasks.find(x => x.id === id);
+  if (t) { t.type = value; save(); if (state.sortType) renderTasks(); }
+}
+
+function getTaskCountsByPerson() {
+  const counts = {};
+  state.people.forEach(p => counts[p.id] = { done: 0, total: 0 });
+  state.tasks.forEach(t => {
+    if (!counts[t.assigneeId]) counts[t.assigneeId] = { done: 0, total: 0 };
+    counts[t.assigneeId].total++;
+    if (t.done) counts[t.assigneeId].done++;
+  });
+  return counts;
+}
+
+// ══════════════════════════════════════════════
+// LEADERBOARD
+// ══════════════════════════════════════════════
+function renderLeaderboard() {
+  const panel = document.getElementById('leaderboard-panel');
+  const counts = getTaskCountsByPerson();
+
+  if (state.people.length === 0) {
+    panel.innerHTML = `<div class="leaderboard-title">🏆 Hall of Fame</div>
+      <div class="empty-state"><div class="empty-emoji">⚓</div><p>No crew yet!</p><small>Add people in "Edit People" to start the race.</small></div>`;
+    return;
+  }
+
+  const sorted = state.people
+    .map(p => {
+      const fishArr = p.fish || [];
+      const fish = fishArr.length;
+      const focusMinutes = fishArr.reduce((sum, f) => sum + (f.minutes || 0), 0);
+      const done = counts[p.id]?.done || 0;
+      const total = counts[p.id]?.total || 0;
+      const raw = focusMinutes + (done * 30);
+      const points = Math.ceil(raw / 10);
+      return { ...p, done, total, fish, focusMinutes, points };
+    })
+    .sort((a, b) => b.points - a.points || b.done - a.done);
+
+  const max = sorted[0]?.points || 1;
+  const medals = ['🥇', '🥈', '🥉'];
+
+  panel.innerHTML = `
+    <div class="leaderboard-title">🏆 Hall of Fame</div>
+    <div class="leaderboard-sub">Points = (🎣 focus minutes + ✅ tasks×30) ÷ 10</div>
+    <div class="leaderboard-list">
+      ${sorted.map((p, i) => {
+        const rankClass = i < 3 ? `rank-${i+1}` : '';
+        const medal = medals[i] || `#${i+1}`;
+        const stars = i === 0 ? '⭐⭐⭐✨' : i === 1 ? '⭐⭐' : i === 2 ? '⭐' : '';
+        const barW = max > 0 ? Math.round((p.points / max) * 100) : 0;
+        return `<div class="lb-row ${rankClass}">
+          <span class="lb-rank">${medal}</span>
+          <div style="width:28px;height:28px;border-radius:50%;background:${p.color};flex-shrink:0;border:2px solid rgba(255,255,255,0.7)"></div>
+          <span class="lb-name">${escHtml(p.name)} <span class="lb-stars">${stars}</span>
+            <span style="display:block;font-size:10px;font-weight:700;color:var(--ink-light)">✅ ${p.done} · 🎣 ${p.fish} · ⏱️ ${p.focusMinutes}m</span>
+          </span>
+          <div class="lb-bar-wrap"><div class="lb-bar" style="width:${barW}%;background:${p.color}"></div></div>
+          <span class="lb-score">${p.points}<span> pts</span></span>
+        </div>`;
+      }).join('')}
+    </div>
+    ${sorted[0]?.points > 0 ? `<div style="text-align:center;margin-top:18px;font-size:22px">🎉 ${escHtml(sorted[0].name)} is sailing ahead! ⛵</div>` : ''}
+  `;
+}
+
+// ══════════════════════════════════════════════
+// PEOPLE CONFIG
+// ══════════════════════════════════════════════
+const PALETTE = ['#3B9BD4','#2876B0','#6CC4E8','#8FD0F0','#5BA8D8','#E8536A','#7AAF72','#F7E98E','#F4A460','#C9B8E8','#F7A8B5','#B5D4A8'];
+
+function openPeopleConfig() {
+  const list = document.getElementById('people-config-list');
+  if (state.people.length === 0) {
+    list.innerHTML = `<div style="text-align:center; padding:16px; color:var(--ink-light); font-weight:600; font-size:13px;">No crew yet — add your first sailor below! ⛵</div>`;
+  } else {
+    list.innerHTML = state.people.map((p, i) => `
+      <div class="people-config-row" data-pid="${p.id}">
+        <input class="form-input pc-name" value="${escAttr(p.name)}" placeholder="Name"
+          oninput="livePersonName('${p.id}', this.value)">
+        <div class="color-dot" style="background:${p.color}" onclick="cyclePeopleColor('${p.id}', this)" title="Click to change color"></div>
+        <button class="task-delete" onclick="removePerson('${p.id}')">×</button>
+      </div>`).join('');
+  }
+  document.getElementById('people-modal').style.display = 'flex';
+}
+
+function livePersonName(pid, value) {
+  const p = state.people.find(x => x.id === pid);
+  if (p) p.name = value;
+}
+
+function cyclePeopleColor(pid, dot) {
+  const p = state.people.find(x => x.id === pid);
+  if (!p) return;
+  const current = PALETTE.indexOf(p.color);
+  p.color = PALETTE[(current + 1) % PALETTE.length];
+  dot.style.background = p.color;
+}
+
+function addPersonConfig() {
+  // commit any in-progress typing first
+  commitPeopleInputs();
+  state.people.push({ id: 'p' + Date.now() + Math.floor(Math.random()*999), name: '', color: PALETTE[state.people.length % PALETTE.length] });
+  openPeopleConfig();
+  // focus the newly added name input
+  setTimeout(() => {
+    const inputs = document.querySelectorAll('.pc-name');
+    if (inputs.length) inputs[inputs.length - 1].focus();
+  }, 30);
+}
+
+function removePerson(pid) {
+  state.people = state.people.filter(p => p.id !== pid);
+  // also clean up their tasks
+  state.tasks = state.tasks.filter(t => t.assigneeId !== pid);
+  openPeopleConfig();
+}
+
+function commitPeopleInputs() {
+  document.querySelectorAll('.people-config-row').forEach(row => {
+    const pid = row.getAttribute('data-pid');
+    const inp = row.querySelector('.pc-name');
+    const p = state.people.find(x => x.id === pid);
+    if (p && inp) p.name = inp.value.trim();
+  });
+}
+
+function savePeople() {
+  commitPeopleInputs();
+  // drop any blank-named people
+  state.people = state.people.filter(p => p.name.trim().length > 0);
+  save();
+  closeModal('people-modal');
+  renderAll();
+  showToast('Crew saved! ⚓');
+}
+
+// ══════════════════════════════════════════════
+// MY NAME
+// ══════════════════════════════════════════════
+function openMyNameModal() {
+  document.getElementById('myname-input').value = state.myName;
+  document.getElementById('myname-modal').style.display = 'flex';
+}
+
+function saveWorkspaceName(el) {
+  const v = el.textContent.trim() || 'WAY OF BOATS';
+  el.textContent = v;
+  state.wsName = v;
+  document.title = '⚓ ' + v;
+  save();
+}
+function saveWorkspaceSub(el) {
+  const v = el.textContent.trim() || 'the immortal typhoon 🌊';
+  el.textContent = v;
+  state.wsSub = v;
+  save();
+}
+function applyWorkspaceNames() {
+  const t = document.querySelector('.ws-title');
+  const s = document.querySelector('.ws-sub');
+  if (t) t.textContent = state.wsName || 'WAY OF BOATS';
+  if (s) s.textContent = state.wsSub || 'the immortal typhoon 🌊';
+  document.title = '⚓ ' + (state.wsName || 'WAY OF BOATS');
+}
+
+function saveMyName() {
+  state.myName = document.getElementById('myname-input').value.trim() || 'Anonymous';
+  localStorage.setItem('boats_myname', state.myName);
+  if (myLabelEl) myLabelEl.querySelector('.cursor-label').textContent = state.myName + ' (you)';
+  // update presence so others see the new name
+  if (sbChannel) { try { sbChannel.track({ id: myUserId, name: state.myName, color: myColor }); } catch(e){} }
+  // save name without pushing whole doc unnecessarily
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  closeModal('myname-modal');
+  renderOnlineUsers();
+  showToast('Name saved! 🪪');
+}
+
+// ══════════════════════════════════════════════
+// ONLINE USERS (simulated)
+// ══════════════════════════════════════════════
+function renderOnlineUsers() {
+  const list = document.getElementById('online-users-list');
+  // Build the roster: all crew members, plus me if I'm not in the list.
+  const roster = state.people.map(p => ({ name: p.name, color: p.color }));
+  const myName = (state.myName || '').trim();
+  if (myName && !roster.some(r => r.name.trim().toLowerCase() === myName.toLowerCase())) {
+    roster.unshift({ name: myName, color: myColor });
+  }
+  if (roster.length === 0) {
+    list.innerHTML = `<div style="font-size:11px; color:var(--ink-light); padding:4px 8px; font-weight:600;">Add crew or set your name →</div>`;
+    return;
+  }
+  // I'm always considered online; others online if present via Supabase
+  const isOnline = (name) => {
+    const n = name.trim().toLowerCase();
+    if (myName && n === myName.toLowerCase()) return true;
+    return presentNames.has(n);
+  };
+  list.innerHTML = roster.map(u => {
+    const online = isOnline(u.name);
+    const icon = online ? '⛵' : '⚓';
+    const me = myName && u.name.trim().toLowerCase() === myName.toLowerCase();
+    return `<div class="online-user" style="${online ? '' : 'opacity:0.5;'}" title="${online ? 'On the page now' : 'Anchored (offline)'}">
+      <span style="font-size:14px; width:18px; text-align:center;">${icon}</span>
+      <span class="online-name" style="font-size:12px;font-weight:700; color:${u.color}">${escHtml(u.name)}${me ? ' (you)' : ''}</span>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escAttr(s) { return String(s).replace(/"/g,'&quot;'); }
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2500);
+}
+
+function hexToHsl(hex) {
+  let r = parseInt(hex.slice(1,3),16)/255, g = parseInt(hex.slice(3,5),16)/255, b = parseInt(hex.slice(5,7),16)/255;
+  const max = Math.max(r,g,b), min = Math.min(r,g,b);
+  let h, s, l = (max+min)/2;
+  if (max === min) { h = s = 0; } else {
+    const d = max - min;
+    s = l > 0.5 ? d/(2-max-min) : d/(max+min);
+    switch(max) { case r: h = ((g-b)/d + (g<b?6:0))/6; break; case g: h=(b-r)/d/6+1/3; break; default: h=(r-g)/d/6+2/3; }
+  }
+  return [Math.round(h*360), Math.round(s*100), Math.round(l*100)];
+}
+
+function renderAll() {
+  applyWorkspaceNames();
+  renderMeetings();
+  renderTasks();
+  renderLeaderboard();
+  renderOnlineUsers();
+  renderAssigneeSelect();
+}
+
+// ══════════════════════════════════════════════
+// SOUND ENGINE (Web Audio — no files needed)
+// ══════════════════════════════════════════════
+let audioCtx = null;
+function getCtx() {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+  }
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+function tone(freq, dur, type = 'sine', vol = 0.15, delay = 0, sweepTo = null) {
+  const ctx = getCtx(); if (!ctx) return;
+  const t0 = ctx.currentTime + delay;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, t0);
+  if (sweepTo) osc.frequency.exponentialRampToValueAtTime(sweepTo, t0 + dur);
+  gain.gain.setValueAtTime(0.0001, t0);
+  gain.gain.exponentialRampToValueAtTime(vol, t0 + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  osc.connect(gain); gain.connect(ctx.destination);
+  osc.start(t0); osc.stop(t0 + dur + 0.02);
+}
+function noiseWoosh(dur = 0.4, vol = 0.18) {
+  const ctx = getCtx(); if (!ctx) return;
+  const buf = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = (Math.random()*2-1) * (1 - i/data.length);
+  const src = ctx.createBufferSource(); src.buffer = buf;
+  const filter = ctx.createBiquadFilter(); filter.type = 'bandpass';
+  filter.frequency.setValueAtTime(400, ctx.currentTime);
+  filter.frequency.exponentialRampToValueAtTime(2500, ctx.currentTime + dur);
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(vol, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + dur);
+  src.connect(filter); filter.connect(gain); gain.connect(ctx.destination);
+  src.start();
+}
+function playSound(kind) {
+  switch(kind) {
+    case 'click': tone(660, 0.06, 'triangle', 0.12); break;
+    case 'woosh': noiseWoosh(0.45, 0.16); break;
+    case 'seagull':
+      // two quick chirps that sweep up
+      tone(900, 0.12, 'sawtooth', 0.08, 0, 1500);
+      tone(1100, 0.12, 'sawtooth', 0.07, 0.16, 1700);
+      tone(950, 0.10, 'sawtooth', 0.06, 0.34, 1400);
+      break;
+    case 'ding':
+      // short, rustic, joyful — two quick wood-block plucks up a third
+      tone(784, 0.09, 'triangle', 0.20, 0);     // G
+      tone(1047, 0.13, 'triangle', 0.18, 0.07);  // C — bright little hop
+      break;
+    case 'horn':
+      // triumphant rising fanfare (with a warm horn underneath)
+      tone(130, 0.7, 'sine', 0.16, 0);       // low foundation
+      tone(392, 0.18, 'triangle', 0.18, 0);    // G
+      tone(523, 0.18, 'triangle', 0.18, 0.16); // C
+      tone(659, 0.22, 'triangle', 0.18, 0.32); // E
+      tone(784, 0.45, 'triangle', 0.20, 0.48); // G (held)
+      tone(1047, 0.45, 'sine', 0.12, 0.52);    // sparkle octave
+      break;
+  }
+}
+
+// Wire a soft click sound to all buttons/controls (no random seagull).
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('button, .nav-btn, .tab-btn, .filter-chip, .task-check, .pcheck-box, .template-card, .color-dot');
+  if (btn) playSound('click');
+}, true);
+
+// Woosh on page switch; boat horn specifically when opening the Leaderboard.
+const _showSection = showSection;
+showSection = function(name) {
+  if (name === 'leaderboard') playSound('horn');
+  else playSound('woosh');
+  _showSection(name);
+};
+
+// ══════════════════════════════════════════════
+// FLOATING PAPER FISH (orange, simple)
+// ══════════════════════════════════════════════
+function fishSvg(color = '#F4823C', scale = 1) {
+  const w = Math.round(34 * scale), h = Math.round(20 * scale);
+  // tail fin on the LEFT edge, rounded head + eye on the RIGHT → fish points RIGHT
+  return `<svg width="${w}" height="${h}" viewBox="0 0 34 20">
+    <polygon points="12,10 1,3 1,17" fill="${color}" stroke="white" stroke-width="1.2"/>
+    <ellipse cx="20" cy="10" rx="13" ry="7" fill="${color}" stroke="white" stroke-width="1.2"/>
+    <circle cx="28" cy="8" r="1.6" fill="white"/>
+    <circle cx="28" cy="8" r="0.8" fill="#3D2B1F"/>
+  </svg>`;
+}
+function spawnFish() {
+  const layer = document.getElementById('fish-layer');
+  if (!layer) return;
+  const fish = document.createElement('div');
+  const rtl = Math.random() < 0.5;
+  fish.className = 'floaty-fish ' + (rtl ? 'rtl' : 'ltr');
+  const shades = ['#F4823C','#FF9E4D','#F4A460','#FF8C42'];
+  const scale = 0.7 + Math.random() * 0.9;
+  fish.innerHTML = fishSvg(shades[Math.floor(Math.random()*shades.length)], scale);
+  // keep fish in the lower band of the screen (near the waves), away from cards
+  const bandTop = window.innerHeight - 220;
+  fish.style.top = (bandTop + Math.random() * 120) + 'px';
+  fish.style.animationDuration = (16 + Math.random() * 12) + 's';
+  layer.appendChild(fish);
+  setTimeout(() => fish.remove(), 30000);
+}
+
+function jellySvg(color, scale = 1) {
+  const w = Math.round(30 * scale), h = Math.round(40 * scale);
+  return `<svg width="${w}" height="${h}" viewBox="0 0 30 40">
+    <path d="M3,16 a12,13 0 0 1 24,0 q-3,-2 -6,0 q-3,2 -6,0 q-3,-2 -6,0 q-3,2 -6,0 Z" fill="${color}" stroke="white" stroke-width="1.2"/>
+    <circle cx="11" cy="13" r="1.4" fill="white"/>
+    <circle cx="19" cy="13" r="1.4" fill="white"/>
+    <path d="M7,17 q1,10 -1,18" stroke="${color}" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.8"/>
+    <path d="M12,18 q0,11 1,19" stroke="${color}" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.8"/>
+    <path d="M18,18 q0,11 -1,19" stroke="${color}" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.8"/>
+    <path d="M23,17 q-1,10 1,18" stroke="${color}" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.8"/>
+  </svg>`;
+}
+function var_sidebar() {
+  const sb = document.getElementById('sidebar');
+  return sb ? sb.getBoundingClientRect().width : 220;
+}
+function spawnJelly() {  const layer = document.getElementById('fish-layer');
+  if (!layer) return;
+  const jelly = document.createElement('div');
+  jelly.className = 'floaty-jelly';
+  const shades = ['#E8A8D8','#C9B8E8','#A8C8F0','#F4A6C8'];
+  const scale = 0.8 + Math.random() * 0.7;
+  jelly.innerHTML = jellySvg(shades[Math.floor(Math.random()*shades.length)], scale);
+  // keep jellyfish hugging the left or right edge, clear of the work area
+  const side = Math.random() < 0.5;
+  jelly.style.left = side
+    ? (var_sidebar() + 6 + Math.random() * 30) + 'px'
+    : (window.innerWidth - 70 - Math.random() * 30) + 'px';
+  jelly.style.bottom = '-50px';
+  jelly.style.animationDuration = (22 + Math.random() * 14) + 's, 2.4s';
+  layer.appendChild(jelly);
+  setTimeout(() => jelly.remove(), 38000);
+}
+function startFish() {
+  for (let i = 0; i < 3; i++) setTimeout(spawnFish, i * 3000);
+  setInterval(spawnFish, 6000);
+  setTimeout(spawnJelly, 5000);
+  setInterval(spawnJelly, 14000); // a jellyfish every now and then
+}
+
+// ══════════════════════════════════════════════
+// CLICKABLE BOATS — motivational messages
+// (Original lines inspired by themes of habit & decade-defining books)
+// ══════════════════════════════════════════════
+const BOAT_MESSAGES = [
+  { text: "Tiny oars, big distance. A 1% better row today compounds into a whole new shore.", book: "in the spirit of Atomic Habits" },
+  { text: "You don't rise to your goals — you drift to the level of your systems. Build a good boat.", book: "in the spirit of Atomic Habits" },
+  { text: "Don't wait for the perfect tide. Cast off now; you can steer once you're moving.", book: "in the spirit of The Defining Decade" },
+  { text: "Identity first: become the kind of person who finishes the crossing.", book: "in the spirit of Atomic Habits" },
+  { text: "The next ten strokes matter more than you think. Small choices set the heading for years.", book: "in the spirit of The Defining Decade" },
+  { text: "Make the habit obvious, easy, and a little bit fun — then it rows itself.", book: "in the spirit of Atomic Habits" },
+  { text: "Weak ties carry you to new harbors. Reach out to one new person this week.", book: "in the spirit of The Defining Decade" },
+  { text: "Every checkbox is a vote for the sailor you're becoming.", book: "in the spirit of Atomic Habits" },
+  { text: "You can't change the wind, but you can keep adjusting the sail. Try again tomorrow.", book: "a little encouragement" },
+  { text: "Progress over perfection — a leaky boat still moving beats a perfect one in dry dock.", book: "a little encouragement" }
+];
+let boatMsgEl = null;
+function showBoatMessage(x) {
+  if (boatMsgEl) boatMsgEl.remove();
+  const msg = BOAT_MESSAGES[Math.floor(Math.random() * BOAT_MESSAGES.length)];
+  boatMsgEl = document.createElement('div');
+  boatMsgEl.className = 'boat-msg';
+  boatMsgEl.innerHTML = `⛵ ${escHtml(msg.text)}<span class="bm-book">— ${escHtml(msg.book)}</span>`;
+  document.body.appendChild(boatMsgEl);
+  const left = Math.max(16, Math.min(window.innerWidth - 300, x - 140));
+  boatMsgEl.style.left = left + 'px';
+  playSound('click');
+  clearTimeout(boatMsgEl._t);
+  boatMsgEl._t = setTimeout(() => { if (boatMsgEl) { boatMsgEl.remove(); boatMsgEl = null; } }, 6000);
+}
+function wireBoats() {
+  document.querySelectorAll('.floaty-boat').forEach(b => {
+    b.addEventListener('click', (e) => showBoatMessage(e.clientX));
+  });
+}
+
+// ══════════════════════════════════════════════
+// FISHING FOCUS TIMER
+// ══════════════════════════════════════════════
+// Fish you can catch (rarer ones for longer focus sessions)
+const FISH_SPECIES = [
+  { emoji: '🐟', name: 'Little Minnow',  min: 0 },
+  { emoji: '🐠', name: 'Tropical Fish',  min: 15 },
+  { emoji: '🐡', name: 'Puffer Fish',    min: 25 },
+  { emoji: '🦑', name: 'Squid',          min: 40 },
+  { emoji: '🐙', name: 'Octopus',        min: 50 },
+  { emoji: '🦞', name: 'Lobster',        min: 60 },
+  { emoji: '🐋', name: 'Great Whale',    min: 90 }
+];
+let pomoMinutes = parseInt(localStorage.getItem('boats_pomo_min') || '25', 10);
+let pomoRemaining = pomoMinutes * 60;
+let pomoRunning = false;
+let pomoInterval = null;
+let pomoGoal = '';
+// caught fish stored per-person so it can feed the leaderboard
+function myFishList() {
+  const id = myPersonId();
+  if (!id) {
+    // not matched to a crew member yet — keep a personal stash
+    try { return JSON.parse(localStorage.getItem('boats_myfish') || '[]'); } catch(e){ return []; }
+  }
+  const p = personById(id);
+  if (!p.fish) p.fish = [];
+  return p.fish;
+}
+function saveMyFish(list) {
+  const id = myPersonId();
+  if (!id) { localStorage.setItem('boats_myfish', JSON.stringify(list)); return; }
+  const p = personById(id);
+  p.fish = list;
+  save();
+}
+// match my display name to a crew member (so fish count toward the leaderboard)
+function myPersonId() {
+  const n = (state.myName || '').trim().toLowerCase();
+  if (!n) return null;
+  const p = state.people.find(x => x.name.trim().toLowerCase() === n);
+  return p ? p.id : null;
+}
+
+function togglePomo() {
+  document.getElementById('pomodoro').classList.toggle('pomo-collapsed');
+}
+function bumpPomoMinutes(delta) {
+  setPomoMinutes(pomoMinutes + delta);
+  document.getElementById('pomo-minutes').value = pomoMinutes;
+}
+function setPomoMinutes(val) {
+  let v = Math.max(1, Math.min(180, parseInt(val, 10) || 25));
+  pomoMinutes = v;
+  localStorage.setItem('boats_pomo_min', String(v));
+  if (!pomoRunning) { pomoRemaining = v * 60; renderPomo(); }
+}
+function startPausePomo() {
+  const btn = document.getElementById('pomo-startbtn');
+  const toggle = document.getElementById('pomo-toggle');
+  if (pomoRunning) {
+    pomoRunning = false;
+    stopPomoTick();
+    btn.textContent = '🎣 Resume';
+    document.getElementById('pomodoro').classList.remove('pomo-running');
+    toggle.classList.remove('casting');
+  } else {
+    // lock in the goal when casting
+    pomoGoal = document.getElementById('pomo-goal').value.trim();
+    document.getElementById('pomo-goal-display').textContent = pomoGoal ? '🎯 ' + pomoGoal : '';
+    pomoRunning = true;
+    btn.textContent = '⏸ Pause';
+    document.getElementById('pomodoro').classList.add('pomo-running');
+    toggle.classList.add('casting');
+    pomoInterval = setInterval(pomoTick, 1000);
+  }
+}
+function stopPomoTick() { if (pomoInterval) { clearInterval(pomoInterval); pomoInterval = null; } }
+function pomoTick() {
+  pomoRemaining--;
+  if (pomoRemaining <= 0) {
+    stopPomoTick();
+    pomoRunning = false;
+    document.getElementById('pomo-toggle').classList.remove('casting');
+    document.getElementById('pomodoro').classList.remove('pomo-running');
+    catchFish();
+    return;
+  }
+  renderPomo();
+}
+function catchFish() {
+  playSound('ding');
+  // pick the best fish your focus length qualifies for, then a little randomness
+  const eligible = FISH_SPECIES.filter(f => pomoMinutes >= f.min);
+  const top = eligible[eligible.length - 1];
+  // 70% chance of the top eligible fish, else a random eligible one
+  const fish = Math.random() < 0.7 ? top : eligible[Math.floor(Math.random() * eligible.length)];
+
+  const list = myFishList();
+  list.push({ emoji: fish.emoji, name: fish.name, goal: pomoGoal, minutes: pomoMinutes, at: Date.now() });
+  saveMyFish(list);
+
+  // celebration
+  const pop = document.getElementById('fish-caught');
+  document.getElementById('fc-fish-emoji').textContent = fish.emoji;
+  document.getElementById('fc-fish-name').textContent = 'Caught a ' + fish.name + '!';
+  pop.style.display = 'block';
+  setTimeout(() => { pop.style.display = 'none'; }, 3000);
+
+  showToast(pomoGoal ? `🎣 Reeled in your goal: ${pomoGoal}` : '🎣 Nice catch! Focus complete');
+
+  // reset for next cast
+  pomoRemaining = pomoMinutes * 60;
+  document.getElementById('pomo-startbtn').textContent = '🎣 Cast';
+  renderPomo();
+  renderLeaderboard();
+}
+function resetPomo() {
+  stopPomoTick();
+  pomoRunning = false;
+  pomoRemaining = pomoMinutes * 60;
+  document.getElementById('pomo-startbtn').textContent = '🎣 Cast';
+  document.getElementById('pomodoro').classList.remove('pomo-running');
+  document.getElementById('pomo-toggle').classList.remove('casting');
+  renderPomo();
+}
+function renderPomo() {
+  const m = Math.floor(pomoRemaining / 60);
+  const s = pomoRemaining % 60;
+  const tEl = document.getElementById('pomo-time');
+  if (tEl) tEl.textContent = `${m}:${String(s).padStart(2,'0')}`;
+  // render fish tank from my catch
+  const tank = document.getElementById('pomo-fish-tank');
+  if (tank) {
+    const list = myFishList();
+    tank.innerHTML = list.length ? list.map(f => `<span title="${escAttr(f.name + (f.goal ? ' · ' + f.goal : ''))}">${f.emoji}</span>`).join('') : '🌊';
+  }
+}
+
+// ══════════════════════════════════════════════
+// CALENDAR / TIMEBLOCKS
+// 2 days, 6am → 1am next day, 30-min slots
+// ══════════════════════════════════════════════
+const CAL_START_HOUR = 6;          // 6 AM
+const CAL_SLOTS = 38;              // 6:00 .. 1:00 next day = 19 hours × 2
+const SLOT_PX = 24;               // each 30-min slot half of the 48px row → we render 48px per hour
+const CAL_SLOT_H = 24;            // px per 30-min slot
+const EVENT_COLORS = ['#FF7A3C','#3B9BD4','#7AAF72','#C9B8E8','#E8536A','#F4A460','#1E5E63','#E8A8D8'];
+let calDays = []; // [{label, dateKey}]
+let editingEventId = null;
+let pickedColor = EVENT_COLORS[0];
+
+function slotToLabel(slotIndex) {
+  const totalMin = CAL_START_HOUR * 60 + slotIndex * 30;
+  let h = Math.floor(totalMin / 60) % 24;
+  const m = totalMin % 60;
+  const ampm = h < 12 ? 'AM' : 'PM';
+  let h12 = h % 12; if (h12 === 0) h12 = 12;
+  return `${h12}:${String(m).padStart(2,'0')} ${ampm}`;
+}
+
+function renderCalendar() {
+  const grid = document.getElementById('calendar-grid');
+  if (!grid) return;
+  // two days: today + tomorrow
+  const today = new Date();
+  calDays = [0,1].map(off => {
+    const d = new Date(today); d.setDate(today.getDate()+off);
+    return { label: d.toLocaleDateString('en-US',{weekday:'short', month:'short', day:'numeric'}),
+             key: d.toISOString().split('T')[0] };
+  });
+
+  // time labels column (every hour)
+  let timeCol = '<div class="cal-time-col">';
+  for (let s = 0; s < CAL_SLOTS; s += 2) {
+    timeCol += `<div class="cal-time-label" style="height:${CAL_SLOT_H*2}px">${slotToLabel(s)}</div>`;
+  }
+  timeCol += '</div>';
+
+  let cols = '';
+  calDays.forEach((day, di) => {
+    let slots = '';
+    for (let s = 0; s < CAL_SLOTS; s++) {
+      slots += `<div class="cal-slot" data-day="${di}" data-slot="${s}" style="height:${CAL_SLOT_H}px"></div>`;
+    }
+    cols += `<div class="cal-day-col" data-day="${di}">
+      <div class="cal-day-head">${day.label}</div>
+      <div class="cal-slots" id="cal-slots-${di}" style="height:${CAL_SLOTS*CAL_SLOT_H}px">${slots}</div>
+    </div>`;
+  });
+
+  grid.innerHTML = timeCol + cols;
+
+  // render existing events
+  state.events.forEach(ev => renderEvent(ev));
+
+  // wire drag-to-create on each day's slot container
+  calDays.forEach((day, di) => {
+    const cont = document.getElementById('cal-slots-' + di);
+    attachCreateDrag(cont, di);
+  });
+}
+
+function renderEvent(ev) {
+  const cont = document.getElementById('cal-slots-' + ev.day);
+  if (!cont) return;
+  const el = document.createElement('div');
+  el.className = 'cal-event';
+  el.style.top = (ev.start * CAL_SLOT_H) + 'px';
+  el.style.height = ((ev.end - ev.start) * CAL_SLOT_H - 3) + 'px';
+  el.style.background = ev.color || EVENT_COLORS[0];
+  el.dataset.id = ev.id;
+  const task = ev.taskId ? state.tasks.find(t => t.id === ev.taskId) : null;
+  el.innerHTML = `${escHtml(ev.title || 'Untitled')}${task ? `<span class="ce-task">✅ ${escHtml(task.text || 'task')}</span>` : ''}
+    <div class="cal-event-resize" data-id="${ev.id}"></div>`;
+  el.addEventListener('click', (e) => {
+    if (e.target.classList.contains('cal-event-resize')) return;
+    openEventModal(ev.id);
+  });
+  cont.appendChild(el);
+  attachResize(el.querySelector('.cal-event-resize'), ev);
+}
+
+function attachCreateDrag(cont, dayIdx) {
+  cont.addEventListener('mousedown', (e) => {
+    if (e.target.classList.contains('cal-event') || e.target.classList.contains('cal-event-resize') || e.target.closest('.cal-event')) return;
+    const rect = cont.getBoundingClientRect();
+    const startSlot = Math.floor((e.clientY - rect.top) / CAL_SLOT_H);
+    let ghost = document.createElement('div');
+    ghost.className = 'cal-drag-ghost';
+    ghost.style.top = (startSlot * CAL_SLOT_H) + 'px';
+    ghost.style.height = CAL_SLOT_H + 'px';
+    cont.appendChild(ghost);
+    let endSlot = startSlot;
+
+    function move(ev2) {
+      const cur = Math.max(0, Math.min(CAL_SLOTS, Math.ceil((ev2.clientY - rect.top) / CAL_SLOT_H)));
+      endSlot = Math.max(startSlot + 1, cur);
+      ghost.style.top = (Math.min(startSlot, endSlot) * CAL_SLOT_H) + 'px';
+      ghost.style.height = (Math.abs(endSlot - startSlot) * CAL_SLOT_H) + 'px';
+    }
+    function up() {
+      document.removeEventListener('mousemove', move);
+      document.removeEventListener('mouseup', up);
+      ghost.remove();
+      const s = Math.min(startSlot, endSlot);
+      const en = Math.max(startSlot + 1, endSlot);
+      const ev = { id: 'e'+Date.now()+Math.floor(Math.random()*999), day: dayIdx, start: s, end: en, title: '', color: EVENT_COLORS[Math.floor(Math.random()*EVENT_COLORS.length)], taskId: null };
+      state.events.push(ev);
+      save();
+      renderCalendar();
+      openEventModal(ev.id);
+    }
+    document.addEventListener('mousemove', move);
+    document.addEventListener('mouseup', up);
+  });
+}
+
+function attachResize(handle, ev) {
+  handle.addEventListener('mousedown', (e) => {
+    e.stopPropagation();
+    const cont = document.getElementById('cal-slots-' + ev.day);
+    const rect = cont.getBoundingClientRect();
+    function move(ev2) {
+      const cur = Math.max(ev.start + 1, Math.min(CAL_SLOTS, Math.ceil((ev2.clientY - rect.top) / CAL_SLOT_H)));
+      ev.end = cur;
+      renderCalendar();
+    }
+    function up() {
+      document.removeEventListener('mousemove', move);
+      document.removeEventListener('mouseup', up);
+      save();
+    }
+    document.addEventListener('mousemove', move);
+    document.addEventListener('mouseup', up);
+  });
+}
+
+function openEventModal(id) {
+  editingEventId = id;
+  const ev = state.events.find(e => e.id === id);
+  if (!ev) return;
+  document.getElementById('event-title').value = ev.title || '';
+  pickedColor = ev.color || EVENT_COLORS[0];
+  // task dropdown
+  const tsel = document.getElementById('event-task');
+  tsel.innerHTML = `<option value="">— none —</option>` + state.tasks.map(t => {
+    const p = personById(t.assigneeId);
+    const who = p ? ` (${p.name})` : '';
+    return `<option value="${t.id}" ${ev.taskId===t.id?'selected':''}>${escHtml(t.text || 'untitled task')}${who}</option>`;
+  }).join('');
+  // colors
+  const cdiv = document.getElementById('event-colors');
+  cdiv.innerHTML = EVENT_COLORS.map(c => `<div class="event-color-dot ${c===pickedColor?'sel':''}" style="background:${c}" onclick="pickEventColor('${c}', this)"></div>`).join('');
+  document.getElementById('event-modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('event-title').focus(), 50);
+}
+function pickEventColor(c, el) {
+  pickedColor = c;
+  document.querySelectorAll('.event-color-dot').forEach(d => d.classList.remove('sel'));
+  el.classList.add('sel');
+}
+function saveEvent() {
+  const ev = state.events.find(e => e.id === editingEventId);
+  if (!ev) return;
+  ev.title = document.getElementById('event-title').value.trim() || 'Untitled';
+  ev.taskId = document.getElementById('event-task').value || null;
+  ev.color = pickedColor;
+  save();
+  closeModal('event-modal');
+  renderCalendar();
+  playSound('click');
+}
+function deleteEvent() {
+  state.events = state.events.filter(e => e.id !== editingEventId);
+  save();
+  closeModal('event-modal');
+  renderCalendar();
+}
+
+// ══════════════════════════════════════════════
+// BOOT
+// ══════════════════════════════════════════════
+load();
+renderAll();
+initCursors();
+startFish();
+wireBoats();
+renderPomo();
+
+// Prompt for name on first visit
+if (!state.myName) {
+  setTimeout(() => openMyNameModal(), 800);
+}
+
+// Auto-reconnect to live sync if previously configured
+if (sbConfig && typeof window.supabase !== 'undefined') {
+  setSyncStatus('🟡 Connecting…', 'var(--peach)');
+  startSync();
+}
+</script>
+</body>
+</html>
