@@ -347,7 +347,18 @@
     margin-bottom: 8px;
     padding-bottom: 5px;
     border-bottom: 2px dashed currentColor;
+<<<<<<< Updated upstream
   }
+=======
+    display: flex; align-items: center; justify-content: space-between; gap: 6px;
+  }
+  .col-expand-btn {
+    background: none; border: none; cursor: pointer;
+    font-size: 15px; font-weight: 800; line-height: 1;
+    padding: 2px 4px; border-radius: 6px; flex-shrink: 0;
+  }
+  .col-expand-btn:hover { background: rgba(255,255,255,0.5); }
+>>>>>>> Stashed changes
   .person-notes-area {
     width: 100%;
     min-height: 80px;
@@ -508,6 +519,69 @@
     box-shadow: 4px 6px 0 var(--ocean-light);
     padding: 24px;
   }
+<<<<<<< Updated upstream
+=======
+  .next-task-banner {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--warm-white);
+    border: 2.5px solid var(--sunset);
+    border-radius: 16px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    box-shadow: 3px 4px 0 var(--sunset-light);
+  }
+  /* ── WORLD CUP ── */
+  #worldcup-table { width: 100%; border-collapse: collapse; }
+  #worldcup-table th {
+    font-size: 12px; font-weight: 800; color: var(--ocean-deep);
+    padding: 8px 6px; text-align: center; border-bottom: 2px solid var(--ocean-light);
+  }
+  #worldcup-table td {
+    padding: 8px 6px; text-align: center; border-bottom: 1px dashed var(--ocean-pale);
+  }
+  #worldcup-table .wc-name-cell { text-align: left; font-weight: 700; font-size: 13px; white-space: nowrap; }
+  #worldcup-table tr.wc-me { background: rgba(255,122,60,0.08); }
+  .wc-cell { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .wc-check {
+    width: 26px; height: 26px; border-radius: 50%;
+    border: 2.5px solid var(--matcha); background: white; color: white;
+    cursor: pointer; font-size: 13px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.12s;
+  }
+  .wc-check:hover:not(:disabled) { background: var(--matcha-pale, #E8F5E4); }
+  .wc-check.checked { background: var(--matcha); border-color: var(--matcha); }
+  .wc-check:disabled { opacity: 0.4; cursor: not-allowed; border-color: #bbb; }
+  .wc-streak { font-size: 11px; font-weight: 800; color: var(--sunset-deep); }
+  /* card-based World Cup (per-person categories) */
+  .wc-cards { display: flex; flex-direction: column; gap: 12px; }
+  .wc-card {
+    background: white; border: 2px solid var(--ocean-light);
+    border-radius: 14px; padding: 12px 14px;
+  }
+  .wc-card.wc-me { border-color: var(--sunset); box-shadow: 0 2px 8px rgba(255,122,60,0.15); }
+  .wc-card-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    font-size: 14px; font-weight: 800; margin-bottom: 10px;
+    padding-bottom: 8px; border-bottom: 2px dashed var(--ocean-pale);
+  }
+  .wc-chips { display: flex; flex-wrap: wrap; gap: 10px; }
+  .wc-chip {
+    display: flex; align-items: center; gap: 7px;
+    background: var(--ocean-pale); border-radius: 30px; padding: 5px 12px 5px 5px;
+  }
+  .wc-chip-label { font-size: 12px; font-weight: 700; }
+  .rules-box {
+    background: var(--ocean-pale); border-radius: 12px; padding: 10px 14px;
+    text-align: left; font-size: 12px; font-weight: 600; color: var(--ink);
+  }
+  .rules-box b { color: var(--ocean-deep); font-size: 13px; }
+  .rules-formula {
+    font-family: 'Nunito', sans-serif; font-weight: 800; color: var(--sunset-deep);
+    margin: 6px 0; font-size: 13px; line-height: 1.5;
+  }
+  .rules-note { font-size: 11.5px; font-weight: 600; color: var(--ink-light); line-height: 1.6; }
+>>>>>>> Stashed changes
   .leaderboard-title {
     font-family: 'Kalam', cursive;
     font-size: 26px; font-weight: 700;
@@ -1161,6 +1235,12 @@
       <button class="nav-btn" onclick="showSection('calendar')" id="nav-calendar">
         <span class="emoji">🗓️</span> <span>Calendar</span>
       </button>
+<<<<<<< Updated upstream
+=======
+      <button class="nav-btn" onclick="showSection('worldcup')" id="nav-worldcup">
+        <span class="emoji">🏆</span> <span>World Cup</span>
+      </button>
+>>>>>>> Stashed changes
     </div>
 
     <hr class="sidebar-divider">
@@ -1203,6 +1283,11 @@
 
       <div class="tab-bar" id="week-tabs"></div>
 
+<<<<<<< Updated upstream
+=======
+      <div id="next-task-banner" class="next-task-banner" style="display:none"></div>
+
+>>>>>>> Stashed changes
       <div id="meeting-notes-container">
         <div class="empty-state">
           <div class="empty-emoji">📝</div>
@@ -1303,9 +1388,70 @@
       </div>
     </div>
 
+<<<<<<< Updated upstream
   </main>
 </div>
 
+=======
+    <!-- WORLD CUP SECTION -->
+    <div id="section-worldcup" class="page-section">
+      <div class="page-header">
+        <div class="page-title">🏆 World <span>Cup</span></div>
+        <span style="font-size:13px; font-weight:700; color:#E8F1F8;">consistency beats perfection</span>
+      </div>
+      <div class="paper-card">
+        <div style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+          <div class="rules-box" style="flex:1; min-width:240px;">
+            <b>🏆 How the World Cup works</b>
+            <div class="rules-note">
+              • Tap a category's circle each day you do it — that builds your 🔥 streak.<br>
+              • Miss a day and that streak resets to <b>0</b>.<br>
+              • Keep a category checked <b>26+ days in one month</b> and you catch a 🎣 fish (one per category, per month) — worth 10 leaderboard points.<br>
+              • Days roll over at <b>midnight Eastern Time</b> (not your computer's clock).<br>
+              • Everyone sets their <b>own</b> categories — tap "⚙️ my goals" on your card.
+            </div>
+          </div>
+          <button class="btn-secondary" onclick="openWcCategoriesModal()">⚙️ My Goals</button>
+        </div>
+        <div style="overflow-x:auto;">
+          <table id="worldcup-table"></table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- PERSON EXPAND MODAL (Notion-style expanded view) -->
+<div class="modal-overlay" id="person-expand-modal" style="display:none" onclick="if(event.target===this) closeModal('person-expand-modal')">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-title" id="pe-title">Tasks</div>
+    <div style="font-size:12px;font-weight:700;color:var(--ink-light);margin-bottom:8px;">
+      These are the same tasks as the board — edit time, category, and subtasks here.
+    </div>
+    <div id="pe-tasklist" style="display:flex;flex-direction:column;gap:10px;max-height:52vh;overflow-y:auto;"></div>
+    <button class="btn-secondary" style="margin-top:12px;width:100%" id="pe-add">＋ Add a task for this person</button>
+    <div class="modal-footer">
+      <button class="btn-primary" onclick="closeModal('person-expand-modal')">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- WORLD CUP CATEGORIES MODAL -->
+<div class="modal-overlay" id="wc-categories-modal" style="display:none" onclick="if(event.target===this) closeModal('wc-categories-modal')">
+  <div class="modal">
+    <div class="modal-title">⚙️ World Cup Categories</div>
+    <p style="font-size:13px; font-weight:600; color:var(--ink-light); margin-bottom:14px;">Daily check-in habits everyone tracks a streak for.</p>
+    <div id="wc-categories-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+    <button class="btn-secondary" style="margin-top:12px; width:100%" onclick="addWcCategory()">＋ Add Category</button>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="resetWcCategories()">↺ Reset</button>
+      <button class="btn-primary" onclick="saveWcCategories()">Save 💾</button>
+    </div>
+  </div>
+</div>
+
+>>>>>>> Stashed changes
 <!-- EVENT EDIT MODAL -->
 <div class="modal-overlay" id="event-modal" style="display:none" onclick="if(event.target===this) closeModal('event-modal')">
   <div class="modal" style="max-width:420px">
@@ -1523,7 +1669,14 @@ function applyConfigColors() {
 // ══════════════════════════════════════════════════════════════════
 
 // ══════════════════════════════════════════════
+<<<<<<< Updated upstream
 const STORAGE_KEY = 'teamspace_v13';
+=======
+// Stable key that never changes — data survives all future code updates.
+const STORAGE_KEY = 'teamspace_data';
+// Old versioned keys we migrate from (newest last).
+const LEGACY_KEYS = ['teamspace_v9','teamspace_v10','teamspace_v11','teamspace_v12','teamspace_v13'];
+>>>>>>> Stashed changes
 let state = {
   people: [],
   meetings: [],
@@ -1540,7 +1693,13 @@ let state = {
   wsSub: 'the immortal typhoon 🌊',
   activityTypes: null,
   events: [],
+<<<<<<< Updated upstream
   messages: []
+=======
+  messages: [],
+  wcCategories: null,   // World Cup streak categories
+  personTemplates: {}   // { personId: "default note text for new meetings" }
+>>>>>>> Stashed changes
 };
 
 const DEFAULT_TEMPLATES = [
@@ -1548,6 +1707,17 @@ const DEFAULT_TEMPLATES = [
   { id: 'retro', name: 'Retro', emoji: '🔄', prompt: 'Went well · Improve · Action items' }
 ];
 
+<<<<<<< Updated upstream
+=======
+// World Cup streak categories (daily check-ins). Editable by the team.
+const DEFAULT_WC_CATEGORIES = [
+  { id: 'wc_move',  emoji: '🏃', label: 'Move' },
+  { id: 'wc_read',  emoji: '📚', label: 'Read' },
+  { id: 'wc_water', emoji: '💧', label: 'Hydrate' },
+  { id: 'wc_deep',  emoji: '🎯', label: 'Deep Work' }
+];
+
+>>>>>>> Stashed changes
 // ══════════════════════════════════════════════
 // PERSIST  (local + optional Supabase live sync)
 // ══════════════════════════════════════════════
@@ -1569,7 +1739,18 @@ function save() {
 }
 
 function load() {
+<<<<<<< Updated upstream
   const raw = localStorage.getItem(STORAGE_KEY);
+=======
+  let raw = localStorage.getItem(STORAGE_KEY);
+  // one-time migration: if no stable data yet, pull from the newest legacy key we can find
+  if (!raw) {
+    for (let i = LEGACY_KEYS.length - 1; i >= 0; i--) {
+      const legacy = localStorage.getItem(LEGACY_KEYS[i]);
+      if (legacy) { raw = legacy; localStorage.setItem(STORAGE_KEY, legacy); break; }
+    }
+  }
+>>>>>>> Stashed changes
   if (raw) {
     try { state = { ...state, ...JSON.parse(raw) }; } catch(e) {}
   }
@@ -1579,6 +1760,12 @@ function load() {
   if (!state.activityTypes || !state.activityTypes.length) {
     state.activityTypes = JSON.parse(JSON.stringify(DEFAULT_ACTIVITY_TYPES));
   }
+<<<<<<< Updated upstream
+=======
+  if (!state.wcCategories || !state.wcCategories.length) {
+    state.wcCategories = JSON.parse(JSON.stringify(DEFAULT_WC_CATEGORIES));
+  }
+>>>>>>> Stashed changes
   const savedName = localStorage.getItem('boats_myname');
   if (savedName) state.myName = savedName;
   // load saved sync config (kept separately so it isn't shared into the cloud doc)
@@ -1605,7 +1792,11 @@ function setSyncStatus(text, color) {
 
 // Only the shareable parts of state go to the cloud (not myName/filter/selectedTemplate)
 function sharedSlice() {
+<<<<<<< Updated upstream
   return { people: state.people, meetings: state.meetings, tasks: state.tasks, templates: state.templates, wsName: state.wsName, wsSub: state.wsSub, activityTypes: state.activityTypes, events: state.events, messages: state.messages };
+=======
+  return { people: state.people, meetings: state.meetings, tasks: state.tasks, templates: state.templates, wsName: state.wsName, wsSub: state.wsSub, activityTypes: state.activityTypes, events: state.events, messages: state.messages, wcCategories: state.wcCategories, personTemplates: state.personTemplates };
+>>>>>>> Stashed changes
 }
 function mergeShared(data) {
   if (!data) return;
@@ -1617,10 +1808,19 @@ function mergeShared(data) {
   if (data.activityTypes) state.activityTypes = data.activityTypes;
   if (data.events) state.events = data.events;
   if (data.messages) state.messages = data.messages;
+<<<<<<< Updated upstream
+=======
+  if (data.wcCategories) state.wcCategories = data.wcCategories;
+  if (data.personTemplates) state.personTemplates = data.personTemplates;
+>>>>>>> Stashed changes
   if (data.wsName) state.wsName = data.wsName;
   if (data.wsSub) state.wsSub = data.wsSub;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   if (typeof renderBoard === 'function') renderBoard();
+<<<<<<< Updated upstream
+=======
+  if (typeof renderWorldCup === 'function' && document.getElementById('section-worldcup')?.classList.contains('active')) renderWorldCup();
+>>>>>>> Stashed changes
   // Avoid yanking focus if the user is actively typing in a field.
   const active = document.activeElement;
   const isTyping = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
@@ -1759,6 +1959,10 @@ function showSection(name) {
   if (name === 'leaderboard') { renderLeaderboard(); renderPie(); }
   if (name === 'tasks') renderTasks();
   if (name === 'calendar') renderCalendar();
+<<<<<<< Updated upstream
+=======
+  if (name === 'worldcup') renderWorldCup();
+>>>>>>> Stashed changes
 }
 
 // ══════════════════════════════════════════════
@@ -1863,13 +2067,24 @@ function createMeeting() {
   const title = document.getElementById('nm-title').value.trim() || 'Team Meeting';
   const date = document.getElementById('nm-date').value;
   const tmpl = getTemplates().find(t => t.id === state.selectedTemplate);
+<<<<<<< Updated upstream
+=======
+  const notes = {};
+  // pre-fill each person's box with their personal template text
+  const pt = state.personTemplates || {};
+  state.people.forEach(p => { if (pt[p.id]) notes[p.id] = pt[p.id]; });
+>>>>>>> Stashed changes
   const meeting = {
     id: Date.now(),
     title,
     date,
     template: state.selectedTemplate,
     prompt: tmpl?.prompt || '',
+<<<<<<< Updated upstream
     notes: {},   // { personId: text }
+=======
+    notes,       // { personId: text } — seeded from personal templates
+>>>>>>> Stashed changes
     checks: {},  // { personId: [{text, done, linkId}] }
     things: {}   // { personId: [str, ...] }
   };
@@ -1880,7 +2095,41 @@ function createMeeting() {
   showToast('Meeting created! 📋');
 }
 
+<<<<<<< Updated upstream
 function renderMeetings() {
+=======
+function renderNextTaskBanner() {
+  const banner = document.getElementById('next-task-banner');
+  if (!banner) return;
+  const myId = myPersonId();
+  let pool = state.tasks.filter(t => !t.done);
+  if (myId) pool = pool.filter(t => t.assigneeId === myId);
+  if (pool.length === 0) { banner.style.display = 'none'; return; }
+  pool.sort((a, b) => {
+    const pr = (PRIORITY_META[a.priority||'medium'].rank) - (PRIORITY_META[b.priority||'medium'].rank);
+    if (pr !== 0) return pr;
+    return taskEffectiveMins(a) - taskEffectiveMins(b);
+  });
+  const t = pool[0];
+  const p = personById(t.assigneeId);
+  const cat = typeMeta(t.type || getActivityTypes()[0].id);
+  const whoLabel = myId ? 'You' : (p ? escHtml(p.name) : 'Someone');
+  banner.style.display = 'flex';
+  banner.innerHTML = `
+    <span style="font-size:20px">🧭</span>
+    <div style="flex:1;">
+      <div style="font-size:11px; font-weight:800; color:var(--ocean-deep); text-transform:uppercase; letter-spacing:0.04em;">Next up</div>
+      <div style="font-size:14px; font-weight:700;">${whoLabel} should tackle: "${escHtml(t.text || 'untitled task')}"
+        <span style="font-weight:600; color:var(--ink-light);">· ${PRIORITY_META[t.priority||'medium'].emoji} ${PRIORITY_META[t.priority||'medium'].label} · ${formatMinutes(taskEffectiveMins(t))}</span>
+        <span style="display:inline-flex; align-items:center; gap:3px; vertical-align:middle;">${fishIcon(cat.color, 14)} ${escHtml(cat.label)}</span>
+      </div>
+    </div>
+    <button class="btn-primary" style="flex-shrink:0" onclick="showSection('tasks')">Go to board</button>`;
+}
+
+function renderMeetings() {
+  renderNextTaskBanner();
+>>>>>>> Stashed changes
   const container = document.getElementById('meeting-notes-container');
   const tabs = document.getElementById('week-tabs');
 
@@ -1958,7 +2207,12 @@ function renderMeetingCards(meetings) {
 
         return `<div class="person-col" style="background:${bg}; border-color:${border}; border-width:2px; border-style:solid;">
           <div class="person-col-header" style="color:${border}; border-color:${border}">
+<<<<<<< Updated upstream
             ${escHtml(p.name)}
+=======
+            <span>${escHtml(p.name)}</span>
+            <button class="col-expand-btn" style="color:${border}" title="Expand ${escAttr(p.name)}'s tasks" onclick="openPersonExpand(${m.id}, '${p.id}')">⤢</button>
+>>>>>>> Stashed changes
           </div>
           ${tmpl && tmpl.prompt ? `<div style="font-size:11px; font-weight:700; color:var(--ink-light); margin-bottom:5px; font-style:italic">${escHtml(tmpl.prompt)}</div>` : ''}
           <textarea class="person-notes-area"
@@ -1975,7 +2229,11 @@ function renderMeetingCards(meetings) {
           </div>
 
           <div class="checks-label" style="color:${border}">✅ Tasks (sync to board)</div>
+<<<<<<< Updated upstream
           <div class="person-checks">${checksHtml}</div>
+=======
+          <div class="person-checks" id="checks-${m.id}-${p.id}">${checksHtml}</div>
+>>>>>>> Stashed changes
           <button class="thing-add" style="color:${border}" onclick="addPCheck(${m.id}, '${p.id}')">＋ add checkbox</button>
 
           <div class="meeting-stats">
@@ -2080,11 +2338,19 @@ function addPCheck(meetingId, personId) {
   renderMeetings();
   renderTasks();
   renderLeaderboard();
+<<<<<<< Updated upstream
   // focus the new empty checkbox input
   setTimeout(() => {
     const card = document.getElementById('meeting-' + meetingId);
     if (card) {
       const inputs = card.querySelectorAll(`.pcheck-text`);
+=======
+  // focus the new empty checkbox input within THIS person's column
+  setTimeout(() => {
+    const container = document.getElementById('checks-' + meetingId + '-' + personId);
+    if (container) {
+      const inputs = container.querySelectorAll('.pcheck-text');
+>>>>>>> Stashed changes
       if (inputs.length) inputs[inputs.length - 1].focus();
     }
   }, 50);
@@ -2174,6 +2440,78 @@ function addThing(meetingId, personId) {
   renderMeetings();
 }
 
+<<<<<<< Updated upstream
+=======
+// ── PERSON EXPAND (Notion-style expanded view of a person's meeting tasks) ──
+let peContext = { meetingId: null, personId: null };
+function openPersonExpand(meetingId, personId) {
+  peContext = { meetingId, personId };
+  const p = personById(personId);
+  document.getElementById('pe-title').textContent = (p ? p.name : 'Person') + ' — Tasks';
+  document.getElementById('pe-add').onclick = () => { addPCheck(meetingId, personId); renderPersonExpand(); };
+  document.getElementById('person-expand-modal').style.display = 'flex';
+  renderPersonExpand();
+}
+function renderPersonExpand() {
+  const { meetingId, personId } = peContext;
+  const box = document.getElementById('pe-tasklist');
+  if (!box) return;
+  const tasks = state.tasks.filter(t => t.meetingId === meetingId && t.assigneeId === personId);
+  if (tasks.length === 0) {
+    box.innerHTML = `<div class="empty-state" style="padding:20px"><div class="empty-emoji">📝</div><p>No tasks yet — add one below!</p></div>`;
+    return;
+  }
+  box.innerHTML = tasks.map(t => {
+    const curPrio = t.priority || 'medium';
+    const curType = t.type || getActivityTypes()[0].id;
+    const subs = t.subtasks || [];
+    const subTotal = subs.reduce((s, st) => s + (st.mins||0), 0);
+    const hasSubs = subs.length > 0;
+    const prioOpts = PRIORITY_ORDER.map(k => `<option value="${k}" ${k===curPrio?'selected':''}>${PRIORITY_META[k].emoji} ${PRIORITY_META[k].label}</option>`).join('');
+    const typeOpts = getActivityTypes().map(at => `<option value="${at.id}" ${at.id===curType?'selected':''}>${escHtml(at.label)}</option>`).join('');
+    const subHtml = subs.map((st, si) => `
+      <div class="subtask-row ${st.done?'done':''}">
+        <div class="subtask-check ${st.done?'checked':''}" onclick="toggleSubtask(${t.id}, ${si}); renderPersonExpand();">${st.done?'✓':''}</div>
+        <input class="subtask-text ${st.done?'done':''}" value="${escAttr(st.text)}" placeholder="subtask…"
+          onchange="editSubtask(${t.id}, ${si}, this.value)">
+        <input class="subtask-time" value="${formatMinutes(st.mins||0)}" onchange="setSubtaskMins(${t.id}, ${si}, this.value); renderPersonExpand();">
+        <button class="pcheck-del" onclick="delSubtask(${t.id}, ${si}); renderPersonExpand();">×</button>
+      </div>`).join('');
+    return `<div style="background:var(--ocean-pale); border-radius:14px; padding:12px;">
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+        <div class="task-check ${t.done?'checked':''}" onclick="toggleTask(${t.id}); renderPersonExpand();">${t.done?'✓':''}</div>
+        <input class="form-input" value="${escAttr(t.text)}" placeholder="Task…" style="flex:1"
+          onchange="editTaskText(${t.id}, this.value)">
+        <button class="pcheck-del" onclick="deleteTask(${t.id}); renderPersonExpand();">×</button>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px;">
+        ${hasSubs
+          ? `<span class="time-sum">Σ ${formatMinutes(subTotal)}</span>`
+          : `<input class="task-mini-select" style="width:64px;text-align:center;background:white;border:2px solid var(--lavender);" value="${formatMinutes(t.mins||30)}" title="Time — type 30m, 2h" onchange="setTaskMins(${t.id}, this.value); renderPersonExpand();">`}
+        <select class="task-mini-select" onchange="setTaskPriority(${t.id}, this.value)">${prioOpts}</select>
+        <span class="type-fish">${fishIcon(typeMeta(curType).color, 18)}</span>
+        <select class="task-mini-select" onchange="setTaskType(${t.id}, this.value); renderPersonExpand();">${typeOpts}</select>
+      </div>
+      <div class="subtask-list" style="margin-left:0">${subHtml}</div>
+      <button class="add-sub-btn" onclick="addSubtask(${t.id}); renderPersonExpand();">＋ subtask</button>
+    </div>`;
+  }).join('');
+}
+function editTaskText(id, value) {
+  const t = state.tasks.find(x => x.id === id);
+  if (!t) return;
+  t.text = value;
+  // keep linked meeting checkbox text in sync
+  if (t.linkedCheck) {
+    const m = state.meetings.find(x => x.id === t.meetingId);
+    const arr = m && m.checks && m.checks[t.assigneeId];
+    if (arr) { const chk = arr.find(c => c.linkId === t.linkedCheck); if (chk) chk.text = value; }
+  }
+  save();
+  renderTasks();
+}
+
+>>>>>>> Stashed changes
 // ── TEMPLATE EDITING ──
 function openTemplatesModal() {
   const list = document.getElementById('templates-edit-list');
@@ -2477,10 +2815,27 @@ function toggleTask(id) {
   t.done = !t.done;
   if (t.done) playSound('ding');
   if (t.linkedCheck) syncCheckFromTask(t);
+<<<<<<< Updated upstream
   save();
   renderTasks();
   renderLeaderboard();
   if (t.linkedCheck) renderMeetings();
+=======
+  // update this row instantly to avoid a flicker before the full re-render
+  const el = document.getElementById('task-item-' + id);
+  if (el) {
+    el.classList.toggle('done', t.done);
+    const chk = el.querySelector('.task-check');
+    if (chk) { chk.classList.toggle('checked', t.done); chk.textContent = t.done ? '✓' : ''; }
+  }
+  save();
+  // defer heavier re-renders one frame so the click feels instant
+  requestAnimationFrame(() => {
+    renderTasks();
+    renderLeaderboard();
+    if (t.linkedCheck) renderMeetings();
+  });
+>>>>>>> Stashed changes
 }
 
 function deleteTask(id) {
@@ -2713,6 +3068,230 @@ function getTaskCountsByPerson() {
 }
 
 // ══════════════════════════════════════════════
+<<<<<<< Updated upstream
+=======
+// WORLD CUP — daily streak tracker (Eastern Time)
+// ══════════════════════════════════════════════
+// Categories are per-person now. state.wcCategories can be either an object
+// keyed by personId, or (legacy) a flat array shared by all. This normalizes both.
+function getWcCategories(personId) {
+  const wcc = state.wcCategories;
+  // legacy: a flat array → treat as everyone's shared default
+  if (Array.isArray(wcc)) return wcc;
+  if (wcc && personId && Array.isArray(wcc[personId]) && wcc[personId].length) return wcc[personId];
+  return DEFAULT_WC_CATEGORIES;
+}
+function setWcCategories(personId, cats) {
+  if (Array.isArray(state.wcCategories) || !state.wcCategories) state.wcCategories = {};
+  state.wcCategories[personId] = cats;
+}
+
+// Returns today's date key in US Eastern Time as "YYYY-MM-DD" (always ET, never local clock).
+function estDateKey(d = new Date()) {
+  // en-CA gives YYYY-MM-DD; timeZone forces Eastern regardless of user's clock
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+}
+function estMonthKey(d = new Date()) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit' }).format(d);
+}
+// yesterday's ET key relative to a given ET key
+function prevDateKey(key) {
+  const d = new Date(key + 'T12:00:00Z'); // noon UTC avoids TZ edge
+  d.setUTCDate(d.getUTCDate() - 1);
+  return estDateKey(d);
+}
+
+// Ensure a person's streak object exists: { catId: { streak, last, monthAwarded } }
+function ensureWc(p) {
+  if (!p.wc) p.wc = {};
+  return p.wc;
+}
+
+// Called on load and when the WC section opens: apply "missed a day → reset" logic.
+function reconcileStreaks() {
+  const today = estDateKey();
+  const yesterday = prevDateKey(today);
+  // One-time cleanup: remove fish that were awarded under the OLD rule
+  // (first-check-in-of-month fish had no valid month/25-day basis). These are
+  // tagged fromStreak but lack a 'month' field, or were granted below threshold.
+  if (!state._streakFishCleaned) {
+    state.people.forEach(p => {
+      if (Array.isArray(p.fish)) {
+        p.fish = p.fish.filter(f => !(f.fromStreak && !f.month));
+      }
+    });
+    state._streakFishCleaned = true;
+    try { save(); } catch(e) {}
+  }
+  state.people.forEach(p => {
+    const wc = ensureWc(p);
+    getWcCategories(p.id).forEach(cat => {
+      const rec = wc[cat.id];
+      if (!rec) return;
+      if (rec.last !== today && rec.last !== yesterday) {
+        rec.streak = 0;
+      }
+    });
+  });
+}
+
+// Toggle today's check-in for me + a category
+function wcCheckIn(catId) {
+  const pid = myPersonId();
+  if (!pid) { showToast('Set your name to a crew member first! 🪪'); return; }
+  const p = personById(pid);
+  const wc = ensureWc(p);
+  const today = estDateKey();
+  const yesterday = prevDateKey(today);
+  const mk = estMonthKey();
+  let rec = wc[catId] || { streak: 0, last: null, monthCounts: {}, monthFish: {} };
+  if (!rec.monthCounts) rec.monthCounts = {};
+  if (!rec.monthFish) rec.monthFish = {};
+
+  if (rec.last === today) {
+    // uncheck today → step streak back and decrement this month's count
+    rec.streak = Math.max(0, rec.streak - 1);
+    rec.monthCounts[mk] = Math.max(0, (rec.monthCounts[mk] || 1) - 1);
+    rec.last = rec.streak > 0 ? yesterday : null;
+  } else {
+    // check in for today
+    if (rec.last === yesterday) rec.streak += 1;   // continuing streak
+    else rec.streak = 1;                            // fresh start
+    rec.last = today;
+    rec.monthCounts[mk] = (rec.monthCounts[mk] || 0) + 1;
+    playSound('ding');
+    // Fish awarded ONLY when this category passes 25 check-in days in this month,
+    // and only once per category per month.
+    if (rec.monthCounts[mk] > 25 && !rec.monthFish[mk]) {
+      rec.monthFish[mk] = true;
+      awardStreakFish(p, catId, mk);
+    }
+  }
+  wc[catId] = rec;
+  save();
+  renderWorldCup();
+  renderLeaderboard();
+}
+
+function awardStreakFish(p, catId, mk) {
+  if (!p.fish) p.fish = [];
+  const cat = getWcCategories(p.id).find(c => c.id === catId);
+  const label = cat ? cat.label : 'habit';
+  p.fish.push({ emoji: '🐟', name: 'Consistency Fish (' + label + ', ' + mk + ')', minutes: 0, at: Date.now(), fromStreak: true, catId, month: mk });
+  showToast(`🎣 ${escHtml(p.name)} earned a fish — 25+ days of ${label} this month! 🔥`);
+}
+
+function renderWorldCup() {
+  reconcileStreaks();
+  const table = document.getElementById('worldcup-table');
+  if (!table) return;
+  const today = estDateKey();
+  const mk = estMonthKey();
+  const myId = myPersonId();
+
+  if (state.people.length === 0) {
+    table.innerHTML = `<tr><td style="padding:20px;text-align:center;color:var(--ink-light);font-weight:600;">No crew yet — add people in "Edit People" to start the World Cup!</td></tr>`;
+    return;
+  }
+
+  // Each person has their own categories, so render a card per sailor.
+  const ranked = state.people.map(p => {
+    const wc = p.wc || {};
+    const cats = getWcCategories(p.id);
+    const total = cats.reduce((s, c) => s + ((wc[c.id] && wc[c.id].streak) || 0), 0);
+    return { p, total, cats };
+  }).sort((a,b) => b.total - a.total);
+
+  const cards = ranked.map(({ p, total, cats }) => {
+    const wc = p.wc || {};
+    const isMe = p.id === myId;
+    const chips = cats.map(c => {
+      const rec = wc[c.id] || { streak: 0, last: null, monthCounts: {} };
+      const checkedToday = rec.last === today;
+      const monthCount = (rec.monthCounts && rec.monthCounts[mk]) || 0;
+      const nearFish = monthCount > 0 ? ` · ${monthCount}/26 this month` : '';
+      return `<div class="wc-chip">
+        <button class="wc-check ${checkedToday ? 'checked' : ''}" ${isMe ? '' : 'disabled'}
+          onclick="wcCheckIn('${c.id}')" title="${isMe ? 'Check in for today' : 'Only ' + escAttr(p.name) + ' can check this'}">${checkedToday ? '✓' : ''}</button>
+        <span class="wc-chip-label">${c.emoji} ${escHtml(c.label)}</span>
+        <span class="wc-streak">${rec.streak || 0}🔥<span style="font-size:9px;color:var(--ink-light);font-weight:700">${nearFish}</span></span>
+      </div>`;
+    }).join('');
+    return `<div class="wc-card ${isMe ? 'wc-me' : ''}">
+      <div class="wc-card-head">
+        <span><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${p.color};margin-right:6px;"></span>${escHtml(p.name)}${isMe ? ' <span style="font-size:10px;color:var(--ocean)">(you)</span>' : ''}</span>
+        <span style="display:flex; align-items:center; gap:8px;">
+          <b>${total}🔥 total</b>
+          ${isMe ? `<button class="thing-add" onclick="openWcCategoriesModal()" title="Edit your categories">⚙️ my goals</button>` : ''}
+        </span>
+      </div>
+      <div class="wc-chips">${chips || '<span style="font-size:12px;color:var(--ink-light)">No categories yet.</span>'}</div>
+    </div>`;
+  }).join('');
+
+  // render inside the same container (as a block, not an actual table)
+  table.outerHTML = `<div id="worldcup-table" class="wc-cards">${cards}</div>`;
+}
+
+// ── WC categories editor (edits the CURRENT USER's own goals) ──
+function openWcCategoriesModal() {
+  const myId = myPersonId();
+  if (!myId) { showToast('Set your name to a crew member first! 🪪'); return; }
+  const list = document.getElementById('wc-categories-list');
+  list.innerHTML = getWcCategories(myId).map(c => `
+    <div style="display:flex; gap:8px; align-items:center; background:var(--ocean-pale); padding:8px; border-radius:12px;" data-cid="${c.id}">
+      <input class="form-input wc-emoji" style="width:50px; text-align:center; font-size:18px; padding:6px" value="${escAttr(c.emoji)}" maxlength="3">
+      <input class="form-input wc-label" style="flex:1" value="${escAttr(c.label)}" placeholder="Habit name">
+      <button class="task-delete" onclick="removeWcCategory('${c.id}')">×</button>
+    </div>`).join('');
+  document.getElementById('wc-categories-modal').style.display = 'flex';
+}
+function commitWcInputs() {
+  const rows = document.querySelectorAll('#wc-categories-list [data-cid]');
+  const updated = [];
+  rows.forEach(row => {
+    const id = row.getAttribute('data-cid');
+    const emoji = row.querySelector('.wc-emoji').value.trim() || '⭐';
+    const label = row.querySelector('.wc-label').value.trim();
+    if (label) updated.push({ id, emoji, label });
+  });
+  return updated;
+}
+function addWcCategory() {
+  const myId = myPersonId(); if (!myId) return;
+  const cur = commitWcInputs();
+  cur.push({ id: 'wc' + Date.now() + Math.floor(Math.random()*999), emoji: '⭐', label: '' });
+  setWcCategories(myId, cur);
+  openWcCategoriesModal();
+  setTimeout(() => { const l = document.querySelectorAll('.wc-label'); if (l.length) l[l.length-1].focus(); }, 30);
+}
+function removeWcCategory(id) {
+  const myId = myPersonId(); if (!myId) return;
+  let cats = commitWcInputs().filter(c => c.id !== id);
+  if (cats.length === 0) cats = [{ id: 'wc_move', emoji: '🏃', label: 'Move' }];
+  setWcCategories(myId, cats);
+  openWcCategoriesModal();
+}
+function saveWcCategories() {
+  const myId = myPersonId(); if (!myId) return;
+  const updated = commitWcInputs();
+  if (updated.length === 0) { showToast('Keep at least one category!'); return; }
+  setWcCategories(myId, updated);
+  save();
+  closeModal('wc-categories-modal');
+  renderWorldCup();
+  showToast('Your goals saved! ⚙️');
+}
+function resetWcCategories() {
+  const myId = myPersonId(); if (!myId) return;
+  setWcCategories(myId, JSON.parse(JSON.stringify(DEFAULT_WC_CATEGORIES)));
+  save();
+  openWcCategoriesModal();
+  showToast('Your goals reset ↺');
+}
+
+// ══════════════════════════════════════════════
+>>>>>>> Stashed changes
 // LEADERBOARD
 // ══════════════════════════════════════════════
 function renderLeaderboard() {
@@ -2732,9 +3311,19 @@ function renderLeaderboard() {
       const focusMinutes = fishArr.reduce((sum, f) => sum + (f.minutes || 0), 0);
       const done = counts[p.id]?.done || 0;
       const total = counts[p.id]?.total || 0;
+<<<<<<< Updated upstream
       const raw = focusMinutes + (done * 30);
       const points = Math.ceil(raw / 10);
       return { ...p, done, total, fish, focusMinutes, points };
+=======
+      const ratio = total > 0 ? (done / total) : 0;
+      // total streak across all World Cup categories
+      const wc = p.wc || {};
+      const streak = getWcCategories(p.id).reduce((s, c) => s + ((wc[c.id] && wc[c.id].streak) || 0), 0);
+      // NEW FORMULA: (fish*10) + (10 * done/total) + (streak/5) + (total tasks/5)
+      const points = Math.round((fish * 10) + (10 * ratio) + (streak / 5) + (total / 5));
+      return { ...p, done, total, fish, focusMinutes, streak, points };
+>>>>>>> Stashed changes
     })
     .sort((a, b) => b.points - a.points || b.done - a.done);
 
@@ -2743,7 +3332,17 @@ function renderLeaderboard() {
 
   panel.innerHTML = `
     <div class="leaderboard-title">🏆 Hall of Fame</div>
+<<<<<<< Updated upstream
     <div class="leaderboard-sub">Points = (🎣 focus minutes + ✅ tasks×30) ÷ 10</div>
+=======
+    <div class="leaderboard-sub">
+      <div class="rules-box">
+        <b>🧮 How points work</b>
+        <div class="rules-formula">Points = (🎣&nbsp;×&nbsp;10) + (10&nbsp;×&nbsp;tasks&nbsp;done&nbsp;÷&nbsp;tasks&nbsp;total) + (🔥&nbsp;total&nbsp;streak&nbsp;÷&nbsp;5) + (total&nbsp;tasks&nbsp;÷&nbsp;5)</div>
+        <div class="rules-note">🎣 fish are earned in the World Cup: keep a category checked <b>26+ days in a month</b> to catch one (one fish per category, per month).</div>
+      </div>
+    </div>
+>>>>>>> Stashed changes
     <div class="leaderboard-list">
       ${sorted.map((p, i) => {
         const rankClass = i < 3 ? `rank-${i+1}` : '';
@@ -2754,7 +3353,11 @@ function renderLeaderboard() {
           <span class="lb-rank">${medal}</span>
           <div style="width:28px;height:28px;border-radius:50%;background:${p.color};flex-shrink:0;border:2px solid rgba(255,255,255,0.7)"></div>
           <span class="lb-name">${escHtml(p.name)} <span class="lb-stars">${stars}</span>
+<<<<<<< Updated upstream
             <span style="display:block;font-size:10px;font-weight:700;color:var(--ink-light)">✅ ${p.done} · 🎣 ${p.fish} · ⏱️ ${p.focusMinutes}m</span>
+=======
+            <span style="display:block;font-size:10px;font-weight:700;color:var(--ink-light)">✅ ${p.done}/${p.total} · 🎣 ${p.fish} · 🔥 ${p.streak}</span>
+>>>>>>> Stashed changes
           </span>
           <div class="lb-bar-wrap"><div class="lb-bar" style="width:${barW}%;background:${p.color}"></div></div>
           <span class="lb-score">${p.points}<span> pts</span></span>
@@ -2874,6 +3477,7 @@ function openPeopleConfig() {
     list.innerHTML = `<div style="text-align:center; padding:16px; color:var(--ink-light); font-weight:600; font-size:13px;">No crew yet — add your first sailor below! ⛵</div>`;
   } else {
     list.innerHTML = state.people.map((p, i) => `
+<<<<<<< Updated upstream
       <div class="people-config-row" data-pid="${p.id}">
         <div style="flex:1; display:flex; flex-direction:column; gap:2px;">
           <input class="form-input pc-name" value="${escAttr(p.name)}" placeholder="Name" maxlength="${CONFIG.nameCharLimit}"
@@ -2888,6 +3492,30 @@ function openPeopleConfig() {
         <input class="form-input hex-input" value="${escAttr(p.color)}" maxlength="7" title="Type a hex code"
           oninput="setPersonColorHex('${p.id}', this.value)" style="width:78px; font-size:12px;">
         <button class="task-delete" onclick="removePerson('${p.id}')">×</button>
+=======
+      <div class="people-config-row" data-pid="${p.id}" style="flex-direction:column; align-items:stretch; gap:8px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div style="flex:1; display:flex; flex-direction:column; gap:2px;">
+            <input class="form-input pc-name" value="${escAttr(p.name)}" placeholder="Name" maxlength="${CONFIG.nameCharLimit}"
+              oninput="livePersonName('${p.id}', this.value); updateNameCounter(this)">
+            <span class="name-counter" style="font-size:10px; font-weight:700; color:var(--ink-light); align-self:flex-end;">${(p.name||'').length}/${CONFIG.nameCharLimit}</span>
+          </div>
+          <label class="boat-color-picker" title="Click the sail to change color">
+            <span class="boat-swatch">${sailBoat(p.color)}</span>
+            <input type="color" class="boat-color-input" value="${p.color}"
+              oninput="setPersonColor('${p.id}', this.value)">
+          </label>
+          <input class="form-input hex-input" value="${escAttr(p.color)}" maxlength="7" title="Type a hex code"
+            oninput="setPersonColorHex('${p.id}', this.value)" style="width:78px; font-size:12px;">
+          <button class="task-delete" onclick="removePerson('${p.id}')">×</button>
+        </div>
+        <div>
+          <span style="font-size:10px; font-weight:800; color:var(--ocean-deep); text-transform:uppercase; letter-spacing:0.04em;">Their note template</span>
+          <textarea class="form-input pc-template" placeholder="Text that auto-fills ${escAttr(p.name)}'s box in every new meeting (e.g. headers to guide what goes where)…"
+            style="width:100%; min-height:52px; font-size:12px; resize:vertical; margin-top:3px;"
+            oninput="setPersonTemplate('${p.id}', this.value)">${escHtml((state.personTemplates && state.personTemplates[p.id]) || '')}</textarea>
+        </div>
+>>>>>>> Stashed changes
       </div>`).join('');
   }
   document.getElementById('people-modal').style.display = 'flex';
@@ -2902,6 +3530,14 @@ function livePersonName(pid, value) {
   const p = state.people.find(x => x.id === pid);
   if (p) p.name = value;
 }
+<<<<<<< Updated upstream
+=======
+function setPersonTemplate(pid, value) {
+  if (!state.personTemplates) state.personTemplates = {};
+  state.personTemplates[pid] = value;
+  save();
+}
+>>>>>>> Stashed changes
 
 function setPersonColor(pid, hex) {
   const p = state.people.find(x => x.id === pid);
