@@ -347,9 +347,6 @@
     margin-bottom: 8px;
     padding-bottom: 5px;
     border-bottom: 2px dashed currentColor;
-<<<<<<< Updated upstream
-  }
-=======
     display: flex; align-items: center; justify-content: space-between; gap: 6px;
   }
   .col-expand-btn {
@@ -358,7 +355,6 @@
     padding: 2px 4px; border-radius: 6px; flex-shrink: 0;
   }
   .col-expand-btn:hover { background: rgba(255,255,255,0.5); }
->>>>>>> Stashed changes
   .person-notes-area {
     width: 100%;
     min-height: 80px;
@@ -519,8 +515,6 @@
     box-shadow: 4px 6px 0 var(--ocean-light);
     padding: 24px;
   }
-<<<<<<< Updated upstream
-=======
   .next-task-banner {
     display: flex; align-items: center; gap: 12px;
     background: var(--warm-white);
@@ -581,7 +575,6 @@
     margin: 6px 0; font-size: 13px; line-height: 1.5;
   }
   .rules-note { font-size: 11.5px; font-weight: 600; color: var(--ink-light); line-height: 1.6; }
->>>>>>> Stashed changes
   .leaderboard-title {
     font-family: 'Kalam', cursive;
     font-size: 26px; font-weight: 700;
@@ -1235,12 +1228,9 @@
       <button class="nav-btn" onclick="showSection('calendar')" id="nav-calendar">
         <span class="emoji">🗓️</span> <span>Calendar</span>
       </button>
-<<<<<<< Updated upstream
-=======
       <button class="nav-btn" onclick="showSection('worldcup')" id="nav-worldcup">
         <span class="emoji">🏆</span> <span>World Cup</span>
       </button>
->>>>>>> Stashed changes
     </div>
 
     <hr class="sidebar-divider">
@@ -1283,11 +1273,8 @@
 
       <div class="tab-bar" id="week-tabs"></div>
 
-<<<<<<< Updated upstream
-=======
       <div id="next-task-banner" class="next-task-banner" style="display:none"></div>
 
->>>>>>> Stashed changes
       <div id="meeting-notes-container">
         <div class="empty-state">
           <div class="empty-emoji">📝</div>
@@ -1388,11 +1375,6 @@
       </div>
     </div>
 
-<<<<<<< Updated upstream
-  </main>
-</div>
-
-=======
     <!-- WORLD CUP SECTION -->
     <div id="section-worldcup" class="page-section">
       <div class="page-header">
@@ -1451,7 +1433,6 @@
   </div>
 </div>
 
->>>>>>> Stashed changes
 <!-- EVENT EDIT MODAL -->
 <div class="modal-overlay" id="event-modal" style="display:none" onclick="if(event.target===this) closeModal('event-modal')">
   <div class="modal" style="max-width:420px">
@@ -1669,14 +1650,10 @@ function applyConfigColors() {
 // ══════════════════════════════════════════════════════════════════
 
 // ══════════════════════════════════════════════
-<<<<<<< Updated upstream
-const STORAGE_KEY = 'teamspace_v13';
-=======
 // Stable key that never changes — data survives all future code updates.
 const STORAGE_KEY = 'teamspace_data';
 // Old versioned keys we migrate from (newest last).
 const LEGACY_KEYS = ['teamspace_v9','teamspace_v10','teamspace_v11','teamspace_v12','teamspace_v13'];
->>>>>>> Stashed changes
 let state = {
   people: [],
   meetings: [],
@@ -1693,13 +1670,9 @@ let state = {
   wsSub: 'the immortal typhoon 🌊',
   activityTypes: null,
   events: [],
-<<<<<<< Updated upstream
-  messages: []
-=======
   messages: [],
   wcCategories: null,   // World Cup streak categories
   personTemplates: {}   // { personId: "default note text for new meetings" }
->>>>>>> Stashed changes
 };
 
 const DEFAULT_TEMPLATES = [
@@ -1707,8 +1680,6 @@ const DEFAULT_TEMPLATES = [
   { id: 'retro', name: 'Retro', emoji: '🔄', prompt: 'Went well · Improve · Action items' }
 ];
 
-<<<<<<< Updated upstream
-=======
 // World Cup streak categories (daily check-ins). Editable by the team.
 const DEFAULT_WC_CATEGORIES = [
   { id: 'wc_move',  emoji: '🏃', label: 'Move' },
@@ -1717,7 +1688,6 @@ const DEFAULT_WC_CATEGORIES = [
   { id: 'wc_deep',  emoji: '🎯', label: 'Deep Work' }
 ];
 
->>>>>>> Stashed changes
 // ══════════════════════════════════════════════
 // PERSIST  (local + optional Supabase live sync)
 // ══════════════════════════════════════════════
@@ -1739,9 +1709,6 @@ function save() {
 }
 
 function load() {
-<<<<<<< Updated upstream
-  const raw = localStorage.getItem(STORAGE_KEY);
-=======
   let raw = localStorage.getItem(STORAGE_KEY);
   // one-time migration: if no stable data yet, pull from the newest legacy key we can find
   if (!raw) {
@@ -1750,7 +1717,6 @@ function load() {
       if (legacy) { raw = legacy; localStorage.setItem(STORAGE_KEY, legacy); break; }
     }
   }
->>>>>>> Stashed changes
   if (raw) {
     try { state = { ...state, ...JSON.parse(raw) }; } catch(e) {}
   }
@@ -1760,12 +1726,9 @@ function load() {
   if (!state.activityTypes || !state.activityTypes.length) {
     state.activityTypes = JSON.parse(JSON.stringify(DEFAULT_ACTIVITY_TYPES));
   }
-<<<<<<< Updated upstream
-=======
   if (!state.wcCategories || !state.wcCategories.length) {
     state.wcCategories = JSON.parse(JSON.stringify(DEFAULT_WC_CATEGORIES));
   }
->>>>>>> Stashed changes
   const savedName = localStorage.getItem('boats_myname');
   if (savedName) state.myName = savedName;
   // load saved sync config (kept separately so it isn't shared into the cloud doc)
@@ -1792,11 +1755,7 @@ function setSyncStatus(text, color) {
 
 // Only the shareable parts of state go to the cloud (not myName/filter/selectedTemplate)
 function sharedSlice() {
-<<<<<<< Updated upstream
-  return { people: state.people, meetings: state.meetings, tasks: state.tasks, templates: state.templates, wsName: state.wsName, wsSub: state.wsSub, activityTypes: state.activityTypes, events: state.events, messages: state.messages };
-=======
   return { people: state.people, meetings: state.meetings, tasks: state.tasks, templates: state.templates, wsName: state.wsName, wsSub: state.wsSub, activityTypes: state.activityTypes, events: state.events, messages: state.messages, wcCategories: state.wcCategories, personTemplates: state.personTemplates };
->>>>>>> Stashed changes
 }
 function mergeShared(data) {
   if (!data) return;
@@ -1808,19 +1767,13 @@ function mergeShared(data) {
   if (data.activityTypes) state.activityTypes = data.activityTypes;
   if (data.events) state.events = data.events;
   if (data.messages) state.messages = data.messages;
-<<<<<<< Updated upstream
-=======
   if (data.wcCategories) state.wcCategories = data.wcCategories;
   if (data.personTemplates) state.personTemplates = data.personTemplates;
->>>>>>> Stashed changes
   if (data.wsName) state.wsName = data.wsName;
   if (data.wsSub) state.wsSub = data.wsSub;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   if (typeof renderBoard === 'function') renderBoard();
-<<<<<<< Updated upstream
-=======
   if (typeof renderWorldCup === 'function' && document.getElementById('section-worldcup')?.classList.contains('active')) renderWorldCup();
->>>>>>> Stashed changes
   // Avoid yanking focus if the user is actively typing in a field.
   const active = document.activeElement;
   const isTyping = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
@@ -1959,10 +1912,7 @@ function showSection(name) {
   if (name === 'leaderboard') { renderLeaderboard(); renderPie(); }
   if (name === 'tasks') renderTasks();
   if (name === 'calendar') renderCalendar();
-<<<<<<< Updated upstream
-=======
   if (name === 'worldcup') renderWorldCup();
->>>>>>> Stashed changes
 }
 
 // ══════════════════════════════════════════════
@@ -2067,24 +2017,17 @@ function createMeeting() {
   const title = document.getElementById('nm-title').value.trim() || 'Team Meeting';
   const date = document.getElementById('nm-date').value;
   const tmpl = getTemplates().find(t => t.id === state.selectedTemplate);
-<<<<<<< Updated upstream
-=======
   const notes = {};
   // pre-fill each person's box with their personal template text
   const pt = state.personTemplates || {};
   state.people.forEach(p => { if (pt[p.id]) notes[p.id] = pt[p.id]; });
->>>>>>> Stashed changes
   const meeting = {
     id: Date.now(),
     title,
     date,
     template: state.selectedTemplate,
     prompt: tmpl?.prompt || '',
-<<<<<<< Updated upstream
-    notes: {},   // { personId: text }
-=======
     notes,       // { personId: text } — seeded from personal templates
->>>>>>> Stashed changes
     checks: {},  // { personId: [{text, done, linkId}] }
     things: {}   // { personId: [str, ...] }
   };
@@ -2095,9 +2038,6 @@ function createMeeting() {
   showToast('Meeting created! 📋');
 }
 
-<<<<<<< Updated upstream
-function renderMeetings() {
-=======
 function renderNextTaskBanner() {
   const banner = document.getElementById('next-task-banner');
   if (!banner) return;
@@ -2129,7 +2069,6 @@ function renderNextTaskBanner() {
 
 function renderMeetings() {
   renderNextTaskBanner();
->>>>>>> Stashed changes
   const container = document.getElementById('meeting-notes-container');
   const tabs = document.getElementById('week-tabs');
 
@@ -2207,12 +2146,8 @@ function renderMeetingCards(meetings) {
 
         return `<div class="person-col" style="background:${bg}; border-color:${border}; border-width:2px; border-style:solid;">
           <div class="person-col-header" style="color:${border}; border-color:${border}">
-<<<<<<< Updated upstream
-            ${escHtml(p.name)}
-=======
             <span>${escHtml(p.name)}</span>
             <button class="col-expand-btn" style="color:${border}" title="Expand ${escAttr(p.name)}'s tasks" onclick="openPersonExpand(${m.id}, '${p.id}')">⤢</button>
->>>>>>> Stashed changes
           </div>
           ${tmpl && tmpl.prompt ? `<div style="font-size:11px; font-weight:700; color:var(--ink-light); margin-bottom:5px; font-style:italic">${escHtml(tmpl.prompt)}</div>` : ''}
           <textarea class="person-notes-area"
@@ -2229,11 +2164,7 @@ function renderMeetingCards(meetings) {
           </div>
 
           <div class="checks-label" style="color:${border}">✅ Tasks (sync to board)</div>
-<<<<<<< Updated upstream
-          <div class="person-checks">${checksHtml}</div>
-=======
           <div class="person-checks" id="checks-${m.id}-${p.id}">${checksHtml}</div>
->>>>>>> Stashed changes
           <button class="thing-add" style="color:${border}" onclick="addPCheck(${m.id}, '${p.id}')">＋ add checkbox</button>
 
           <div class="meeting-stats">
@@ -2338,19 +2269,11 @@ function addPCheck(meetingId, personId) {
   renderMeetings();
   renderTasks();
   renderLeaderboard();
-<<<<<<< Updated upstream
-  // focus the new empty checkbox input
-  setTimeout(() => {
-    const card = document.getElementById('meeting-' + meetingId);
-    if (card) {
-      const inputs = card.querySelectorAll(`.pcheck-text`);
-=======
   // focus the new empty checkbox input within THIS person's column
   setTimeout(() => {
     const container = document.getElementById('checks-' + meetingId + '-' + personId);
     if (container) {
       const inputs = container.querySelectorAll('.pcheck-text');
->>>>>>> Stashed changes
       if (inputs.length) inputs[inputs.length - 1].focus();
     }
   }, 50);
@@ -2440,8 +2363,6 @@ function addThing(meetingId, personId) {
   renderMeetings();
 }
 
-<<<<<<< Updated upstream
-=======
 // ── PERSON EXPAND (Notion-style expanded view of a person's meeting tasks) ──
 let peContext = { meetingId: null, personId: null };
 function openPersonExpand(meetingId, personId) {
@@ -2511,7 +2432,6 @@ function editTaskText(id, value) {
   renderTasks();
 }
 
->>>>>>> Stashed changes
 // ── TEMPLATE EDITING ──
 function openTemplatesModal() {
   const list = document.getElementById('templates-edit-list');
@@ -2815,12 +2735,6 @@ function toggleTask(id) {
   t.done = !t.done;
   if (t.done) playSound('ding');
   if (t.linkedCheck) syncCheckFromTask(t);
-<<<<<<< Updated upstream
-  save();
-  renderTasks();
-  renderLeaderboard();
-  if (t.linkedCheck) renderMeetings();
-=======
   // update this row instantly to avoid a flicker before the full re-render
   const el = document.getElementById('task-item-' + id);
   if (el) {
@@ -2835,7 +2749,6 @@ function toggleTask(id) {
     renderLeaderboard();
     if (t.linkedCheck) renderMeetings();
   });
->>>>>>> Stashed changes
 }
 
 function deleteTask(id) {
@@ -3068,8 +2981,6 @@ function getTaskCountsByPerson() {
 }
 
 // ══════════════════════════════════════════════
-<<<<<<< Updated upstream
-=======
 // WORLD CUP — daily streak tracker (Eastern Time)
 // ══════════════════════════════════════════════
 // Categories are per-person now. state.wcCategories can be either an object
@@ -3291,7 +3202,6 @@ function resetWcCategories() {
 }
 
 // ══════════════════════════════════════════════
->>>>>>> Stashed changes
 // LEADERBOARD
 // ══════════════════════════════════════════════
 function renderLeaderboard() {
@@ -3311,11 +3221,6 @@ function renderLeaderboard() {
       const focusMinutes = fishArr.reduce((sum, f) => sum + (f.minutes || 0), 0);
       const done = counts[p.id]?.done || 0;
       const total = counts[p.id]?.total || 0;
-<<<<<<< Updated upstream
-      const raw = focusMinutes + (done * 30);
-      const points = Math.ceil(raw / 10);
-      return { ...p, done, total, fish, focusMinutes, points };
-=======
       const ratio = total > 0 ? (done / total) : 0;
       // total streak across all World Cup categories
       const wc = p.wc || {};
@@ -3323,7 +3228,6 @@ function renderLeaderboard() {
       // NEW FORMULA: (fish*10) + (10 * done/total) + (streak/5) + (total tasks/5)
       const points = Math.round((fish * 10) + (10 * ratio) + (streak / 5) + (total / 5));
       return { ...p, done, total, fish, focusMinutes, streak, points };
->>>>>>> Stashed changes
     })
     .sort((a, b) => b.points - a.points || b.done - a.done);
 
@@ -3332,9 +3236,6 @@ function renderLeaderboard() {
 
   panel.innerHTML = `
     <div class="leaderboard-title">🏆 Hall of Fame</div>
-<<<<<<< Updated upstream
-    <div class="leaderboard-sub">Points = (🎣 focus minutes + ✅ tasks×30) ÷ 10</div>
-=======
     <div class="leaderboard-sub">
       <div class="rules-box">
         <b>🧮 How points work</b>
@@ -3342,7 +3243,6 @@ function renderLeaderboard() {
         <div class="rules-note">🎣 fish are earned in the World Cup: keep a category checked <b>26+ days in a month</b> to catch one (one fish per category, per month).</div>
       </div>
     </div>
->>>>>>> Stashed changes
     <div class="leaderboard-list">
       ${sorted.map((p, i) => {
         const rankClass = i < 3 ? `rank-${i+1}` : '';
@@ -3353,11 +3253,7 @@ function renderLeaderboard() {
           <span class="lb-rank">${medal}</span>
           <div style="width:28px;height:28px;border-radius:50%;background:${p.color};flex-shrink:0;border:2px solid rgba(255,255,255,0.7)"></div>
           <span class="lb-name">${escHtml(p.name)} <span class="lb-stars">${stars}</span>
-<<<<<<< Updated upstream
-            <span style="display:block;font-size:10px;font-weight:700;color:var(--ink-light)">✅ ${p.done} · 🎣 ${p.fish} · ⏱️ ${p.focusMinutes}m</span>
-=======
             <span style="display:block;font-size:10px;font-weight:700;color:var(--ink-light)">✅ ${p.done}/${p.total} · 🎣 ${p.fish} · 🔥 ${p.streak}</span>
->>>>>>> Stashed changes
           </span>
           <div class="lb-bar-wrap"><div class="lb-bar" style="width:${barW}%;background:${p.color}"></div></div>
           <span class="lb-score">${p.points}<span> pts</span></span>
@@ -3477,22 +3373,6 @@ function openPeopleConfig() {
     list.innerHTML = `<div style="text-align:center; padding:16px; color:var(--ink-light); font-weight:600; font-size:13px;">No crew yet — add your first sailor below! ⛵</div>`;
   } else {
     list.innerHTML = state.people.map((p, i) => `
-<<<<<<< Updated upstream
-      <div class="people-config-row" data-pid="${p.id}">
-        <div style="flex:1; display:flex; flex-direction:column; gap:2px;">
-          <input class="form-input pc-name" value="${escAttr(p.name)}" placeholder="Name" maxlength="${CONFIG.nameCharLimit}"
-            oninput="livePersonName('${p.id}', this.value); updateNameCounter(this)">
-          <span class="name-counter" style="font-size:10px; font-weight:700; color:var(--ink-light); align-self:flex-end;">${(p.name||'').length}/${CONFIG.nameCharLimit}</span>
-        </div>
-        <label class="boat-color-picker" title="Click the sail to change color">
-          <span class="boat-swatch">${sailBoat(p.color)}</span>
-          <input type="color" class="boat-color-input" value="${p.color}"
-            oninput="setPersonColor('${p.id}', this.value)">
-        </label>
-        <input class="form-input hex-input" value="${escAttr(p.color)}" maxlength="7" title="Type a hex code"
-          oninput="setPersonColorHex('${p.id}', this.value)" style="width:78px; font-size:12px;">
-        <button class="task-delete" onclick="removePerson('${p.id}')">×</button>
-=======
       <div class="people-config-row" data-pid="${p.id}" style="flex-direction:column; align-items:stretch; gap:8px;">
         <div style="display:flex; align-items:center; gap:8px;">
           <div style="flex:1; display:flex; flex-direction:column; gap:2px;">
@@ -3515,7 +3395,6 @@ function openPeopleConfig() {
             style="width:100%; min-height:52px; font-size:12px; resize:vertical; margin-top:3px;"
             oninput="setPersonTemplate('${p.id}', this.value)">${escHtml((state.personTemplates && state.personTemplates[p.id]) || '')}</textarea>
         </div>
->>>>>>> Stashed changes
       </div>`).join('');
   }
   document.getElementById('people-modal').style.display = 'flex';
@@ -3530,14 +3409,11 @@ function livePersonName(pid, value) {
   const p = state.people.find(x => x.id === pid);
   if (p) p.name = value;
 }
-<<<<<<< Updated upstream
-=======
 function setPersonTemplate(pid, value) {
   if (!state.personTemplates) state.personTemplates = {};
   state.personTemplates[pid] = value;
   save();
 }
->>>>>>> Stashed changes
 
 function setPersonColor(pid, hex) {
   const p = state.people.find(x => x.id === pid);

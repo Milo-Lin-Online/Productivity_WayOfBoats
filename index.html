@@ -1650,14 +1650,10 @@ function applyConfigColors() {
 // ══════════════════════════════════════════════════════════════════
 
 // ══════════════════════════════════════════════
-<<<<<<< Updated upstream
-const STORAGE_KEY = 'teamspace_v13';
-=======
 // Stable key that never changes — data survives all future code updates.
 const STORAGE_KEY = 'teamspace_data';
 // Old versioned keys we migrate from (newest last).
 const LEGACY_KEYS = ['teamspace_v9','teamspace_v10','teamspace_v11','teamspace_v12','teamspace_v13'];
->>>>>>> Stashed changes
 let state = {
   people: [],
   meetings: [],
@@ -1674,13 +1670,9 @@ let state = {
   wsSub: 'the immortal typhoon 🌊',
   activityTypes: null,
   events: [],
-<<<<<<< Updated upstream
-  messages: []
-=======
   messages: [],
   wcCategories: null,   // World Cup streak categories
   personTemplates: {}   // { personId: "default note text for new meetings" }
->>>>>>> Stashed changes
 };
 
 const DEFAULT_TEMPLATES = [
@@ -1763,11 +1755,7 @@ function setSyncStatus(text, color) {
 
 // Only the shareable parts of state go to the cloud (not myName/filter/selectedTemplate)
 function sharedSlice() {
-<<<<<<< Updated upstream
-  return { people: state.people, meetings: state.meetings, tasks: state.tasks, templates: state.templates, wsName: state.wsName, wsSub: state.wsSub, activityTypes: state.activityTypes, events: state.events, messages: state.messages };
-=======
   return { people: state.people, meetings: state.meetings, tasks: state.tasks, templates: state.templates, wsName: state.wsName, wsSub: state.wsSub, activityTypes: state.activityTypes, events: state.events, messages: state.messages, wcCategories: state.wcCategories, personTemplates: state.personTemplates };
->>>>>>> Stashed changes
 }
 function mergeShared(data) {
   if (!data) return;
@@ -1779,19 +1767,13 @@ function mergeShared(data) {
   if (data.activityTypes) state.activityTypes = data.activityTypes;
   if (data.events) state.events = data.events;
   if (data.messages) state.messages = data.messages;
-<<<<<<< Updated upstream
-=======
   if (data.wcCategories) state.wcCategories = data.wcCategories;
   if (data.personTemplates) state.personTemplates = data.personTemplates;
->>>>>>> Stashed changes
   if (data.wsName) state.wsName = data.wsName;
   if (data.wsSub) state.wsSub = data.wsSub;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   if (typeof renderBoard === 'function') renderBoard();
-<<<<<<< Updated upstream
-=======
   if (typeof renderWorldCup === 'function' && document.getElementById('section-worldcup')?.classList.contains('active')) renderWorldCup();
->>>>>>> Stashed changes
   // Avoid yanking focus if the user is actively typing in a field.
   const active = document.activeElement;
   const isTyping = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
@@ -3391,22 +3373,6 @@ function openPeopleConfig() {
     list.innerHTML = `<div style="text-align:center; padding:16px; color:var(--ink-light); font-weight:600; font-size:13px;">No crew yet — add your first sailor below! ⛵</div>`;
   } else {
     list.innerHTML = state.people.map((p, i) => `
-<<<<<<< Updated upstream
-      <div class="people-config-row" data-pid="${p.id}">
-        <div style="flex:1; display:flex; flex-direction:column; gap:2px;">
-          <input class="form-input pc-name" value="${escAttr(p.name)}" placeholder="Name" maxlength="${CONFIG.nameCharLimit}"
-            oninput="livePersonName('${p.id}', this.value); updateNameCounter(this)">
-          <span class="name-counter" style="font-size:10px; font-weight:700; color:var(--ink-light); align-self:flex-end;">${(p.name||'').length}/${CONFIG.nameCharLimit}</span>
-        </div>
-        <label class="boat-color-picker" title="Click the sail to change color">
-          <span class="boat-swatch">${sailBoat(p.color)}</span>
-          <input type="color" class="boat-color-input" value="${p.color}"
-            oninput="setPersonColor('${p.id}', this.value)">
-        </label>
-        <input class="form-input hex-input" value="${escAttr(p.color)}" maxlength="7" title="Type a hex code"
-          oninput="setPersonColorHex('${p.id}', this.value)" style="width:78px; font-size:12px;">
-        <button class="task-delete" onclick="removePerson('${p.id}')">×</button>
-=======
       <div class="people-config-row" data-pid="${p.id}" style="flex-direction:column; align-items:stretch; gap:8px;">
         <div style="display:flex; align-items:center; gap:8px;">
           <div style="flex:1; display:flex; flex-direction:column; gap:2px;">
@@ -3429,7 +3395,6 @@ function openPeopleConfig() {
             style="width:100%; min-height:52px; font-size:12px; resize:vertical; margin-top:3px;"
             oninput="setPersonTemplate('${p.id}', this.value)">${escHtml((state.personTemplates && state.personTemplates[p.id]) || '')}</textarea>
         </div>
->>>>>>> Stashed changes
       </div>`).join('');
   }
   document.getElementById('people-modal').style.display = 'flex';
