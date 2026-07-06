@@ -1078,14 +1078,44 @@
   .event-color-dot.sel { border-color: var(--ink); }
 
   @media (max-width: 700px) {
-    #sidebar { width: 60px; padding: 12px 6px; }
+    #sidebar { width: 54px; padding: 12px 4px; }
     #sidebar .nav-btn span:not(.emoji) { display: none; }
+    #sidebar .nav-btn { justify-content: center; padding: 10px 4px; }
     #sidebar .sidebar-logo span { display: none; }
-    #sidebar .sidebar-logo { font-size: 16px; }
-    #sidebar .online-label, #sidebar .online-user .online-name { display: none; }
-    #main { margin-left: 60px; padding: 16px; }
-    .people-grid { grid-template-columns: 1fr 1fr; }
+    #sidebar .sidebar-logo { font-size: 14px; }
+    #sidebar .nav-label, #sidebar .online-label, #sidebar .online-user .online-name { display: none; }
+    #sidebar #sync-status { font-size: 8px; padding: 4px 2px; }
+    #main { margin-left: 54px; padding: 12px; }
+    .page-title { font-size: 24px; }
+    .page-header { flex-wrap: wrap; gap: 8px; }
+    .people-grid { grid-template-columns: 1fr; }
     .template-grid { grid-template-columns: 1fr; }
+    /* tasks: let controls wrap instead of overflowing */
+    .task-input-row { flex-wrap: wrap; }
+    .task-input { min-width: 100%; }
+    .task-item-main { flex-wrap: wrap; gap: 8px; }
+    .task-item-main .task-text { flex: 1 1 100%; order: -1; }
+    .task-mini-select, .assignee-select { font-size: 12px; }
+    .filter-row { gap: 6px; }
+    /* meeting columns stack full width */
+    .meeting-note-body .people-grid { grid-template-columns: 1fr; }
+    /* pop-out widgets shrink and sit lower so they don't cover content */
+    #pomodoro { bottom: 80px; right: 10px; }
+    #pomo-panel { width: 190px; }
+    #msgboard { bottom: 80px; left: 10px; }
+    #board-panel { width: 200px; }
+    /* calendar: allow horizontal scroll */
+    #calendar-grid { min-width: 520px; }
+    .paper-card { padding: 14px; }
+    .modal { width: 94%; padding: 18px; }
+    /* World Cup cards already stack; make chips full-width friendly */
+    .wc-chips { gap: 8px; }
+    .rules-formula { font-size: 11px; }
+  }
+  @media (max-width: 430px) {
+    #pomodoro, #msgboard { bottom: 70px; }
+    #pomo-panel, #board-panel { width: 170px; }
+    .page-title { font-size: 20px; }
   }
 </style>
 </head>
@@ -1564,7 +1594,10 @@
         <li>Go to <b>supabase.com</b> → sign up free → <b>New Project</b>.</li>
         <li>Wait ~2 min for it to build.</li>
         <li>Left sidebar → <b>SQL Editor</b> → paste &amp; run this:
-          <div style="background:white; border-radius:8px; padding:8px; margin:6px 0; font-family:monospace; font-size:11px; user-select:all;">create table boats_state (room text primary key, data jsonb);<br>alter table boats_state enable row level security;<br>create policy "all" on boats_state for all using (true) with check (true);<br>alter publication supabase_realtime add table boats_state;</div>
+          <div style="background:white; border-radius:8px; padding:8px; margin:6px 0; font-family:monospace; font-size:11px; user-select:all;">create table boats_items (room text, item_key text, data jsonb, updated_at bigint, primary key (room, item_key));<br>alter table boats_items enable row level security;<br>create policy "all" on boats_items for all using (true) with check (true);<br>alter publication supabase_realtime add table boats_items;</div>
+        </li>
+        <li><b>Already using the old version?</b> Also run this so your data migrates:
+          <div style="background:white; border-radius:8px; padding:8px; margin:6px 0; font-family:monospace; font-size:11px; user-select:all;">-- keep the old table too; the app reads it once to migrate<br>-- (nothing to run if boats_state already exists)</div>
         </li>
         <li>Left sidebar → <b>Project Settings</b> → <b>API</b>.</li>
         <li>Copy <b>Project URL</b> → paste above.</li>
@@ -1682,14 +1715,14 @@ const DEFAULT_TEMPLATES = [
 
 // World Cup streak categories (daily check-ins). Editable by the team.
 const DEFAULT_WC_CATEGORIES = [
-  { id: 'wc_move',  emoji: '🏃', label: 'Move' },
-  { id: 'wc_read',  emoji: '📚', label: 'Read' },
-  { id: 'wc_water', emoji: '💧', label: 'Hydrate' },
-  { id: 'wc_deep',  emoji: '🎯', label: 'Deep Work' }
+  { id: 'wc_move',  shape: 'triangle', color: '#FF7A3C', label: 'Move' },
+  { id: 'wc_read',  shape: 'square',   color: '#3B9BD4', label: 'Read' },
+  { id: 'wc_water', shape: 'circle',   color: '#6CC4E8', label: 'Hydrate' },
+  { id: 'wc_deep',  shape: 'star',     color: '#7AAF72', label: 'Deep Work' }
 ];
 
 // ══════════════════════════════════════════════
-// PERSIST  (local + optional Supabase live sync)
+// PERSIST  (local + optional Supabase live sync, PER-ITEM rows)
 // ══════════════════════════════════════════════
 let sb = null;            // supabase client
 let sbChannel = null;     // realtime channel
@@ -1697,20 +1730,66 @@ let sbConfig = null;      // { url, key, room }
 let applyingRemote = false; // guard so remote writes don't echo back
 let pushTimer = null;
 
+// Collections stored one-row-per-element (keyed by their .id).
+const ITEM_COLLECTIONS = ['people', 'tasks', 'meetings', 'events', 'messages'];
+// Singletons stored as a single row each.
+const SINGLETONS = ['templates', 'activityTypes', 'wcCategories', 'personTemplates', 'wsName', 'wsSub'];
+
+// A snapshot of what we last saw, so save() can push only what changed.
+let lastSnapshot = {};
+function snapshotOf(obj) { return JSON.stringify(obj); }
+
 function save() {
-  // always keep a local copy
+  // always keep a local copy (full state)
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   localStorage.setItem(STORAGE_KEY + '_broadcast', Date.now());
-  // if connected and this isn't a remote-applied change, push to cloud (debounced)
   if (sb && !applyingRemote) {
     clearTimeout(pushTimer);
-    pushTimer = setTimeout(pushState, 350);
+    pushTimer = setTimeout(pushChangedItems, 300);
   }
+}
+
+// Build the map of item_key -> data for the whole state.
+function buildItemMap() {
+  const map = {};
+  ITEM_COLLECTIONS.forEach(coll => {
+    (state[coll] || []).forEach(el => {
+      if (el && el.id != null) map[coll + ':' + el.id] = el;
+    });
+  });
+  SINGLETONS.forEach(key => { map['single:' + key] = state[key]; });
+  return map;
+}
+
+// Push only the rows whose JSON changed since last push (per-item last-write-wins).
+async function pushChangedItems() {
+  if (!sb || !sbConfig) return;
+  const now = Date.now();
+  const map = buildItemMap();
+  const rows = [];
+  // changed or new items
+  for (const k in map) {
+    const snap = snapshotOf(map[k]);
+    if (lastSnapshot[k] !== snap) {
+      rows.push({ room: sbConfig.room, item_key: k, data: map[k], updated_at: now });
+      lastSnapshot[k] = snap;
+    }
+  }
+  // deletions: keys we had before but not now
+  const deletions = [];
+  for (const k in lastSnapshot) {
+    if (!(k in map)) { deletions.push(k); delete lastSnapshot[k]; }
+  }
+  try {
+    if (rows.length) await sb.from('boats_items').upsert(rows);
+    if (deletions.length) {
+      await sb.from('boats_items').delete().eq('room', sbConfig.room).in('item_key', deletions);
+    }
+  } catch (e) { console.error('push failed', e); }
 }
 
 function load() {
   let raw = localStorage.getItem(STORAGE_KEY);
-  // one-time migration: if no stable data yet, pull from the newest legacy key we can find
   if (!raw) {
     for (let i = LEGACY_KEYS.length - 1; i >= 0; i--) {
       const legacy = localStorage.getItem(LEGACY_KEYS[i]);
@@ -1726,12 +1805,11 @@ function load() {
   if (!state.activityTypes || !state.activityTypes.length) {
     state.activityTypes = JSON.parse(JSON.stringify(DEFAULT_ACTIVITY_TYPES));
   }
-  if (!state.wcCategories || !state.wcCategories.length) {
+  if (!state.wcCategories) {
     state.wcCategories = JSON.parse(JSON.stringify(DEFAULT_WC_CATEGORIES));
   }
   const savedName = localStorage.getItem('boats_myname');
   if (savedName) state.myName = savedName;
-  // load saved sync config (kept separately so it isn't shared into the cloud doc)
   try {
     const cfg = localStorage.getItem('boats_sync_cfg');
     if (cfg) sbConfig = JSON.parse(cfg);
@@ -1753,38 +1831,43 @@ function setSyncStatus(text, color) {
   if (el) { el.textContent = text; el.style.color = color || 'var(--ink-light)'; }
 }
 
-// Only the shareable parts of state go to the cloud (not myName/filter/selectedTemplate)
-function sharedSlice() {
-  return { people: state.people, meetings: state.meetings, tasks: state.tasks, templates: state.templates, wsName: state.wsName, wsSub: state.wsSub, activityTypes: state.activityTypes, events: state.events, messages: state.messages, wcCategories: state.wcCategories, personTemplates: state.personTemplates };
-}
-function mergeShared(data) {
-  if (!data) return;
+// Apply a single incoming row (from realtime or initial pull) into state.
+function applyItemRow(item_key, data, isDelete) {
   applyingRemote = true;
-  if (data.people) state.people = data.people;
-  if (data.meetings) state.meetings = data.meetings;
-  if (data.tasks) state.tasks = data.tasks;
-  if (data.templates) state.templates = data.templates;
-  if (data.activityTypes) state.activityTypes = data.activityTypes;
-  if (data.events) state.events = data.events;
-  if (data.messages) state.messages = data.messages;
-  if (data.wcCategories) state.wcCategories = data.wcCategories;
-  if (data.personTemplates) state.personTemplates = data.personTemplates;
-  if (data.wsName) state.wsName = data.wsName;
-  if (data.wsSub) state.wsSub = data.wsSub;
+  const [kind, ...rest] = item_key.split(':');
+  const idPart = rest.join(':');
+  if (kind === 'single') {
+    if (!isDelete) state[idPart] = data;
+  } else if (ITEM_COLLECTIONS.includes(kind)) {
+    if (!state[kind]) state[kind] = [];
+    const arr = state[kind];
+    const idx = arr.findIndex(el => String(el.id) === idPart);
+    if (isDelete) {
+      if (idx > -1) arr.splice(idx, 1);
+    } else if (idx > -1) {
+      arr[idx] = data;
+    } else {
+      arr.push(data);
+    }
+  }
+  // keep our snapshot in sync so we don't echo this back
+  if (isDelete) delete lastSnapshot[item_key];
+  else lastSnapshot[item_key] = snapshotOf(data);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  if (typeof renderBoard === 'function') renderBoard();
-  if (typeof renderWorldCup === 'function' && document.getElementById('section-worldcup')?.classList.contains('active')) renderWorldCup();
-  // Avoid yanking focus if the user is actively typing in a field.
+  applyingRemote = false;
+}
+
+// Re-render after remote changes, without yanking focus while typing.
+function rerenderAfterRemote() {
   const active = document.activeElement;
   const isTyping = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
   if (isTyping) {
-    // re-render only the leaderboard (safe), defer full render until they blur
     try { renderLeaderboard(); } catch(e){}
+    if (typeof renderBoard === 'function') renderBoard();
     pendingRemoteRender = true;
   } else {
     renderAll();
   }
-  applyingRemote = false;
 }
 let pendingRemoteRender = false;
 document.addEventListener('focusout', () => {
@@ -1794,25 +1877,37 @@ document.addEventListener('focusout', () => {
   }
 });
 
-async function pushState() {
+// Pull all rows for the room; if empty, migrate from old single-blob table, else seed.
+async function pullAllItems() {
   if (!sb || !sbConfig) return;
   try {
-    await sb.from('boats_state').upsert({ room: sbConfig.room, data: sharedSlice() });
-  } catch (e) { console.error('push failed', e); }
-}
-
-async function pullState() {
-  if (!sb || !sbConfig) return;
-  try {
-    const { data, error } = await sb.from('boats_state').select('data').eq('room', sbConfig.room).maybeSingle();
+    const { data, error } = await sb.from('boats_items').select('item_key,data').eq('room', sbConfig.room);
     if (error) throw error;
-    if (data && data.data) {
-      mergeShared(data.data);
+    if (data && data.length) {
+      data.forEach(row => applyItemRow(row.item_key, row.data, false));
+      renderAll();
     } else {
-      // no row yet — seed the room with whatever we have locally
-      await pushState();
+      // try migrating from the old single-document table
+      let migrated = false;
+      try {
+        const old = await sb.from('boats_state').select('data').eq('room', sbConfig.room).maybeSingle();
+        if (old.data && old.data.data) { mergeLegacyBlob(old.data.data); migrated = true; }
+      } catch(e) { /* old table may not exist; fine */ }
+      // seed the room from our current local state (migrated or not)
+      lastSnapshot = {}; // force full push
+      await pushChangedItems();
     }
   } catch (e) { console.error('pull failed', e); }
+}
+
+// Merge a legacy single-blob into current state (used once during migration).
+function mergeLegacyBlob(data) {
+  applyingRemote = true;
+  ['people','meetings','tasks','events','messages','templates','activityTypes','wcCategories','personTemplates','wsName','wsSub'].forEach(k => {
+    if (data[k] !== undefined) state[k] = data[k];
+  });
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  applyingRemote = false;
 }
 
 function openSyncModal() {
@@ -1842,23 +1937,30 @@ async function startSync() {
   if (!sbConfig) return;
   try {
     sb = window.supabase.createClient(sbConfig.url, sbConfig.key);
-    await pullState();
+    lastSnapshot = {};
+    await pullAllItems();
 
-    // Realtime: listen for changes to our room's row + presence/cursors via broadcast
     if (sbChannel) { try { await sb.removeChannel(sbChannel); } catch(e){} }
     sbChannel = sb.channel('boats-' + sbConfig.room, { config: { broadcast: { self: false }, presence: { key: myUserId } } });
 
+    // per-item realtime: apply just the changed/deleted row
     sbChannel.on('postgres_changes',
-      { event: '*', schema: 'public', table: 'boats_state', filter: 'room=eq.' + sbConfig.room },
-      (payload) => { if (payload.new && payload.new.data) mergeShared(payload.new.data); }
+      { event: '*', schema: 'public', table: 'boats_items', filter: 'room=eq.' + sbConfig.room },
+      (payload) => {
+        if (payload.eventType === 'DELETE') {
+          const key = payload.old && payload.old.item_key;
+          if (key) { applyItemRow(key, null, true); rerenderAfterRemote(); }
+        } else {
+          const row = payload.new;
+          if (row && row.item_key) { applyItemRow(row.item_key, row.data, false); rerenderAfterRemote(); }
+        }
+      }
     );
 
-    // live cursors over broadcast
     sbChannel.on('broadcast', { event: 'cursor' }, ({ payload }) => {
       if (payload.id !== myUserId) renderRemoteCursor(payload);
     });
 
-    // presence → online list
     sbChannel.on('presence', { event: 'sync' }, () => {
       const stateP = sbChannel.presenceState();
       const users = [];
@@ -1885,11 +1987,11 @@ async function startSync() {
 async function disconnectSync() {
   if (sbChannel && sb) { try { await sb.removeChannel(sbChannel); } catch(e){} }
   sb = null; sbChannel = null; sbConfig = null;
+  lastSnapshot = {};
   localStorage.removeItem('boats_sync_cfg');
   setSyncStatus('⚪ Local only');
   closeModal('sync-modal');
   showToast('Disconnected — local only');
-  // clear any remote cursors
   document.querySelectorAll('.remote-cursor[data-remote]').forEach(el => el.remove());
   renderOnlineUsers();
 }
@@ -2630,8 +2732,24 @@ function typeMeta(id) {
   return getActivityTypes().find(t => t.id === id) || { color: '#999', label: 'Other' };
 }
 // Little inline fish icon in a given color (used for activity types).
-function fishIcon(color, px = 16) {
-  const w = px, h = Math.round(px * 0.62);
+// World Cup category shapes — pick a shape + it's tinted with the category color.
+const WC_SHAPES = ['circle','square','diamond','star','heart','triangle','anchor','fish'];
+function wcShapeSvg(shape, color, px = 18) {
+  const s = px;
+  const wrap = (inner) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" style="vertical-align:middle;flex-shrink:0">${inner}</svg>`;
+  switch (shape) {
+    case 'square':   return wrap(`<rect x="3" y="3" width="18" height="18" rx="3" fill="${color}"/>`);
+    case 'diamond':  return wrap(`<path d="M12 2 L22 12 L12 22 L2 12 Z" fill="${color}"/>`);
+    case 'star':     return wrap(`<path d="M12 2 L15 9 L22 9 L16 14 L18 21 L12 17 L6 21 L8 14 L2 9 L9 9 Z" fill="${color}"/>`);
+    case 'heart':    return wrap(`<path d="M12 21 C4 14 4 7 8.5 7 C11 7 12 9 12 9 C12 9 13 7 15.5 7 C20 7 20 14 12 21 Z" fill="${color}"/>`);
+    case 'triangle': return wrap(`<path d="M12 3 L22 21 L2 21 Z" fill="${color}"/>`);
+    case 'anchor':   return wrap(`<circle cx="12" cy="4" r="2.4" fill="none" stroke="${color}" stroke-width="2"/><line x1="12" y1="6" x2="12" y2="20" stroke="${color}" stroke-width="2"/><line x1="7" y1="11" x2="17" y2="11" stroke="${color}" stroke-width="2"/><path d="M4 15 C5 20 10 21 12 21 C14 21 19 20 20 15" fill="none" stroke="${color}" stroke-width="2"/>`);
+    case 'fish':     return `<span style="display:inline-flex">${fishIcon(color, px)}</span>`;
+    default:         return wrap(`<circle cx="12" cy="12" r="9" fill="${color}"/>`);
+  }
+}
+
+function fishIcon(color, px = 16) {  const w = px, h = Math.round(px * 0.62);
   return `<svg width="${w}" height="${h}" viewBox="0 0 34 20" style="vertical-align:middle;flex-shrink:0">
     <polygon points="12,10 1,3 1,17" fill="${color}"/>
     <ellipse cx="20" cy="10" rx="13" ry="7" fill="${color}"/>
@@ -2781,12 +2899,47 @@ function toggleBatchMode(btn) {
   if (!batchMode) batchSelected.clear();
   renderTasks();
 }
-function toggleBatchSelect(id) {
-  if (batchSelected.has(id)) batchSelected.delete(id); else batchSelected.add(id);
-  document.getElementById('batch-count').textContent = batchSelected.size;
-  const el = document.getElementById('task-item-' + id);
-  if (el) el.classList.toggle('batch-selected', batchSelected.has(id));
+let lastBatchIndex = null;
+function currentTaskOrder() {
+  // ids in the order currently shown in the list
+  return Array.from(document.querySelectorAll('.task-item[data-id]')).map(el => parseInt(el.dataset.id, 10));
 }
+function setBatchSelected(id, on) {
+  if (on) batchSelected.add(id); else batchSelected.delete(id);
+  const el = document.getElementById('task-item-' + id);
+  if (el) el.classList.toggle('batch-selected', on);
+  const cb = el && el.querySelector('.batch-check'); if (cb) cb.checked = on;
+}
+function toggleBatchSelect(id, ev) {
+  const order = currentTaskOrder();
+  const idx = order.indexOf(id);
+  // shift-click: select the range from the last clicked to here
+  if (ev && ev.shiftKey && lastBatchIndex !== null) {
+    const [a, b] = [lastBatchIndex, idx].sort((x,y)=>x-y);
+    for (let i = a; i <= b; i++) setBatchSelected(order[i], true);
+  } else {
+    setBatchSelected(id, !batchSelected.has(id));
+  }
+  lastBatchIndex = idx;
+  document.getElementById('batch-count').textContent = batchSelected.size;
+}
+// Drag across checkboxes to select a run of them
+let batchDragging = false, batchDragValue = true;
+function startBatchDrag(id, ev) {
+  if (!batchMode) return;
+  batchDragging = true;
+  batchDragValue = !batchSelected.has(id); // set them all to the opposite of this one
+  setBatchSelected(id, batchDragValue);
+  lastBatchIndex = currentTaskOrder().indexOf(id);
+  document.getElementById('batch-count').textContent = batchSelected.size;
+  ev.preventDefault();
+}
+function overBatchDrag(id) {
+  if (!batchDragging) return;
+  setBatchSelected(id, batchDragValue);
+  document.getElementById('batch-count').textContent = batchSelected.size;
+}
+document.addEventListener('mouseup', () => { batchDragging = false; });
 function selectAllTasks() {
   document.querySelectorAll('.task-item[data-id]').forEach(el => {
     const id = parseInt(el.dataset.id, 10);
@@ -2797,6 +2950,7 @@ function selectAllTasks() {
 }
 function clearBatch() {
   batchSelected.clear();
+  lastBatchIndex = null;
   document.getElementById('batch-count').textContent = 0;
   document.querySelectorAll('.task-item').forEach(el => el.classList.remove('batch-selected'));
   document.querySelectorAll('.batch-check').forEach(cb => cb.checked = false);
@@ -2876,7 +3030,7 @@ function renderTasks() {
 
     return `<div class="task-item ${t.done ? 'done' : ''}" id="task-item-${t.id}" data-id="${t.id}">
       <div class="task-item-main">
-        ${batchMode ? `<input type="checkbox" class="batch-check" onclick="toggleBatchSelect(${t.id})" ${batchSelected.has(t.id)?'checked':''}>` : ''}
+        ${batchMode ? `<input type="checkbox" class="batch-check" onclick="toggleBatchSelect(${t.id}, event)" onmousedown="startBatchDrag(${t.id}, event)" onmouseenter="overBatchDrag(${t.id})" ${batchSelected.has(t.id)?'checked':''} title="Click, shift-click for a range, or drag across">` : ''}
         <div class="task-check ${t.done ? 'checked' : ''}" onclick="toggleTask(${t.id})">${t.done ? '✓' : ''}</div>
         ${hasSubs ? `<button class="sub-accordion" onclick="toggleCollapse(${t.id})" title="Show/hide subtasks">${collapsed?'▸':'▾'}</button>` : ''}
         <span class="task-text">${escHtml(t.text)}${t.linkedCheck ? ' <span style="font-size:11px;color:var(--ocean)" title="Linked to a meeting checkbox">🔗</span>' : ''}${hasSubs?` <span style="font-size:10px;opacity:0.6">(${subs.filter(s=>s.done).length}/${subs.length})</span>`:''}</span>
@@ -3124,7 +3278,7 @@ function renderWorldCup() {
       return `<div class="wc-chip">
         <button class="wc-check ${checkedToday ? 'checked' : ''}" ${isMe ? '' : 'disabled'}
           onclick="wcCheckIn('${c.id}')" title="${isMe ? 'Check in for today' : 'Only ' + escAttr(p.name) + ' can check this'}">${checkedToday ? '✓' : ''}</button>
-        <span class="wc-chip-label">${c.emoji} ${escHtml(c.label)}</span>
+        <span class="wc-chip-label" style="display:inline-flex;align-items:center;gap:5px;">${wcShapeSvg(c.shape||'circle', c.color||'#3B9BD4', 16)} ${escHtml(c.label)}</span>
         <span class="wc-streak">${rec.streak || 0}🔥<span style="font-size:9px;color:var(--ink-light);font-weight:700">${nearFish}</span></span>
       </div>`;
     }).join('');
@@ -3149,29 +3303,45 @@ function openWcCategoriesModal() {
   const myId = myPersonId();
   if (!myId) { showToast('Set your name to a crew member first! 🪪'); return; }
   const list = document.getElementById('wc-categories-list');
-  list.innerHTML = getWcCategories(myId).map(c => `
+  list.innerHTML = getWcCategories(myId).map(c => {
+    const color = c.color || '#3B9BD4';
+    const shape = c.shape || 'circle';
+    const shapeOpts = WC_SHAPES.map(s => `<option value="${s}" ${s===shape?'selected':''}>${s}</option>`).join('');
+    return `
     <div style="display:flex; gap:8px; align-items:center; background:var(--ocean-pale); padding:8px; border-radius:12px;" data-cid="${c.id}">
-      <input class="form-input wc-emoji" style="width:50px; text-align:center; font-size:18px; padding:6px" value="${escAttr(c.emoji)}" maxlength="3">
+      <span class="wc-shape-preview" style="width:24px;display:flex;justify-content:center;">${wcShapeSvg(shape, color, 22)}</span>
+      <select class="form-input wc-shape" style="width:92px; font-size:12px; padding:6px" onchange="previewWcShape(this)">${shapeOpts}</select>
+      <input type="color" class="color-input wc-color" value="${color}" title="Shape color" oninput="previewWcShape(this)">
       <input class="form-input wc-label" style="flex:1" value="${escAttr(c.label)}" placeholder="Habit name">
       <button class="task-delete" onclick="removeWcCategory('${c.id}')">×</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   document.getElementById('wc-categories-modal').style.display = 'flex';
+}
+function previewWcShape(el) {
+  const row = el.closest('[data-cid]');
+  const shape = row.querySelector('.wc-shape').value;
+  const color = row.querySelector('.wc-color').value;
+  const prev = row.querySelector('.wc-shape-preview');
+  if (prev) prev.innerHTML = wcShapeSvg(shape, color, 22);
 }
 function commitWcInputs() {
   const rows = document.querySelectorAll('#wc-categories-list [data-cid]');
   const updated = [];
   rows.forEach(row => {
     const id = row.getAttribute('data-cid');
-    const emoji = row.querySelector('.wc-emoji').value.trim() || '⭐';
+    const shape = row.querySelector('.wc-shape').value || 'circle';
+    const color = row.querySelector('.wc-color').value || '#3B9BD4';
     const label = row.querySelector('.wc-label').value.trim();
-    if (label) updated.push({ id, emoji, label });
+    if (label) updated.push({ id, shape, color, label });
   });
   return updated;
 }
 function addWcCategory() {
   const myId = myPersonId(); if (!myId) return;
   const cur = commitWcInputs();
-  cur.push({ id: 'wc' + Date.now() + Math.floor(Math.random()*999), emoji: '⭐', label: '' });
+  const pal = ['#E8536A','#3B9BD4','#7AAF72','#FF7A3C','#C9B8E8'];
+  cur.push({ id: 'wc' + Date.now() + Math.floor(Math.random()*999), shape: WC_SHAPES[cur.length % WC_SHAPES.length], color: pal[cur.length % pal.length], label: '' });
   setWcCategories(myId, cur);
   openWcCategoriesModal();
   setTimeout(() => { const l = document.querySelectorAll('.wc-label'); if (l.length) l[l.length-1].focus(); }, 30);
