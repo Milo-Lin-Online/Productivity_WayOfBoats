@@ -3390,14 +3390,14 @@ function renderLeaderboard() {
       const fish = fishArr.length;
       const focusMinutes = fishArr.reduce((sum, f) => sum + (f.minutes || 0), 0);
       const done = counts[p.id]?.done || 0;
-      const totalT = counts[p.id]?.total || 0;
-      const ratio = total > 0 ? (done / totalT) : 0;
+      const total = counts[p.id]?.total || 0;
+      const ratio = total > 0 ? (done / total) : 0;
       // total streak across all World Cup categories
       const wc = p.wc || {};
       const streak = getWcCategories(p.id).reduce((s, c) => s + ((wc[c.id] && wc[c.id].streak) || 0), 0);
       // NEW FORMULA: (fish*5) + (10 * (done/total)) + (streak/5) + (total tasks/5)
-      const points = Math.round((fish * 3) + (10 * ratio) + (streak / 5) + (totalT / 5));
-      return { ...p, done, totalT, fish, focusMinutes, streak, points };
+      const points = Math.round((fish * 3) + (10 * ratio) + (streak / 5) + (total / 5));
+      return { ...p, done, total, fish, focusMinutes, streak, points };
     })
     .sort((a, b) => b.points - a.points || b.done - a.done);
 
