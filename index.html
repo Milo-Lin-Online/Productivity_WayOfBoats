@@ -3390,14 +3390,14 @@ function renderLeaderboard() {
       const fish = fishArr.length;
       const focusMinutes = fishArr.reduce((sum, f) => sum + (f.minutes || 0), 0);
       const done = counts[p.id]?.done || 0;
-      const total = counts[p.id]?.total || 0;
-      const ratio = total > 0 ? (done / total) : 0;
+      const totalT = counts[p.id]?.total || 0;
+      const ratio = total > 0 ? (done / totalT) : 0;
       // total streak across all World Cup categories
       const wc = p.wc || {};
       const streak = getWcCategories(p.id).reduce((s, c) => s + ((wc[c.id] && wc[c.id].streak) || 0), 0);
-      // NEW FORMULA: (fish*10) + (10 * done/total) + (streak/5) + (total tasks/5)
-      const points = Math.round((fish * 10) + (10 * ratio) + (streak / 5) + (total / 5));
-      return { ...p, done, total, fish, focusMinutes, streak, points };
+      // NEW FORMULA: (fish*5) + (10 * (done/total)) + (streak/5) + (total tasks/5)
+      const points = Math.round((fish * 3) + (10 * ratio) + (streak / 5) + (totalT / 5));
+      return { ...p, done, totalT, fish, focusMinutes, streak, points };
     })
     .sort((a, b) => b.points - a.points || b.done - a.done);
 
@@ -4132,11 +4132,9 @@ function pomoTick() {
 }
 function catchFish() {
   playSound('ding');
-  // pick the best fish your focus length qualifies for, then a little randomness
-  const eligible = FISH_SPECIES.filter(f => pomoMinutes >= f.min);
-  const top = eligible[eligible.length - 1];
-  // 70% chance of the top eligible fish, else a random eligible one
-  const fish = Math.random() < 0.7 ? top : eligible[Math.floor(Math.random() * eligible.length)];
+  
+// fully random fish — any species, regardless of how long you studied
+  const fish = FISH_SPECIES[Math.floor(Math.random() * FISH_SPECIES.length)];
 
   const list = myFishList();
   list.push({ emoji: fish.emoji, name: fish.name, goal: pomoGoal, minutes: pomoMinutes, at: Date.now() });
