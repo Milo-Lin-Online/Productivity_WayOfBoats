@@ -1035,47 +1035,61 @@
   .fc-name { font-family:'Kalam',cursive; font-size: 18px; font-weight: 700; color: var(--ocean-deep); margin-top: 4px; }
   .fc-sub { font-size: 11px; font-weight: 700; color: var(--sunset-deep); }
 
-  /* ── CALENDAR ── */
-  #calendar-grid { display: flex; user-select: none; }
-  .cal-time-col { width: 56px; flex-shrink: 0; padding-top: 30px; }
-  .cal-time-label {
-    height: 48px; font-size: 10px; font-weight: 800; color: var(--ink-light);
-    text-align: right; padding-right: 6px; transform: translateY(-7px);
+  /* ── CONTENT CALENDAR ── */
+  .cal-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+  .cal-nav { display: flex; align-items: center; gap: 8px; }
+  .cal-arrow { padding: 4px 12px !important; font-size: 18px !important; line-height: 1; }
+  .cal-period-label { font-family: 'Kalam', cursive; font-size: 20px; font-weight: 700; color: var(--ocean-deep); min-width: 150px; text-align: center; }
+  .cal-toolbar-right { display: flex; align-items: center; gap: 10px; }
+  .cal-view-toggle { display: flex; background: var(--ocean-pale); border-radius: 20px; padding: 3px; }
+  .cal-view-btn { border: none; background: transparent; font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 13px; color: var(--ink-light); padding: 5px 14px; border-radius: 18px; cursor: pointer; }
+  .cal-view-btn.active { background: white; color: var(--ocean-deep); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+
+  #calendar-grid { user-select: none; }
+  .cal-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 4px; }
+  .cal-weekday { text-align: center; font-size: 11px; font-weight: 800; color: var(--ink-light); text-transform: uppercase; letter-spacing: 0.04em; padding: 4px 0; }
+  .cal-month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .cal-cell {
+    background: white; border: 2px solid var(--ocean-pale); border-radius: 10px;
+    min-height: 92px; padding: 4px; position: relative; display: flex; flex-direction: column; gap: 2px;
   }
-  .cal-day-col { flex: 1; border-left: 2px solid var(--ocean-pale); position: relative; }
-  .cal-day-head {
-    height: 30px; text-align: center; font-family: 'Kalam', cursive;
-    font-size: 15px; font-weight: 700; color: var(--ocean-deep);
-    border-bottom: 2px solid var(--ocean-light);
+  .cal-cell.other-month { opacity: 0.4; }
+  .cal-cell.today { border-color: var(--sunset); box-shadow: 0 0 0 2px var(--sunset-light); }
+  .cal-cell-date { font-size: 12px; font-weight: 800; color: var(--ink); align-self: flex-end; padding: 1px 4px; }
+  .cal-cell.today .cal-cell-date { background: var(--sunset); color: white; border-radius: 50%; min-width: 20px; text-align: center; }
+  .cal-week-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .cal-week-grid .cal-cell { min-height: 220px; }
+
+  .cal-post {
+    font-size: 10px; font-weight: 800; color: white;
+    border-radius: 6px; padding: 3px 6px; cursor: pointer;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    display: flex; align-items: center; gap: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
   }
-  .cal-slots { position: relative; }
-  .cal-slot {
-    height: 48px; border-bottom: 1px dashed var(--ocean-pale);
-    cursor: crosshair;
+  .cal-post.span-mid { border-radius: 0; margin-left: -5px; margin-right: -5px; }
+  .cal-post.span-start { border-top-right-radius: 0; border-bottom-right-radius: 0; margin-right: -5px; }
+  .cal-post.span-end { border-top-left-radius: 0; border-bottom-left-radius: 0; margin-left: -5px; }
+  .cal-post .cp-dot { font-size: 8px; }
+  .cal-post .cp-pub { font-size: 8px; opacity: 0.9; }
+  .post-color-dot { width: 26px; height: 26px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; }
+  .post-color-dot.sel { border-color: var(--ink); }
+  .form-row2 { display: flex; gap: 10px; }
+  .form-row2 .form-group { flex: 1; }
+
+  /* Reminder bar on the task board */
+  #post-reminder-bar { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .post-reminder {
+    display: flex; align-items: center; gap: 10px;
+    background: white; border-left: 6px solid var(--sunset);
+    border-radius: 12px; padding: 10px 14px;
+    box-shadow: 2px 3px 0 var(--ocean-pale);
+    font-size: 13px; font-weight: 700; color: var(--ink);
   }
-  .cal-slot:nth-child(odd) { background: rgba(140,208,240,0.05); }
-  .cal-slot:hover { background: rgba(255,122,60,0.08); }
-  .cal-event {
-    position: absolute; left: 3px; right: 3px;
-    border-radius: 8px; padding: 4px 6px;
-    font-size: 11px; font-weight: 800; color: white;
-    overflow: hidden; cursor: pointer;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.15);
-    border: 1.5px solid rgba(255,255,255,0.5);
-  }
-  .cal-event .ce-task { display:block; font-size:9px; font-weight:700; opacity:0.92; margin-top:2px; }
-  .cal-event-resize {
-    position: absolute; bottom: 0; left: 0; right: 0; height: 7px;
-    cursor: ns-resize; border-radius: 0 0 8px 8px;
-  }
-  .cal-event-resize:hover { background: rgba(255,255,255,0.35); }
-  .cal-drag-ghost {
-    position: absolute; left: 3px; right: 3px;
-    background: rgba(255,122,60,0.35); border: 2px dashed var(--sunset-deep);
-    border-radius: 8px; pointer-events: none;
-  }
-  .event-color-dot { width: 26px; height: 26px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; }
-  .event-color-dot.sel { border-color: var(--ink); }
+  .post-reminder .pr-days { margin-left: auto; font-weight: 900; padding: 3px 10px; border-radius: 20px; background: var(--sunset); color: white; font-size: 12px; white-space: nowrap; }
+  .post-reminder .pr-days.soon { background: var(--sail-red); }
+  .post-reminder .pr-days.today { background: var(--sail-red); animation: pulse 1.4s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.6;} }
 
   @media (max-width: 700px) {
     #sidebar { width: 54px; padding: 12px 4px; }
@@ -1105,7 +1119,8 @@
     #msgboard { bottom: 80px; left: 10px; }
     #board-panel { width: 200px; }
     /* calendar: allow horizontal scroll */
-    #calendar-grid { min-width: 520px; }
+    #calendar-grid { overflow-x: auto; }
+    .cal-week-grid { min-width: 640px; }
     .paper-card { padding: 14px; }
     .modal { width: 94%; padding: 18px; }
     /* World Cup cards already stack; make chips full-width friendly */
@@ -1256,7 +1271,7 @@
         <span class="emoji">🏆</span> <span>Leaderboard</span>
       </button>
       <button class="nav-btn" onclick="showSection('calendar')" id="nav-calendar">
-        <span class="emoji">🗓️</span> <span>Calendar</span>
+        <span class="emoji">📆</span> <span>Content</span>
       </button>
       <button class="nav-btn" onclick="showSection('worldcup')" id="nav-worldcup">
         <span class="emoji">🏆</span> <span>World Cup</span>
@@ -1319,6 +1334,8 @@
       <div class="page-header">
         <div class="page-title">✅ Task <span>Board</span></div>
       </div>
+
+      <div id="post-reminder-bar"></div>
 
       <div class="paper-card">
         <div class="task-input-row">
@@ -1394,13 +1411,28 @@
     <!-- CALENDAR SECTION -->
     <div id="section-calendar" class="page-section">
       <div class="page-header">
-        <div class="page-title">🗓️ Time<span>blocks</span></div>
-        <span style="font-size:13px; font-weight:700; color:#E8F1F8;">Click + drag on the grid to block out time</span>
+        <div class="page-title">📆 Content <span>Calendar</span></div>
+        <span style="font-size:13px; font-weight:700; color:#E8F1F8;">plan your social posts across the month</span>
       </div>
-      <div class="paper-card" style="padding:14px;">
+      <div class="paper-card" style="padding:16px;">
+        <div class="cal-toolbar">
+          <div class="cal-nav">
+            <button class="btn-secondary cal-arrow" onclick="calShift(-1)" title="Previous">‹</button>
+            <div class="cal-period-label" id="cal-period-label">—</div>
+            <button class="btn-secondary cal-arrow" onclick="calShift(1)" title="Next">›</button>
+            <button class="btn-secondary" onclick="calToday()" style="font-size:12px;">Today</button>
+          </div>
+          <div class="cal-toolbar-right">
+            <div class="cal-view-toggle">
+              <button id="cal-view-month" class="cal-view-btn active" onclick="setCalView('month')">Month</button>
+              <button id="cal-view-week" class="cal-view-btn" onclick="setCalView('week')">Week</button>
+            </div>
+            <button class="btn-primary" onclick="openPostModal(null)">＋ Add Post</button>
+          </div>
+        </div>
         <div id="calendar-grid"></div>
         <div style="font-size:12px; font-weight:600; color:var(--ink-light); margin-top:10px;">
-          Tip: drag down a column to create a block. Click a block to rename it or link a task. Drag the bottom edge to resize.
+          Each post shows a colored band from its <b>start</b> day to its <b>publish</b> day. Click any post to edit it or turn it into a task.
         </div>
       </div>
     </div>
@@ -1463,25 +1495,49 @@
   </div>
 </div>
 
-<!-- EVENT EDIT MODAL -->
-<div class="modal-overlay" id="event-modal" style="display:none" onclick="if(event.target===this) closeModal('event-modal')">
-  <div class="modal" style="max-width:420px">
-    <div class="modal-title">🗓️ Time Block</div>
+<!-- SOCIAL POST MODAL -->
+<div class="modal-overlay" id="post-modal" style="display:none" onclick="if(event.target===this) closeModal('post-modal')">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-title" id="post-modal-title">📱 Social Post</div>
     <div class="form-group">
-      <label class="form-label">What are you doing?</label>
-      <input class="form-input" id="event-title" placeholder="e.g. Deep work, Gym, Lunch…">
+      <label class="form-label">Title / hook</label>
+      <input class="form-input" id="post-title" placeholder="e.g. Launch teaser, Founder story…">
     </div>
     <div class="form-group">
-      <label class="form-label">Link a task (optional)</label>
-      <select class="form-input" id="event-task"></select>
+      <label class="form-label">Platform</label>
+      <select class="form-input" id="post-platform">
+        <option value="Instagram">📸 Instagram</option>
+        <option value="LinkedIn">💼 LinkedIn</option>
+        <option value="TikTok">🎵 TikTok</option>
+        <option value="X / Twitter">🐦 X / Twitter</option>
+        <option value="YouTube">▶️ YouTube</option>
+        <option value="Facebook">👍 Facebook</option>
+        <option value="Threads">🧵 Threads</option>
+        <option value="Blog">✍️ Blog</option>
+        <option value="Other">🌐 Other</option>
+      </select>
+    </div>
+    <div class="form-row2">
+      <div class="form-group">
+        <label class="form-label">Start / make it by</label>
+        <input class="form-input" type="date" id="post-start">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Publish date</label>
+        <input class="form-input" type="date" id="post-publish">
+      </div>
     </div>
     <div class="form-group">
       <label class="form-label">Color</label>
-      <div id="event-colors" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
+      <div id="post-colors" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
+    </div>
+    <div class="form-group" id="post-maketask-wrap">
+      <button class="btn-secondary" style="width:100%" onclick="makePostTask()">🛠️ Make Task (assign to me · 25 min · Social Media)</button>
+      <div id="post-task-note" style="font-size:11px;font-weight:700;color:var(--matcha);margin-top:5px;"></div>
     </div>
     <div class="modal-footer">
-      <button class="btn-secondary" onclick="deleteEvent()" style="color:var(--sail-red); border-color:var(--sail-red)">Delete</button>
-      <button class="btn-primary" onclick="saveEvent()">Save 💾</button>
+      <button class="btn-secondary" onclick="deletePost()" style="color:var(--sail-red); border-color:var(--sail-red)">Delete</button>
+      <button class="btn-primary" onclick="savePost()">Save 💾</button>
     </div>
   </div>
 </div>
@@ -1703,7 +1759,9 @@ let state = {
   wsSub: 'the immortal typhoon 🌊',
   activityTypes: null,
   events: [],
+  posts: [],            // social media posts for the content calendar
   messages: [],
+  calView: 'month',     // 'month' | 'week'
   wcCategories: null,   // World Cup streak categories
   personTemplates: {}   // { personId: "default note text for new meetings" }
 };
@@ -1731,7 +1789,7 @@ let applyingRemote = false; // guard so remote writes don't echo back
 let pushTimer = null;
 
 // Collections stored one-row-per-element (keyed by their .id).
-const ITEM_COLLECTIONS = ['people', 'tasks', 'meetings', 'events', 'messages'];
+const ITEM_COLLECTIONS = ['people', 'tasks', 'meetings', 'events', 'posts', 'messages'];
 // Singletons stored as a single row each.
 const SINGLETONS = ['templates', 'activityTypes', 'wcCategories', 'personTemplates', 'wsName', 'wsSub'];
 
@@ -2012,7 +2070,7 @@ function showSection(name) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('nav-' + name).classList.add('active');
   if (name === 'leaderboard') { renderLeaderboard(); renderPie(); }
-  if (name === 'tasks') renderTasks();
+  if (name === 'tasks') { renderTasks(); renderPostReminders(); }
   if (name === 'calendar') renderCalendar();
   if (name === 'worldcup') renderWorldCup();
 }
@@ -2725,7 +2783,8 @@ const DEFAULT_ACTIVITY_TYPES = [
   { id: 'money',     color: '#7AAF72', label: 'Money' },
   { id: 'gym',       color: '#FF7A3C', label: 'Gym' },
   { id: 'freelance', color: '#F4A460', label: 'Freelance' },
-  { id: 'career',    color: '#2876B0', label: 'Career' }
+  { id: 'career',    color: '#2876B0', label: 'Career' },
+  { id: 'social',    color: '#E8A8D8', label: 'Social Media' }
 ];
 function getActivityTypes() { return state.activityTypes || DEFAULT_ACTIVITY_TYPES; }
 function typeMeta(id) {
@@ -4178,184 +4237,245 @@ function renderPomo() {
 }
 
 // ══════════════════════════════════════════════
-// CALENDAR / TIMEBLOCKS
-// 2 days, 6am → 1am next day, 30-min slots
+// CONTENT CALENDAR (social media posts, month/week view)
 // ══════════════════════════════════════════════
-const CAL_START_HOUR = 6;          // 6 AM
-const CAL_SLOTS = 38;              // 6:00 .. 1:00 next day = 19 hours × 2
-const SLOT_PX = 24;               // each 30-min slot half of the 48px row → we render 48px per hour
-const CAL_SLOT_H = 24;            // px per 30-min slot
-const EVENT_COLORS = ['#FF7A3C','#3B9BD4','#7AAF72','#C9B8E8','#E8536A','#F4A460','#1E5E63','#E8A8D8'];
-let calDays = []; // [{label, dateKey}]
-let editingEventId = null;
-let pickedColor = EVENT_COLORS[0];
+const POST_COLORS = ['#FF7A3C','#3B9BD4','#7AAF72','#C9B8E8','#E8536A','#F4A460','#1E5E63','#E8A8D8'];
+const PLATFORM_EMOJI = { 'Instagram':'📸','LinkedIn':'💼','TikTok':'🎵','X / Twitter':'🐦','YouTube':'▶️','Facebook':'👍','Threads':'🧵','Blog':'✍️','Other':'🌐' };
+let calCursor = new Date();          // the month/week currently shown
+let editingPostId = null;
+let pickedPostColor = POST_COLORS[0];
 
-function slotToLabel(slotIndex) {
-  const totalMin = CAL_START_HOUR * 60 + slotIndex * 30;
-  let h = Math.floor(totalMin / 60) % 24;
-  const m = totalMin % 60;
-  const ampm = h < 12 ? 'AM' : 'PM';
-  let h12 = h % 12; if (h12 === 0) h12 = 12;
-  return `${h12}:${String(m).padStart(2,'0')} ${ampm}`;
+// local YYYY-MM-DD (avoids UTC off-by-one from toISOString)
+function ymd(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
+function parseYmd(s) { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); }
+function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate()+n); return x; }
+function startOfWeek(d) { const x = new Date(d); x.setDate(x.getDate() - x.getDay()); x.setHours(0,0,0,0); return x; } // Sunday start
+function sameYmd(a, b) { return ymd(a) === ymd(b); }
+function daysBetween(a, b) { // whole days from a→b (date-only)
+  const A = new Date(a.getFullYear(),a.getMonth(),a.getDate());
+  const B = new Date(b.getFullYear(),b.getMonth(),b.getDate());
+  return Math.round((B - A) / 86400000);
+}
+
+function setCalView(v) {
+  state.calView = v;
+  document.getElementById('cal-view-month').classList.toggle('active', v==='month');
+  document.getElementById('cal-view-week').classList.toggle('active', v==='week');
+  renderCalendar();
+}
+function calShift(dir) {
+  if (state.calView === 'week') calCursor = addDays(calCursor, dir*7);
+  else calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth()+dir, 1);
+  renderCalendar();
+}
+function calToday() { calCursor = new Date(); renderCalendar(); }
 
 function renderCalendar() {
   const grid = document.getElementById('calendar-grid');
   if (!grid) return;
-  // two days: today + tomorrow
-  const today = new Date();
-  calDays = [0,1].map(off => {
-    const d = new Date(today); d.setDate(today.getDate()+off);
-    return { label: d.toLocaleDateString('en-US',{weekday:'short', month:'short', day:'numeric'}),
-             key: d.toISOString().split('T')[0] };
-  });
+  const label = document.getElementById('cal-period-label');
+  const weekdays = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  let days = [];
 
-  // time labels column (every hour)
-  let timeCol = '<div class="cal-time-col">';
-  for (let s = 0; s < CAL_SLOTS; s += 2) {
-    timeCol += `<div class="cal-time-label" style="height:${CAL_SLOT_H*2}px">${slotToLabel(s)}</div>`;
+  if (state.calView === 'week') {
+    const start = startOfWeek(calCursor);
+    for (let i=0;i<7;i++) days.push(addDays(start,i));
+    if (label) {
+      const end = addDays(start,6);
+      label.textContent = start.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' – ' + end.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    }
+  } else {
+    const first = new Date(calCursor.getFullYear(), calCursor.getMonth(), 1);
+    const gridStart = startOfWeek(first);
+    for (let i=0;i<42;i++) days.push(addDays(gridStart,i)); // 6 weeks
+    if (label) label.textContent = calCursor.toLocaleDateString('en-US',{month:'long',year:'numeric'});
   }
-  timeCol += '</div>';
 
-  let cols = '';
-  calDays.forEach((day, di) => {
-    let slots = '';
-    for (let s = 0; s < CAL_SLOTS; s++) {
-      slots += `<div class="cal-slot" data-day="${di}" data-slot="${s}" style="height:${CAL_SLOT_H}px"></div>`;
-    }
-    cols += `<div class="cal-day-col" data-day="${di}">
-      <div class="cal-day-head">${day.label}</div>
-      <div class="cal-slots" id="cal-slots-${di}" style="height:${CAL_SLOTS*CAL_SLOT_H}px">${slots}</div>
+  const today = new Date();
+  const curMonth = calCursor.getMonth();
+  const headRow = `<div class="cal-weekdays">${weekdays.map(w=>`<div class="cal-weekday">${w}</div>`).join('')}</div>`;
+  const gridClass = state.calView === 'week' ? 'cal-week-grid' : 'cal-month-grid';
+
+  const cells = days.map(d => {
+    const isToday = sameYmd(d, today);
+    const other = state.calView === 'month' && d.getMonth() !== curMonth;
+    const posts = postsForDay(d);
+    const postHtml = posts.map(seg => {
+      const spanClass = seg.spanStart && seg.spanEnd ? '' : (seg.spanStart ? 'span-start' : (seg.spanEnd ? 'span-end' : 'span-mid'));
+      const emoji = PLATFORM_EMOJI[seg.post.platform] || '🌐';
+      const showText = seg.spanStart || d.getDay() === 0; // show label at start or week wrap
+      return `<div class="cal-post ${spanClass}" style="background:${seg.post.color||POST_COLORS[0]}" onclick="openPostModal('${seg.post.id}')" title="${escAttr(seg.post.title)} · ${escAttr(seg.post.platform)}">
+        ${showText ? `${emoji} ${escHtml(seg.post.title || 'Untitled')}${seg.isPublishDay?' <span class=\"cp-pub\">🚀</span>':''}` : (seg.isPublishDay?'🚀':'&nbsp;')}
+      </div>`;
+    }).join('');
+    return `<div class="cal-cell ${other?'other-month':''} ${isToday?'today':''}" ondblclick="quickAddPost('${ymd(d)}')">
+      <span class="cal-cell-date">${d.getDate()}</span>
+      ${postHtml}
     </div>`;
-  });
-
-  grid.innerHTML = timeCol + cols;
-
-  // render existing events
-  state.events.forEach(ev => renderEvent(ev));
-
-  // wire drag-to-create on each day's slot container
-  calDays.forEach((day, di) => {
-    const cont = document.getElementById('cal-slots-' + di);
-    attachCreateDrag(cont, di);
-  });
-}
-
-function renderEvent(ev) {
-  const cont = document.getElementById('cal-slots-' + ev.day);
-  if (!cont) return;
-  const el = document.createElement('div');
-  el.className = 'cal-event';
-  el.style.top = (ev.start * CAL_SLOT_H) + 'px';
-  el.style.height = ((ev.end - ev.start) * CAL_SLOT_H - 3) + 'px';
-  el.style.background = ev.color || EVENT_COLORS[0];
-  el.dataset.id = ev.id;
-  const task = ev.taskId ? state.tasks.find(t => t.id === ev.taskId) : null;
-  el.innerHTML = `${escHtml(ev.title || 'Untitled')}${task ? `<span class="ce-task">✅ ${escHtml(task.text || 'task')}</span>` : ''}
-    <div class="cal-event-resize" data-id="${ev.id}"></div>`;
-  el.addEventListener('click', (e) => {
-    if (e.target.classList.contains('cal-event-resize')) return;
-    openEventModal(ev.id);
-  });
-  cont.appendChild(el);
-  attachResize(el.querySelector('.cal-event-resize'), ev);
-}
-
-function attachCreateDrag(cont, dayIdx) {
-  cont.addEventListener('mousedown', (e) => {
-    if (e.target.classList.contains('cal-event') || e.target.classList.contains('cal-event-resize') || e.target.closest('.cal-event')) return;
-    const rect = cont.getBoundingClientRect();
-    const startSlot = Math.floor((e.clientY - rect.top) / CAL_SLOT_H);
-    let ghost = document.createElement('div');
-    ghost.className = 'cal-drag-ghost';
-    ghost.style.top = (startSlot * CAL_SLOT_H) + 'px';
-    ghost.style.height = CAL_SLOT_H + 'px';
-    cont.appendChild(ghost);
-    let endSlot = startSlot;
-
-    function move(ev2) {
-      const cur = Math.max(0, Math.min(CAL_SLOTS, Math.ceil((ev2.clientY - rect.top) / CAL_SLOT_H)));
-      endSlot = Math.max(startSlot + 1, cur);
-      ghost.style.top = (Math.min(startSlot, endSlot) * CAL_SLOT_H) + 'px';
-      ghost.style.height = (Math.abs(endSlot - startSlot) * CAL_SLOT_H) + 'px';
-    }
-    function up() {
-      document.removeEventListener('mousemove', move);
-      document.removeEventListener('mouseup', up);
-      ghost.remove();
-      const s = Math.min(startSlot, endSlot);
-      const en = Math.max(startSlot + 1, endSlot);
-      const ev = { id: 'e'+Date.now()+Math.floor(Math.random()*999), day: dayIdx, start: s, end: en, title: '', color: EVENT_COLORS[Math.floor(Math.random()*EVENT_COLORS.length)], taskId: null };
-      state.events.push(ev);
-      save();
-      renderCalendar();
-      openEventModal(ev.id);
-    }
-    document.addEventListener('mousemove', move);
-    document.addEventListener('mouseup', up);
-  });
-}
-
-function attachResize(handle, ev) {
-  handle.addEventListener('mousedown', (e) => {
-    e.stopPropagation();
-    const cont = document.getElementById('cal-slots-' + ev.day);
-    const rect = cont.getBoundingClientRect();
-    function move(ev2) {
-      const cur = Math.max(ev.start + 1, Math.min(CAL_SLOTS, Math.ceil((ev2.clientY - rect.top) / CAL_SLOT_H)));
-      ev.end = cur;
-      renderCalendar();
-    }
-    function up() {
-      document.removeEventListener('mousemove', move);
-      document.removeEventListener('mouseup', up);
-      save();
-    }
-    document.addEventListener('mousemove', move);
-    document.addEventListener('mouseup', up);
-  });
-}
-
-function openEventModal(id) {
-  editingEventId = id;
-  const ev = state.events.find(e => e.id === id);
-  if (!ev) return;
-  document.getElementById('event-title').value = ev.title || '';
-  pickedColor = ev.color || EVENT_COLORS[0];
-  // task dropdown
-  const tsel = document.getElementById('event-task');
-  tsel.innerHTML = `<option value="">— none —</option>` + state.tasks.map(t => {
-    const p = personById(t.assigneeId);
-    const who = p ? ` (${p.name})` : '';
-    return `<option value="${t.id}" ${ev.taskId===t.id?'selected':''}>${escHtml(t.text || 'untitled task')}${who}</option>`;
   }).join('');
-  // colors
-  const cdiv = document.getElementById('event-colors');
-  cdiv.innerHTML = EVENT_COLORS.map(c => `<div class="event-color-dot ${c===pickedColor?'sel':''}" style="background:${c}" onclick="pickEventColor('${c}', this)"></div>`).join('');
-  document.getElementById('event-modal').style.display = 'flex';
-  setTimeout(() => document.getElementById('event-title').focus(), 50);
+
+  grid.innerHTML = headRow + `<div class="${gridClass}">${cells}</div>`;
 }
-function pickEventColor(c, el) {
-  pickedColor = c;
-  document.querySelectorAll('.event-color-dot').forEach(d => d.classList.remove('sel'));
+
+// For a given day, return the posts that overlap it (start..publish inclusive) as segments.
+function postsForDay(d) {
+  const key = ymd(d);
+  const segs = [];
+  (state.posts || []).forEach(post => {
+    const startK = post.start || post.publish;
+    const pubK = post.publish || post.start;
+    if (!startK || !pubK) return;
+    if (key >= startK && key <= pubK) {
+      segs.push({
+        post,
+        spanStart: key === startK,
+        spanEnd: key === pubK,
+        isPublishDay: key === pubK
+      });
+    }
+  });
+  return segs;
+}
+
+function quickAddPost(dayKey) { openPostModal(null, dayKey); }
+
+function openPostModal(id, presetDay) {
+  editingPostId = id;
+  let post;
+  if (id) {
+    post = state.posts.find(p => p.id === id);
+    if (!post) return;
+    document.getElementById('post-modal-title').textContent = '📱 Edit Post';
+  } else {
+    const day = presetDay || ymd(new Date());
+    post = { id: null, title: '', platform: 'Instagram', start: day, publish: day, color: POST_COLORS[Math.floor(Math.random()*POST_COLORS.length)], taskId: null };
+    document.getElementById('post-modal-title').textContent = '📱 New Post';
+  }
+  document.getElementById('post-title').value = post.title || '';
+  document.getElementById('post-platform').value = post.platform || 'Instagram';
+  document.getElementById('post-start').value = post.start || '';
+  document.getElementById('post-publish').value = post.publish || '';
+  pickedPostColor = post.color || POST_COLORS[0];
+  const cdiv = document.getElementById('post-colors');
+  cdiv.innerHTML = POST_COLORS.map(c => `<div class="post-color-dot ${c===pickedPostColor?'sel':''}" style="background:${c}" onclick="pickPostColor('${c}', this)"></div>`).join('');
+  const note = document.getElementById('post-task-note');
+  note.textContent = (post.taskId && state.tasks.find(t=>t.id===post.taskId)) ? '✓ A task already exists for this post.' : '';
+  document.getElementById('post-modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('post-title').focus(), 50);
+}
+function pickPostColor(c, el) {
+  pickedPostColor = c;
+  document.querySelectorAll('.post-color-dot').forEach(d => d.classList.remove('sel'));
   el.classList.add('sel');
 }
-function saveEvent() {
-  const ev = state.events.find(e => e.id === editingEventId);
-  if (!ev) return;
-  ev.title = document.getElementById('event-title').value.trim() || 'Untitled';
-  ev.taskId = document.getElementById('event-task').value || null;
-  ev.color = pickedColor;
+function readPostForm() {
+  let start = document.getElementById('post-start').value;
+  let publish = document.getElementById('post-publish').value;
+  if (start && publish && start > publish) { const t = start; start = publish; publish = t; } // keep order sane
+  return {
+    title: document.getElementById('post-title').value.trim() || 'Untitled',
+    platform: document.getElementById('post-platform').value,
+    start: start || publish,
+    publish: publish || start,
+    color: pickedPostColor
+  };
+}
+function savePost() {
+  const form = readPostForm();
+  if (!form.start && !form.publish) { showToast('Pick at least a publish date 📅'); return; }
+  if (editingPostId) {
+    const post = state.posts.find(p => p.id === editingPostId);
+    Object.assign(post, form);
+  } else {
+    state.posts.push({ id: 'post'+Date.now()+Math.floor(Math.random()*999), taskId: null, ...form });
+  }
   save();
-  closeModal('event-modal');
+  closeModal('post-modal');
   renderCalendar();
+  renderPostReminders();
   playSound('click');
 }
-function deleteEvent() {
-  state.events = state.events.filter(e => e.id !== editingEventId);
+function deletePost() {
+  if (!editingPostId) { closeModal('post-modal'); return; }
+  state.posts = state.posts.filter(p => p.id !== editingPostId);
   save();
-  closeModal('event-modal');
+  closeModal('post-modal');
   renderCalendar();
+  renderPostReminders();
+}
+// Turn the currently-open post into a task for the current user.
+function makePostTask() {
+  const form = readPostForm();
+  // persist the post first (so the task can link to it)
+  let post;
+  if (editingPostId) {
+    post = state.posts.find(p => p.id === editingPostId);
+    Object.assign(post, form);
+  } else {
+    post = { id: 'post'+Date.now()+Math.floor(Math.random()*999), taskId: null, ...form };
+    state.posts.push(post);
+    editingPostId = post.id;
+  }
+  const myId = myPersonId();
+  if (!myId) { showToast('Set your name to a crew member first! 🪪'); return; }
+  const task = {
+    id: Date.now(),
+    text: `Make ${post.platform} post: ${post.title}`,
+    assigneeId: myId,
+    priority: 'medium',
+    type: 'social',
+    mins: 25,
+    done: false,
+    source: 'post',
+    postId: post.id,
+    subtasks: [],
+    collapsed: false
+  };
+  state.tasks.push(task);
+  post.taskId = task.id;
+  save();
+  renderCalendar();
+  renderTasks();
+  renderLeaderboard();
+  renderPostReminders();
+  document.getElementById('post-task-note').textContent = '✓ Task added to your board!';
+  showToast('🛠️ Task created — check your board!');
+}
+
+// ══════════════════════════════════════════════
+// POST REMINDER BAR (on the task board)
+// ══════════════════════════════════════════════
+function renderPostReminders() {
+  const bar = document.getElementById('post-reminder-bar');
+  if (!bar) return;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const items = [];
+  (state.posts || []).forEach(post => {
+    // remind about start day and publish day within the next 7 days (and overdue-ish today)
+    [['start','✏️','Start making'],['publish','🚀','Publish']].forEach(([field, icon, verb]) => {
+      const k = post[field];
+      if (!k) return;
+      const diff = daysBetween(today, parseYmd(k));
+      if (diff >= 0 && diff <= 7) {
+        items.push({ post, field, icon, verb, diff, dateK: k });
+      }
+    });
+  });
+  items.sort((a,b) => a.diff - b.diff);
+  if (items.length === 0) { bar.innerHTML = ''; return; }
+  bar.innerHTML = items.map(it => {
+    const emoji = PLATFORM_EMOJI[it.post.platform] || '🌐';
+    const dateLabel = parseYmd(it.dateK).toLocaleDateString('en-US',{weekday:'short', month:'short', day:'numeric'});
+    const daysTxt = it.diff === 0 ? 'TODAY' : (it.diff === 1 ? 'tomorrow' : `${it.diff} days`);
+    const cls = it.diff === 0 ? 'today' : (it.diff <= 2 ? 'soon' : '');
+    return `<div class="post-reminder" style="border-left-color:${it.post.color||'#FF7A3C'}" onclick="showSection('calendar')">
+      <span style="font-size:16px">${it.icon}</span>
+      <span>${it.verb} ${emoji} <b>${escHtml(it.post.title)}</b> (${escHtml(it.post.platform)}) — ${dateLabel}</span>
+      <span class="pr-days ${cls}">${daysTxt}</span>
+    </div>`;
+  }).join('');
 }
 
 // ══════════════════════════════════════════════
@@ -4370,6 +4490,9 @@ wireBoats();
 wireWaterSplash();
 renderPomo();
 renderBoard();
+// initialize content calendar view toggle + task-board reminders
+if (state.calView === 'week') setCalView('week'); else setCalView('month');
+renderPostReminders();
 
 // Prompt for name on first visit
 if (!state.myName) {
