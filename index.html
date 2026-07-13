@@ -333,7 +333,7 @@
   /* Person columns */
   .people-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    grid-template-columns: repeat(3, 1fr);
     gap: 12px;
   }
   .person-col {
@@ -969,6 +969,7 @@
     box-shadow: 4px 6px 0 var(--ocean-light), 0 4px 14px rgba(0,0,0,0.12);
     padding: 16px;
     width: 220px;
+    box-sizing: border-box;
     text-align: center;
     display: none;
   }
@@ -981,6 +982,31 @@
     background: white; color: var(--ink); text-align: center;
   }
   .pomo-goal:focus { outline: none; border-color: var(--sunset); }
+  .pomo-todo { background: var(--ocean-pale); border-radius: 12px; padding: 8px; margin-bottom: 10px; }
+  .pomo-todo-title { font-size: 11px; font-weight: 900; color: var(--ocean-deep); text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 6px; }
+  #pomo-todo-list { display: flex; flex-direction: column; gap: 4px; max-height: 140px; overflow-y: auto; }
+  .pomo-todo-item { display: flex; align-items: center; gap: 6px; background: white; border-radius: 8px; padding: 4px 6px; }
+  .pomo-todo-check {
+    width: 16px; height: 16px; border-radius: 5px; border: 2px solid var(--matcha);
+    background: white; cursor: pointer; flex-shrink: 0; font-size: 10px;
+    display: flex; align-items: center; justify-content: center; color: white;
+  }
+  .pomo-todo-check.checked { background: var(--matcha); }
+  .pomo-todo-text { flex: 1; font-size: 11px; font-weight: 700; color: var(--ink); border: none; background: transparent; }
+  .pomo-todo-text.done { text-decoration: line-through; opacity: 0.5; }
+  .pomo-todo-mins {
+    width: 40px; text-align: center; font-size: 10px; font-weight: 800; color: var(--ink-light);
+    border: 1.5px solid var(--lavender); border-radius: 10px; background: white; padding: 1px 2px; flex-shrink: 0;
+  }
+  .pomo-todo-del { background: none; border: none; color: var(--sail-red); cursor: pointer; font-size: 13px; opacity: 0.5; flex-shrink: 0; }
+  .pomo-todo-del:hover { opacity: 1; }
+  .pomo-todo-add { display: flex; gap: 5px; margin-top: 6px; }
+  .pomo-todo-input { flex: 1; min-width: 0; max-width: 100%; box-sizing: border-box; border: 2px solid var(--ocean-light); border-radius: 10px; padding: 5px 8px; font-family: 'Nunito', sans-serif; font-size: 11px; font-weight: 600; background: white; }
+  select.pomo-todo-input { text-overflow: ellipsis; }
+  .pomo-todo-input:focus { outline: none; border-color: var(--sunset); }
+  .pomo-todo-addbtn { border: none; background: var(--sunset); color: white; border-radius: 9px; width: 30px; cursor: pointer; font-size: 15px; font-weight: 800; flex-shrink: 0; }
+  .pomo-suggest { font-size: 10px; font-weight: 800; color: var(--ocean-deep); margin-top: 6px; text-align: center; }
+  .pomo-suggest a { color: var(--sunset-deep); cursor: pointer; text-decoration: underline; }
   .pomo-set-row { display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 6px; }
   .pomo-step {
     width: 26px; height: 26px; border-radius: 50%;
@@ -1091,6 +1117,11 @@
   .post-reminder .pr-days.today { background: var(--sail-red); animation: pulse 1.4s infinite; }
   @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.6;} }
 
+  /* medium screens: 2 person columns per meeting so 3 don't get cramped */
+  @media (min-width: 701px) and (max-width: 1050px) {
+    .people-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
   @media (max-width: 700px) {
     #sidebar { width: 54px; padding: 12px 4px; }
     #sidebar .nav-btn span:not(.emoji) { display: none; }
@@ -1200,6 +1231,18 @@
 
     <!-- goal -->
     <input id="pomo-goal" class="pomo-goal" placeholder="What are you fishing for? (your goal)" maxlength="80">
+
+    <!-- THINGS TO DO RIGHT NOW (from your Task Board) -->
+    <div class="pomo-todo">
+      <div class="pomo-todo-title">⚡ Things to do right now</div>
+      <div id="pomo-todo-list"></div>
+      <div class="pomo-todo-add">
+        <select id="pomo-task-picker" class="pomo-todo-input" onchange="addPomoTaskFromBoard()">
+          <option value="">＋ add a task…</option>
+        </select>
+      </div>
+      <div id="pomo-suggest" class="pomo-suggest"></div>
+    </div>
 
     <!-- editable minutes -->
     <div class="pomo-set-row">
@@ -3034,6 +3077,7 @@ function applyBatch() {
 
 function renderTasks() {
   renderAssigneeSelect();
+  if (typeof renderPomoTodos === 'function') renderPomoTodos();
   const list = document.getElementById('task-list');
   let tasks = state.tasks.slice();
   if (state.currentFilter === 'open') tasks = tasks.filter(t => !t.done);
@@ -4117,11 +4161,14 @@ let pomoRemaining = pomoMinutes * 60;
 let pomoRunning = false;
 let pomoInterval = null;
 let pomoGoal = '';
+let pomoEndTime = null;      // wall-clock ms timestamp when the session should end
+let pomoTaskIds = [];        // ids of REAL board tasks pulled into this session
+let userSetMinutes = false;  // did the user manually override the suggested time?
+
 // caught fish stored per-person so it can feed the leaderboard
 function myFishList() {
   const id = myPersonId();
   if (!id) {
-    // not matched to a crew member yet — keep a personal stash
     try { return JSON.parse(localStorage.getItem('boats_myfish') || '[]'); } catch(e){ return []; }
   }
   const p = personById(id);
@@ -4135,7 +4182,6 @@ function saveMyFish(list) {
   p.fish = list;
   save();
 }
-// match my display name to a crew member (so fish count toward the leaderboard)
 function myPersonId() {
   const n = (state.myName || '').trim().toLowerCase();
   if (!n) return null;
@@ -4143,80 +4189,236 @@ function myPersonId() {
   return p ? p.id : null;
 }
 
+// ── THINGS TO DO RIGHT NOW (pulled from the Task Board) ──
+// Helper: my open (not-done) board tasks that aren't already in the session.
+function myOpenBoardTasks() {
+  const myId = myPersonId();
+  return state.tasks.filter(t => !t.done && (!myId || t.assigneeId === myId));
+}
+// The task objects currently in this session (still resolved live from the board).
+function pomoSessionTasks() {
+  return pomoTaskIds.map(id => state.tasks.find(t => t.id === id)).filter(Boolean);
+}
+function addPomoTaskFromBoard() {
+  const sel = document.getElementById('pomo-task-picker');
+  if (!sel) return;
+  const id = parseInt(sel.value, 10);
+  if (!id) return;
+  if (!pomoTaskIds.includes(id)) pomoTaskIds.push(id);
+  sel.value = '';
+  renderPomoTodos();
+  maybeSuggestTime();
+}
+function togglePomoTask(id) {
+  // toggle the REAL board task so it stays in sync everywhere
+  toggleTask(id);
+  renderPomoTodos();
+  checkPomoAllDone();
+}
+function removePomoTask(id) {
+  // just removes it from this session (doesn't delete the board task)
+  pomoTaskIds = pomoTaskIds.filter(x => x !== id);
+  renderPomoTodos();
+  maybeSuggestTime();
+}
+function renderPomoTodos() {
+  // refresh the picker of available board tasks
+  const picker = document.getElementById('pomo-task-picker');
+  if (picker) {
+    const avail = myOpenBoardTasks().filter(t => !pomoTaskIds.includes(t.id));
+    const myId = myPersonId();
+    picker.innerHTML = `<option value="">${myId ? '＋ add one of your tasks…' : '＋ add a task…'}</option>` +
+      avail.map(t => `<option value="${t.id}">${escHtml(t.text || 'untitled')} · ${formatMinutes(taskEffectiveMins(t))}</option>`).join('');
+  }
+  const box = document.getElementById('pomo-todo-list');
+  if (!box) return;
+  const tasks = pomoSessionTasks();
+  if (tasks.length === 0) {
+    box.innerHTML = `<div style="font-size:10px;font-weight:600;color:var(--ink-light);text-align:center;padding:4px;">Pull in tasks from your board below 👇</div>`;
+    return;
+  }
+  box.innerHTML = tasks.map(t => {
+    const meta = typeMeta(t.type || getActivityTypes()[0].id);
+    return `
+    <div class="pomo-todo-item">
+      <div class="pomo-todo-check ${t.done?'checked':''}" onclick="togglePomoTask(${t.id})">${t.done?'✓':''}</div>
+      <span class="pomo-todo-text ${t.done?'done':''}" title="${escAttr(meta.label)}">${escHtml(t.text || 'untitled')}</span>
+      <span class="pomo-todo-mins" title="From the board">${formatMinutes(taskEffectiveMins(t))}</span>
+      <button class="pomo-todo-del" onclick="removePomoTask(${t.id})" title="Remove from this session">×</button>
+    </div>`;
+  }).join('');
+}
+// suggest total time from the session's board tasks; user can still override
+function pomoTodosTotalMins() {
+  return pomoSessionTasks().reduce((s, t) => s + taskEffectiveMins(t), 0);
+}
+function maybeSuggestTime() {
+  const total = pomoTodosTotalMins();
+  const sug = document.getElementById('pomo-suggest');
+  if (!pomoRunning && total > 0 && !userSetMinutes) {
+    pomoMinutes = Math.max(1, Math.min(180, total));
+    pomoRemaining = pomoMinutes * 60;
+    const minEl = document.getElementById('pomo-minutes');
+    if (minEl) minEl.value = pomoMinutes;
+    renderPomo();
+  }
+  if (sug) {
+    if (total > 0) {
+      sug.innerHTML = `⏱️ These tasks add up to <b>${formatMinutes(total)}</b>. ` +
+        (userSetMinutes ? `<a onclick="usePomoSuggested()">use this</a>` : `Suggested & set. <a onclick="clearPomoSuggest()">edit manually</a>`);
+    } else {
+      sug.innerHTML = '';
+    }
+  }
+}
+function usePomoSuggested() {
+  userSetMinutes = false;
+  maybeSuggestTime();
+}
+function clearPomoSuggest() {
+  userSetMinutes = true;
+  maybeSuggestTime();
+}
+// if every session task is checked off, end early with the bonus fish
+function checkPomoAllDone() {
+  const tasks = pomoSessionTasks();
+  if (pomoRunning && tasks.length > 0 && tasks.every(t => t.done)) {
+    finishPomoSession(true);
+  }
+}
+
 function togglePomo() {
   document.getElementById('pomodoro').classList.toggle('pomo-collapsed');
 }
 function bumpPomoMinutes(delta) {
+  userSetMinutes = true;
   setPomoMinutes(pomoMinutes + delta);
   document.getElementById('pomo-minutes').value = pomoMinutes;
+  maybeSuggestTime();
 }
 function setPomoMinutes(val) {
   let v = Math.max(1, Math.min(180, parseInt(val, 10) || 25));
   pomoMinutes = v;
   localStorage.setItem('boats_pomo_min', String(v));
+  if (document.activeElement === document.getElementById('pomo-minutes')) userSetMinutes = true;
   if (!pomoRunning) { pomoRemaining = v * 60; renderPomo(); }
 }
 function startPausePomo() {
   const btn = document.getElementById('pomo-startbtn');
   const toggle = document.getElementById('pomo-toggle');
   if (pomoRunning) {
+    // pause: freeze remaining from the wall clock
     pomoRunning = false;
+    pomoRemaining = Math.max(0, Math.round((pomoEndTime - Date.now()) / 1000));
+    pomoEndTime = null;
     stopPomoTick();
     btn.textContent = '🎣 Resume';
     document.getElementById('pomodoro').classList.remove('pomo-running');
     toggle.classList.remove('casting');
   } else {
-    // lock in the goal when casting
     pomoGoal = document.getElementById('pomo-goal').value.trim();
     document.getElementById('pomo-goal-display').textContent = pomoGoal ? '🎯 ' + pomoGoal : '';
     pomoRunning = true;
+    // anchor the end to a real timestamp so background tabs stay accurate
+    pomoEndTime = Date.now() + pomoRemaining * 1000;
     btn.textContent = '⏸ Pause';
     document.getElementById('pomodoro').classList.add('pomo-running');
     toggle.classList.add('casting');
-    pomoInterval = setInterval(pomoTick, 1000);
+    stopPomoTick();
+    pomoInterval = setInterval(pomoTick, 250); // finer tick; real time comes from the clock
   }
 }
 function stopPomoTick() { if (pomoInterval) { clearInterval(pomoInterval); pomoInterval = null; } }
 function pomoTick() {
-  pomoRemaining--;
+  if (!pomoRunning || pomoEndTime == null) return;
+  pomoRemaining = Math.max(0, Math.round((pomoEndTime - Date.now()) / 1000));
   if (pomoRemaining <= 0) {
-    stopPomoTick();
-    pomoRunning = false;
-    document.getElementById('pomo-toggle').classList.remove('casting');
-    document.getElementById('pomodoro').classList.remove('pomo-running');
-    catchFish();
+    // time's up.
+    const tasks = pomoSessionTasks();
+    const hadTasks = tasks.length > 0;
+    const allDone = hadTasks && tasks.every(t => t.done);
+    if (hadTasks && !allDone) {
+      // unfinished tasks → the "all tasks" bonus is off. But a ≥45-min session
+      // still earns its completion fish. Under 45 with unfinished tasks → nothing.
+      if (pomoMinutes >= POMO_FISH_MIN_MINUTES) {
+        finishPomoSession(false);           // completion fish only
+      } else {
+        stopPomoTick();
+        pomoRunning = false;
+        pomoEndTime = null;
+        pomoRemaining = 0;
+        document.getElementById('pomo-toggle').classList.remove('casting');
+        document.getElementById('pomodoro').classList.remove('pomo-running');
+        document.getElementById('pomo-startbtn').textContent = '🎣 Cast';
+        showToast("⏳ Time's up — tasks unfinished, no catch this time.");
+        renderPomo();
+      }
+    } else {
+      // no tasks, or every task finished exactly at time-up → bonus applies if all done
+      finishPomoSession(allDone);
+    }
     return;
   }
   renderPomo();
 }
-function catchFish() {
-  playSound('ding');
-  
-// fully random fish — any species, regardless of how long you studied
-  const fish = FISH_SPECIES[Math.floor(Math.random() * FISH_SPECIES.length)];
 
+// Called when a session completes. earlyBonus = finished all tasks before time ran out.
+// Fish rules (the two rewards are INDEPENDENT and can stack):
+//   • Completion fish: awarded whenever the session was ≥ 45 min.
+//   • Bonus fish: awarded whenever ALL session tasks got finished.
+//   So finishing all tasks in a ≥45-min session = 2 fish; under 45 min = just the bonus.
+const POMO_FISH_MIN_MINUTES = 45;
+function finishPomoSession(earlyBonus) {
+  stopPomoTick();
+  pomoRunning = false;
+  pomoEndTime = null;
+  document.getElementById('pomo-toggle').classList.remove('casting');
+  document.getElementById('pomodoro').classList.remove('pomo-running');
+  document.getElementById('pomo-startbtn').textContent = '🎣 Cast';
+
+  const earnedCompletion = pomoMinutes >= POMO_FISH_MIN_MINUTES;
+  const earnedBonus = !!earlyBonus;
+
+  if (earnedCompletion) catchFish(false);   // full-length focus fish
+  if (earnedBonus) catchFish(true);         // all-tasks-done bonus fish
+
+  // messaging
+  if (earnedCompletion && earnedBonus) {
+    showToast('🏆 Focus done + all tasks finished — 2 fish! 🎣🎣');
+  } else if (earnedBonus) {
+    showToast('🏆 All tasks done — bonus fish! 🎣');
+  } else if (earnedCompletion) {
+    // completion toast already shown inside catchFish(false)
+  } else {
+    showToast('🎣 Focus complete! (Sessions under ' + POMO_FISH_MIN_MINUTES + ' min don\'t catch a fish)');
+  }
+
+  pomoRemaining = pomoMinutes * 60;
+  renderPomo();
+}
+
+function catchFish(isBonus) {
+  playSound('ding');
+  const fish = FISH_SPECIES[Math.floor(Math.random() * FISH_SPECIES.length)];
   const list = myFishList();
-  list.push({ emoji: fish.emoji, name: fish.name, goal: pomoGoal, minutes: pomoMinutes, at: Date.now() });
+  list.push({ emoji: fish.emoji, name: fish.name + (isBonus ? ' (bonus!)' : ''), goal: pomoGoal, minutes: pomoMinutes, at: Date.now(), bonus: !!isBonus });
   saveMyFish(list);
 
-  // celebration
   const pop = document.getElementById('fish-caught');
   document.getElementById('fc-fish-emoji').textContent = fish.emoji;
-  document.getElementById('fc-fish-name').textContent = 'Caught a ' + fish.name + '!';
+  document.getElementById('fc-fish-name').textContent = (isBonus ? 'Bonus! ' : 'Caught a ') + fish.name + '!';
   pop.style.display = 'block';
   setTimeout(() => { pop.style.display = 'none'; }, 3000);
 
-  showToast(pomoGoal ? `🎣 Reeled in your goal: ${pomoGoal}` : '🎣 Nice catch! Focus complete');
+  if (!isBonus) showToast(pomoGoal ? `🎣 Reeled in your goal: ${pomoGoal}` : '🎣 Nice catch! Focus complete');
 
-  // reset for next cast
-  pomoRemaining = pomoMinutes * 60;
-  document.getElementById('pomo-startbtn').textContent = '🎣 Cast';
   renderPomo();
   renderLeaderboard();
 }
 function resetPomo() {
   stopPomoTick();
   pomoRunning = false;
+  pomoEndTime = null;
   pomoRemaining = pomoMinutes * 60;
   document.getElementById('pomo-startbtn').textContent = '🎣 Cast';
   document.getElementById('pomodoro').classList.remove('pomo-running');
@@ -4224,17 +4426,24 @@ function resetPomo() {
   renderPomo();
 }
 function renderPomo() {
+  // if running, always recompute from the wall clock (keeps background tabs accurate)
+  if (pomoRunning && pomoEndTime != null) {
+    pomoRemaining = Math.max(0, Math.round((pomoEndTime - Date.now()) / 1000));
+  }
   const m = Math.floor(pomoRemaining / 60);
   const s = pomoRemaining % 60;
   const tEl = document.getElementById('pomo-time');
   if (tEl) tEl.textContent = `${m}:${String(s).padStart(2,'0')}`;
-  // render fish tank from my catch
   const tank = document.getElementById('pomo-fish-tank');
   if (tank) {
     const list = myFishList();
     tank.innerHTML = list.length ? list.map(f => `<span title="${escAttr(f.name + (f.goal ? ' · ' + f.goal : ''))}">${f.emoji}</span>`).join('') : '🌊';
   }
 }
+// When returning to the tab, immediately re-sync the display.
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && pomoRunning) { pomoTick(); }
+});
 
 // ══════════════════════════════════════════════
 // CONTENT CALENDAR (social media posts, month/week view)
@@ -4489,6 +4698,7 @@ startFish();
 wireBoats();
 wireWaterSplash();
 renderPomo();
+renderPomoTodos();
 renderBoard();
 // initialize content calendar view toggle + task-board reminders
 if (state.calView === 'week') setCalView('week'); else setCalView('month');
