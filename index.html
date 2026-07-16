@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>⚓ WAY OF BOATS — The Immortal Typhoon</title>
+<!-- FAVICON — swap this data URI for your own image later (e.g. <link rel="icon" href="myfish.png">) -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%9F%3C/text%3E%3C/svg%3E">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Kalam:wght@400;700&family=Patrick+Hand&display=swap');
@@ -603,7 +605,17 @@
   .lb-row.rank-2 { background: linear-gradient(135deg, #F0F0F0, #E0E0E0); border-color: #C8C8C8; }
   .lb-row.rank-3 { background: linear-gradient(135deg, #FFF0E6, #FAD4B0); border-color: var(--peach-light); }
   .lb-rank { font-family: 'Kalam', cursive; font-size: 20px; font-weight: 700; width: 32px; text-align: center; }
-  .lb-stars { font-size: 14px; letter-spacing: -2px; }
+  .lb-stars { font-size: 13px; font-weight: 900; color: var(--sunset-deep); letter-spacing: 0; }
+  .profile-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 8px 0; }
+  .profile-stat { background: var(--ocean-pale); border-radius: 12px; padding: 10px 4px; text-align: center; }
+  .profile-stat b { display: block; font-size: 18px; color: var(--ocean-deep); }
+  .profile-stat span { font-size: 10px; font-weight: 700; color: var(--ink-light); }
+  .profile-fish-list { display: flex; flex-direction: column; gap: 5px; max-height: 240px; overflow-y: auto; }
+  .profile-fish-row { display: flex; align-items: center; gap: 10px; background: var(--warm-white); border: 1.5px solid var(--ocean-pale); border-radius: 10px; padding: 6px 10px; }
+  .profile-fish-count { font-weight: 900; color: var(--sunset-deep); font-size: 14px; }
+  .task-due-input { width: 116px; color: var(--ink); }
+  .task-due-input.due-over { border-color: var(--sail-red); color: var(--sail-red); }
+  .task-due-input.due-met { border-color: var(--matcha); }
   .lb-name { flex: 1; font-size: 15px; font-weight: 800; }
   .lb-score {
     font-family: 'Kalam', cursive;
@@ -984,25 +996,37 @@
   .pomo-goal:focus { outline: none; border-color: var(--sunset); }
   .pomo-todo { background: var(--ocean-pale); border-radius: 12px; padding: 8px; margin-bottom: 10px; }
   .pomo-todo-title { font-size: 11px; font-weight: 900; color: var(--ocean-deep); text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 6px; }
-  #pomo-todo-list { display: flex; flex-direction: column; gap: 4px; max-height: 140px; overflow-y: auto; }
-  .pomo-todo-item { display: flex; align-items: center; gap: 6px; background: white; border-radius: 8px; padding: 4px 6px; }
+  #pomo-todo-list { display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto; }
+  .pomo-todo-empty { font-size: 10px; font-weight: 600; color: var(--ink-light); text-align: center; padding: 8px; }
+  .pomo-todo-item-wrap { background: white; border: 1.5px solid var(--ocean-pale); border-radius: 12px; padding: 5px 7px; }
+  .pomo-todo-item { display: flex; align-items: center; gap: 6px; }
   .pomo-todo-check {
-    width: 16px; height: 16px; border-radius: 5px; border: 2px solid var(--matcha);
-    background: white; cursor: pointer; flex-shrink: 0; font-size: 10px;
-    display: flex; align-items: center; justify-content: center; color: white;
+    width: 18px; height: 18px; border-radius: 6px; border: 2px solid var(--matcha);
+    background: white; cursor: pointer; flex-shrink: 0; font-size: 11px;
+    display: flex; align-items: center; justify-content: center; color: white; transition: all 0.12s;
   }
-  .pomo-todo-check.checked { background: var(--matcha); }
-  .pomo-todo-text { flex: 1; font-size: 11px; font-weight: 700; color: var(--ink); border: none; background: transparent; }
+  .pomo-todo-check.checked { background: var(--matcha); border-color: var(--matcha); }
+  .pomo-todo-check.sm { width: 14px; height: 14px; border-radius: 5px; font-size: 9px; }
+  .pomo-fish-ico { flex-shrink: 0; display: inline-flex; }
+  .pomo-todo-text { flex: 1; font-size: 11.5px; font-weight: 700; color: var(--ink); border: none; background: transparent; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .pomo-todo-text.done { text-decoration: line-through; opacity: 0.5; }
   .pomo-todo-mins {
-    width: 40px; text-align: center; font-size: 10px; font-weight: 800; color: var(--ink-light);
-    border: 1.5px solid var(--lavender); border-radius: 10px; background: white; padding: 1px 2px; flex-shrink: 0;
+    text-align: center; font-size: 9px; font-weight: 800; color: var(--ocean-deep);
+    border: 1.5px solid var(--lavender); border-radius: 10px; background: var(--ocean-pale); padding: 1px 6px; flex-shrink: 0;
   }
-  .pomo-todo-del { background: none; border: none; color: var(--sail-red); cursor: pointer; font-size: 13px; opacity: 0.5; flex-shrink: 0; }
+  .pomo-todo-caret { background: none; border: none; color: var(--ocean-deep); cursor: pointer; font-size: 11px; width: 14px; flex-shrink: 0; padding: 0; }
+  .pomo-todo-del { background: none; border: none; color: var(--sail-red); cursor: pointer; font-size: 14px; opacity: 0.5; flex-shrink: 0; }
   .pomo-todo-del:hover { opacity: 1; }
-  .pomo-todo-add { display: flex; gap: 5px; margin-top: 6px; }
-  .pomo-todo-input { flex: 1; min-width: 0; max-width: 100%; box-sizing: border-box; border: 2px solid var(--ocean-light); border-radius: 10px; padding: 5px 8px; font-family: 'Nunito', sans-serif; font-size: 11px; font-weight: 600; background: white; }
-  select.pomo-todo-input { text-overflow: ellipsis; }
+  .pomo-sub-list { display: flex; flex-direction: column; gap: 3px; margin: 5px 0 3px 22px; }
+  .pomo-sub-row { display: flex; align-items: center; gap: 5px; }
+  .pomo-sub-text { flex: 1; font-size: 10.5px; font-weight: 600; color: var(--ink); text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pomo-sub-text.done { text-decoration: line-through; opacity: 0.5; }
+  .pomo-sub-mins { font-size: 9px; font-weight: 800; color: var(--ink-light); flex-shrink: 0; }
+  .pomo-add-sub { background: var(--ocean-pale); border: none; border-radius: 16px; font-size: 9px; font-weight: 800; color: var(--ocean-deep); padding: 3px 8px; cursor: pointer; margin: 4px 0 2px 22px; }
+  .pomo-add-sub:hover { background: var(--ocean-light); color: white; }
+  .pomo-todo-add { display: flex; gap: 5px; margin-top: 8px; }
+  .pomo-todo-input { flex: 1; min-width: 0; max-width: 100%; box-sizing: border-box; border: 2px solid var(--ocean-light); border-radius: 12px; padding: 6px 10px; font-family: 'Nunito', sans-serif; font-size: 11px; font-weight: 700; background: white; color: var(--ocean-deep); }
+  select.pomo-todo-input { text-overflow: ellipsis; cursor: pointer; }
   .pomo-todo-input:focus { outline: none; border-color: var(--sunset); }
   .pomo-todo-addbtn { border: none; background: var(--sunset); color: white; border-radius: 9px; width: 30px; cursor: pointer; font-size: 15px; font-weight: 800; flex-shrink: 0; }
   .pomo-suggest { font-size: 10px; font-weight: 800; color: var(--ocean-deep); margin-top: 6px; text-align: center; }
@@ -1391,6 +1415,7 @@
           </select>
           <select class="assignee-select" id="task-type" title="Activity type"></select>
           <input class="assignee-select" id="task-mins" title="Estimated time — type like 30m, 90 min, 2h" placeholder="30m" value="30m" style="width:64px; text-align:center; background:white; border:2.5px solid var(--lavender);">
+          <input class="assignee-select" id="task-due" type="date" title="Due date (optional) — beat it for a ⭐">
           <button class="btn-primary" onclick="addTask()">＋ Add</button>
         </div>
 
@@ -1525,6 +1550,16 @@
 </div>
 
 <!-- WORLD CUP CATEGORIES MODAL -->
+<!-- PLAYER PROFILE MODAL -->
+<div class="modal-overlay" id="player-modal" style="display:none" onclick="if(event.target===this) closeModal('player-modal')">
+  <div class="modal" style="max-width:460px">
+    <div id="player-modal-body"></div>
+    <div class="modal-footer">
+      <button class="btn-primary" onclick="closeModal('player-modal')">Close</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="wc-categories-modal" style="display:none" onclick="if(event.target===this) closeModal('wc-categories-modal')">
   <div class="modal">
     <div class="modal-title">⚙️ World Cup Categories</div>
@@ -2218,21 +2253,22 @@ function selectTemplate(id) {
 
 function createMeeting() {
   const title = document.getElementById('nm-title').value.trim() || 'Team Meeting';
-  const date = document.getElementById('nm-date').value;
+  // auto-default the date to today if the user didn't pick one
+  const date = document.getElementById('nm-date').value || estDateKey();
   const tmpl = getTemplates().find(t => t.id === state.selectedTemplate);
   const notes = {};
-  // pre-fill each person's box with their personal template text
   const pt = state.personTemplates || {};
   state.people.forEach(p => { if (pt[p.id]) notes[p.id] = pt[p.id]; });
   const meeting = {
     id: Date.now(),
+    createdAt: Date.now(),   // when it was actually created (for ordering + auto date)
     title,
     date,
     template: state.selectedTemplate,
     prompt: tmpl?.prompt || '',
-    notes,       // { personId: text } — seeded from personal templates
-    checks: {},  // { personId: [{text, done, linkId}] }
-    things: {}   // { personId: [str, ...] }
+    notes,
+    checks: {},
+    things: {}
   };
   state.meetings.unshift(meeting);
   save();
@@ -2281,12 +2317,28 @@ function renderMeetings() {
     return;
   }
 
-  // Week tabs
-  const weeks = [...new Set(state.meetings.map(m => getWeekLabel(m.date)))];
+  // sort meetings newest → oldest (by date, then creation time)
+  state.meetings.sort((a, b) => {
+    const da = a.date || '', db = b.date || '';
+    if (da !== db) return db.localeCompare(da);
+    return (b.createdAt || b.id || 0) - (a.createdAt || a.id || 0);
+  });
+
+  // Week tabs, newest week first
+  const weekMap = {};
+  state.meetings.forEach(m => { const w = getWeekLabel(m.date); if (!(w in weekMap)) weekMap[w] = weekStartKey(m.date); });
+  const weeks = Object.keys(weekMap).sort((a,b) => weekMap[b].localeCompare(weekMap[a]));
   tabs.innerHTML = `<button class="tab-btn active" onclick="filterWeek(null, this)">All</button>` +
     weeks.map(w => `<button class="tab-btn" onclick="filterWeek('${w}', this)">${w}</button>`).join('');
 
   renderMeetingCards(state.meetings);
+}
+// sortable key (YYYY-MM-DD of the week's Sunday) for ordering week tabs
+function weekStartKey(dateStr) {
+  if (!dateStr) return '0000-00-00';
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() - d.getDay());
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
 
 function getWeekLabel(dateStr) {
@@ -2933,8 +2985,10 @@ function addTask() {
   const minsField = document.getElementById('task-mins');
   const mins = parseTimeToMinutes(minsField.value);
   minsField.value = formatMinutes(mins);  // autocorrect display (e.g. "90 minutes" → "1h 30m")
-  state.tasks.push({ id: Date.now(), text, assigneeId, priority, type, mins, done: false, source: 'board', subtasks: [], collapsed: false });
+  const due = document.getElementById('task-due').value || '';
+  state.tasks.push({ id: Date.now(), text, assigneeId, priority, type, mins, due, done: false, source: 'board', subtasks: [], collapsed: false });
   input.value = '';
+  document.getElementById('task-due').value = '';
   save();
   renderTasks();
   renderLeaderboard();
@@ -2953,9 +3007,26 @@ function toggleTask(id) {
   const t = state.tasks.find(x => x.id === id);
   if (!t) return;
   t.done = !t.done;
-  if (t.done) playSound('ding');
+  if (t.done) {
+    playSound('ding');
+    // ⭐ STAR: if this task had a due date and it's being completed on or before it,
+    // award the assignee a star (once per task).
+    if (t.due && !t.starAwarded) {
+      const todayKey = estDateKey();
+      if (todayKey <= t.due) {
+        const p = personById(t.assigneeId);
+        if (p) { p.stars = (p.stars || 0) + 1; t.starAwarded = true; showToast('⭐ On time! +1 star for ' + escHtml(p.name)); }
+      }
+    }
+  } else {
+    // un-completing a task takes back a star it granted
+    if (t.starAwarded) {
+      const p = personById(t.assigneeId);
+      if (p && p.stars) p.stars = Math.max(0, p.stars - 1);
+      t.starAwarded = false;
+    }
+  }
   if (t.linkedCheck) syncCheckFromTask(t);
-  // update this row instantly to avoid a flicker before the full re-render
   const el = document.getElementById('task-item-' + id);
   if (el) {
     el.classList.toggle('done', t.done);
@@ -2963,7 +3034,6 @@ function toggleTask(id) {
     if (chk) { chk.classList.toggle('checked', t.done); chk.textContent = t.done ? '✓' : ''; }
   }
   save();
-  // defer heavier re-renders one frame so the click feels instant
   requestAnimationFrame(() => {
     renderTasks();
     renderLeaderboard();
@@ -3144,6 +3214,7 @@ function renderTasks() {
         <select class="task-mini-select" title="Priority" onchange="setTaskPriority(${t.id}, this.value)">${prioOpts}</select>
         <span class="type-fish" title="${escAttr(typeMeta(curType).label)}">${fishIcon(typeMeta(curType).color, 18)}</span>
         <select class="task-mini-select" title="Activity" onchange="setTaskType(${t.id}, this.value)">${typeOpts}</select>
+        <input class="task-mini-select task-due-input ${t.due ? (t.done && t.starAwarded ? 'due-met' : (t.due < estDateKey() && !t.done ? 'due-over' : '')) : ''}" type="date" value="${t.due || ''}" title="Due date — finish on time for a ⭐" onchange="setTaskDue(${t.id}, this.value)">
         <span class="task-assignee-pill" style="background:${color}">${escHtml(name)}</span>
         <button class="task-delete" onclick="deleteTask(${t.id})">×</button>
       </div>
@@ -3152,6 +3223,21 @@ function renderTasks() {
   }).join('');
 }
 
+function setTaskDue(id, value) {
+  const t = state.tasks.find(x => x.id === id);
+  if (!t) return;
+  t.due = value || '';
+  // if it's already done, re-evaluate whether it earned/keeps its star
+  if (t.done) {
+    const onTime = t.due && estDateKey() <= t.due;
+    const p = personById(t.assigneeId);
+    if (onTime && !t.starAwarded) { if (p) p.stars = (p.stars||0)+1; t.starAwarded = true; }
+    else if (!onTime && t.starAwarded) { if (p && p.stars) p.stars = Math.max(0, p.stars-1); t.starAwarded = false; }
+  }
+  save();
+  renderTasks();
+  renderLeaderboard();
+}
 function setTaskPriority(id, value) {
   const t = state.tasks.find(x => x.id === id);
   if (t) { t.priority = value; save(); if (state.sortPriority) renderTasks(); }
@@ -3254,19 +3340,24 @@ function setWcCategories(personId, cats) {
   state.wcCategories[personId] = cats;
 }
 
-// Returns today's date key in US Eastern Time as "YYYY-MM-DD" (always ET, never local clock).
+// Returns today's "streak day" key in US Eastern Time as "YYYY-MM-DD".
+// The day rolls over at 1:00 AM Boston time (not midnight) — so anything done
+// between 12:00–12:59 AM still counts toward the previous day, giving night owls
+// a little extra time. We do this by shifting the clock back 1 hour before taking the date.
+const STREAK_ROLLOVER_HOUR = 1; // change this number to move the rollover time
 function estDateKey(d = new Date()) {
-  // en-CA gives YYYY-MM-DD; timeZone forces Eastern regardless of user's clock
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+  const shifted = new Date(d.getTime() - STREAK_ROLLOVER_HOUR * 3600000);
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(shifted);
 }
 function estMonthKey(d = new Date()) {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit' }).format(d);
+  const shifted = new Date(d.getTime() - STREAK_ROLLOVER_HOUR * 3600000);
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit' }).format(shifted);
 }
-// yesterday's ET key relative to a given ET key
+// yesterday's key relative to a given key
 function prevDateKey(key) {
   const d = new Date(key + 'T12:00:00Z'); // noon UTC avoids TZ edge
   d.setUTCDate(d.getUTCDate() - 1);
-  return estDateKey(d);
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
 }
 
 // Ensure a person's streak object exists: { catId: { streak, last, monthAwarded } }
@@ -3498,9 +3589,10 @@ function renderLeaderboard() {
       // total streak across all World Cup categories
       const wc = p.wc || {};
       const streak = getWcCategories(p.id).reduce((s, c) => s + ((wc[c.id] && wc[c.id].streak) || 0), 0);
-      // NEW FORMULA: (fish*5) + (10 * (done/total)) + (streak/5) + (total tasks/5)
-      const points = Math.round((fish * 3) + (10 * ratio) + (streak / 5) + (total / 5));
-      return { ...p, done, total, fish, focusMinutes, streak, points };
+      const stars = p.stars || 0;
+      // FORMULA: (fish*3) + (10 * done/total) + (streak/5) + (total tasks/5) + (stars/2)
+      const points = Math.round((fish * 3) + (10 * ratio) + (streak / 5) + (total / 5) + (stars / 2));
+      return { ...p, done, total, fish, focusMinutes, streak, stars, points };
     })
     .sort((a, b) => b.points - a.points || b.done - a.done);
 
@@ -3512,20 +3604,20 @@ function renderLeaderboard() {
     <div class="leaderboard-sub">
       <div class="rules-box">
         <b>🧮 How points work</b>
-        <div class="rules-formula">Points = (🎣&nbsp;×&nbsp;10) + (10&nbsp;×&nbsp;tasks&nbsp;done&nbsp;÷&nbsp;tasks&nbsp;total) + (🔥&nbsp;total&nbsp;streak&nbsp;÷&nbsp;5) + (total&nbsp;tasks&nbsp;÷&nbsp;5)</div>
-        <div class="rules-note">🎣 fish are earned in the World Cup: keep a category checked <b>26+ days in a month</b> to catch one (one fish per category, per month).</div>
+        <div class="rules-formula">Points = (🎣&nbsp;×&nbsp;3) + (10&nbsp;×&nbsp;done&nbsp;÷&nbsp;total) + (🔥&nbsp;streak&nbsp;÷&nbsp;5) + (tasks&nbsp;÷&nbsp;5) + (⭐&nbsp;÷&nbsp;2)</div>
+        <div class="rules-note">🎣 fish come from the World Cup (26+ check-in days in a month) and focus sessions. ⭐ stars are earned by finishing a task on or before its due date.</div>
       </div>
     </div>
     <div class="leaderboard-list">
       ${sorted.map((p, i) => {
         const rankClass = i < 3 ? `rank-${i+1}` : '';
         const medal = medals[i] || `#${i+1}`;
-        const stars = i === 0 ? '⭐⭐⭐✨' : i === 1 ? '⭐⭐' : i === 2 ? '⭐' : '';
+        const starDisplay = p.stars > 0 ? `<span class="lb-stars" title="${p.stars} on-time star${p.stars>1?'s':''}">⭐${p.stars}</span>` : '';
         const barW = max > 0 ? Math.round((p.points / max) * 100) : 0;
-        return `<div class="lb-row ${rankClass}">
+        return `<div class="lb-row ${rankClass}" onclick="openPlayerProfile('${p.id}')" style="cursor:pointer" title="View ${escAttr(p.name)}'s profile">
           <span class="lb-rank">${medal}</span>
           <div style="width:28px;height:28px;border-radius:50%;background:${p.color};flex-shrink:0;border:2px solid rgba(255,255,255,0.7)"></div>
-          <span class="lb-name">${escHtml(p.name)} <span class="lb-stars">${stars}</span>
+          <span class="lb-name">${escHtml(p.name)} ${starDisplay}
             <span style="display:block;font-size:10px;font-weight:700;color:var(--ink-light)">✅ ${p.done}/${p.total} · 🎣 ${p.fish} · 🔥 ${p.streak}</span>
           </span>
           <div class="lb-bar-wrap"><div class="lb-bar" style="width:${barW}%;background:${p.color}"></div></div>
@@ -3535,6 +3627,57 @@ function renderLeaderboard() {
     </div>
     ${sorted[0]?.points > 0 ? `<div style="text-align:center;margin-top:18px;font-size:22px">🎉 ${escHtml(sorted[0].name)} is sailing ahead! ⛵</div>` : ''}
   `;
+}
+
+// ══════════════════════════════════════════════
+// PLAYER PROFILE — click a leaderboard row to see their fish & stats
+// ══════════════════════════════════════════════
+function openPlayerProfile(pid) {
+  const p = personById(pid);
+  if (!p) return;
+  const counts = getTaskCountsByPerson();
+  const done = counts[pid]?.done || 0;
+  const total = counts[pid]?.total || 0;
+  const wc = p.wc || {};
+  const streak = getWcCategories(pid).reduce((s, c) => s + ((wc[c.id] && wc[c.id].streak) || 0), 0);
+  const stars = p.stars || 0;
+  const fishArr = p.fish || [];
+
+  // group fish by name to show counts of each kind
+  const byKind = {};
+  fishArr.forEach(f => {
+    const key = (f.emoji || '🐟') + '|' + (f.name || 'Fish').replace(/ \(bonus!?\)$/,'').replace(/ \(.*\)$/,'');
+    if (!byKind[key]) byKind[key] = { emoji: f.emoji || '🐟', name: (f.name||'Fish').replace(/ \(bonus!?\)$/,''), count: 0 };
+    byKind[key].count++;
+  });
+  const kinds = Object.values(byKind).sort((a,b) => b.count - a.count);
+
+  const fishHtml = fishArr.length === 0
+    ? `<div style="text-align:center;color:var(--ink-light);font-weight:600;padding:14px;">No fish caught yet 🌊</div>`
+    : kinds.map(k => `<div class="profile-fish-row">
+        <span style="font-size:22px">${k.emoji}</span>
+        <span style="flex:1;font-weight:700;font-size:13px;">${escHtml(k.name)}</span>
+        <span class="profile-fish-count">×${k.count}</span>
+      </div>`).join('');
+
+  document.getElementById('player-modal-body').innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+      <div style="width:46px;height:46px;border-radius:50%;background:${p.color};border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.2);flex-shrink:0;"></div>
+      <div>
+        <div style="font-family:'Kalam',cursive;font-size:24px;font-weight:700;color:var(--ocean-deep);">${escHtml(p.name)}</div>
+        <div style="font-size:12px;font-weight:700;color:var(--ink-light);">🎣 ${fishArr.length} fish · ⭐ ${stars} stars · 🔥 ${streak} streak</div>
+      </div>
+    </div>
+    <div class="profile-stats">
+      <div class="profile-stat"><b>${done}/${total}</b><span>tasks done</span></div>
+      <div class="profile-stat"><b>${fishArr.length}</b><span>total fish</span></div>
+      <div class="profile-stat"><b>${stars}</b><span>on-time ⭐</span></div>
+      <div class="profile-stat"><b>${streak}</b><span>🔥 streak</span></div>
+    </div>
+    <div style="font-size:12px;font-weight:800;color:var(--ocean-deep);text-transform:uppercase;letter-spacing:0.04em;margin:14px 0 6px;">🐟 Fish collection</div>
+    <div class="profile-fish-list">${fishHtml}</div>
+  `;
+  document.getElementById('player-modal').style.display = 'flex';
 }
 
 // ══════════════════════════════════════════════
@@ -4221,30 +4364,52 @@ function removePomoTask(id) {
   renderPomoTodos();
   maybeSuggestTime();
 }
+let pomoExpanded = {};   // { taskId: true } which session tasks are expanded to show subtasks
+function togglePomoExpand(id) { pomoExpanded[id] = !pomoExpanded[id]; renderPomoTodos(); }
+function addPomoSubtask(id) {
+  addSubtask(id);          // reuse the board's subtask add (adds an empty subtask + focuses)
+  pomoExpanded[id] = true;
+  renderPomoTodos();
+  maybeSuggestTime();
+}
 function renderPomoTodos() {
   // refresh the picker of available board tasks
   const picker = document.getElementById('pomo-task-picker');
   if (picker) {
     const avail = myOpenBoardTasks().filter(t => !pomoTaskIds.includes(t.id));
-    const myId = myPersonId();
-    picker.innerHTML = `<option value="">${myId ? '＋ add one of your tasks…' : '＋ add a task…'}</option>` +
+    picker.innerHTML = `<option value="">＋ pull in a task from your board…</option>` +
       avail.map(t => `<option value="${t.id}">${escHtml(t.text || 'untitled')} · ${formatMinutes(taskEffectiveMins(t))}</option>`).join('');
   }
   const box = document.getElementById('pomo-todo-list');
   if (!box) return;
   const tasks = pomoSessionTasks();
   if (tasks.length === 0) {
-    box.innerHTML = `<div style="font-size:10px;font-weight:600;color:var(--ink-light);text-align:center;padding:4px;">Pull in tasks from your board below 👇</div>`;
+    box.innerHTML = `<div class="pomo-todo-empty">Pull in tasks from your board below 👇</div>`;
     return;
   }
   box.innerHTML = tasks.map(t => {
     const meta = typeMeta(t.type || getActivityTypes()[0].id);
+    const subs = t.subtasks || [];
+    const hasSubs = subs.length > 0;
+    const expanded = !!pomoExpanded[t.id];
+    const subHtml = (hasSubs && expanded) ? `<div class="pomo-sub-list">${subs.map((st, si) => `
+      <div class="pomo-sub-row">
+        <div class="pomo-todo-check sm ${st.done?'checked':''}" onclick="toggleSubtask(${t.id}, ${si}); renderPomoTodos();">${st.done?'✓':''}</div>
+        <span class="pomo-sub-text ${st.done?'done':''}">${escHtml(st.text || 'subtask')}</span>
+        <span class="pomo-sub-mins">${formatMinutes(st.mins||0)}</span>
+      </div>`).join('')}</div>` : '';
     return `
-    <div class="pomo-todo-item">
-      <div class="pomo-todo-check ${t.done?'checked':''}" onclick="togglePomoTask(${t.id})">${t.done?'✓':''}</div>
-      <span class="pomo-todo-text ${t.done?'done':''}" title="${escAttr(meta.label)}">${escHtml(t.text || 'untitled')}</span>
-      <span class="pomo-todo-mins" title="From the board">${formatMinutes(taskEffectiveMins(t))}</span>
-      <button class="pomo-todo-del" onclick="removePomoTask(${t.id})" title="Remove from this session">×</button>
+    <div class="pomo-todo-item-wrap">
+      <div class="pomo-todo-item">
+        <div class="pomo-todo-check ${t.done?'checked':''}" onclick="togglePomoTask(${t.id})">${t.done?'✓':''}</div>
+        <span class="pomo-fish-ico" title="${escAttr(meta.label)}">${fishIcon(meta.color, 14)}</span>
+        <span class="pomo-todo-text ${t.done?'done':''}">${escHtml(t.text || 'untitled')}</span>
+        <span class="pomo-todo-mins" title="From the board">${formatMinutes(taskEffectiveMins(t))}</span>
+        <button class="pomo-todo-caret" onclick="togglePomoExpand(${t.id})" title="Show subtasks">${hasSubs ? (expanded?'▾':'▸') : ''}</button>
+        <button class="pomo-todo-del" onclick="removePomoTask(${t.id})" title="Remove from this session">×</button>
+      </div>
+      ${subHtml}
+      ${expanded ? `<button class="pomo-add-sub" onclick="addPomoSubtask(${t.id})">＋ add subtask</button>` : ''}
     </div>`;
   }).join('');
 }
@@ -4392,6 +4557,15 @@ function finishPomoSession(earlyBonus) {
   } else {
     showToast('🎣 Focus complete! (Sessions under ' + POMO_FISH_MIN_MINUTES + ' min don\'t catch a fish)');
   }
+
+  // ⚠️ EXPLOIT FIX — clear finished tasks out of the session when a timer ends,
+  // so a user can't keep the same "already done" tasks and re-earn the bonus fish
+  // every session. To change/remove this behavior, edit the line below.
+  pomoTaskIds = pomoTaskIds.filter(id => {
+    const t = state.tasks.find(x => x.id === id);
+    return t && !t.done;   // keep only tasks that are still NOT done
+  });
+  renderPomoTodos();
 
   pomoRemaining = pomoMinutes * 60;
   renderPomo();
