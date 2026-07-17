@@ -3591,7 +3591,7 @@ function renderLeaderboard() {
       const streak = getWcCategories(p.id).reduce((s, c) => s + ((wc[c.id] && wc[c.id].streak) || 0), 0);
       const stars = p.stars || 0;
       // FORMULA: (fish*3) + (10 * done/total) + (streak/5) + (total tasks/5) + (stars/2)
-      const points = Math.round((fish * 3) + (10 * ratio) + (streak / 5) + (total / 5) + (stars / 2));
+      const points = Math.round((fish * 3) + ((ratio * done)) + (streak / 3) + (total / 10) + (stars / 2));
       return { ...p, done, total, fish, focusMinutes, streak, stars, points };
     })
     .sort((a, b) => b.points - a.points || b.done - a.done);
