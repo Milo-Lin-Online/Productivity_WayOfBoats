@@ -613,6 +613,37 @@
   .profile-fish-list { display: flex; flex-direction: column; gap: 5px; max-height: 240px; overflow-y: auto; }
   .profile-fish-row { display: flex; align-items: center; gap: 10px; background: var(--warm-white); border: 1.5px solid var(--ocean-pale); border-radius: 10px; padding: 6px 10px; }
   .profile-fish-count { font-weight: 900; color: var(--sunset-deep); font-size: 14px; }
+  /* Fish Market */
+  .market-balance { font-size: 14px; font-weight: 900; color: var(--ocean-deep); background: var(--ocean-pale); border-radius: 20px; padding: 5px 14px; }
+  .market-shelf { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .market-item {
+    background: white; border: 2px solid var(--ocean-pale); border-radius: 16px;
+    padding: 14px 8px; text-align: center; position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  }
+  .market-item.special { border-color: var(--sunset); background: linear-gradient(160deg, #FFF6EE, #FFECDD); }
+  .market-item.is-owned { opacity: 0.85; }
+  .market-badge { position: absolute; top: 6px; right: 8px; font-size: 9px; font-weight: 900; color: var(--sunset-deep); }
+  .market-emoji { font-size: 40px; line-height: 1; }
+  .market-emoji.shiny { animation: shinyPulse 1.8s ease-in-out infinite; filter: drop-shadow(0 0 4px rgba(255,180,80,0.7)); }
+  @keyframes shinyPulse { 0%,100%{ transform: scale(1) rotate(-3deg); } 50%{ transform: scale(1.15) rotate(3deg); } }
+  .market-name { font-size: 12px; font-weight: 800; color: var(--ink); }
+  .market-buy { border: none; background: var(--sunset); color: white; font-weight: 900; font-size: 12px; border-radius: 20px; padding: 5px 14px; cursor: pointer; }
+  .market-buy:hover { background: var(--sunset-deep); }
+  .market-buy.disabled { background: #CBD5DB; cursor: not-allowed; }
+  .market-owned { font-size: 12px; font-weight: 900; color: var(--matcha); }
+  .market-locked { font-size: 10px; font-weight: 700; color: var(--ink-light); }
+  .sticker-badge { font-size: 15px; }
+  .sticker-badge.shiny { animation: shinyPulse 1.8s ease-in-out infinite; display: inline-block; }
+  .profile-sticker-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .profile-sticker {
+    position: relative; width: 44px; height: 44px; border-radius: 12px;
+    border: 2px solid var(--ocean-pale); background: white; cursor: pointer; font-size: 22px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .profile-sticker.equipped { border-color: var(--matcha); background: #EAF7E6; }
+  .profile-sticker.shiny .ps-emoji { animation: shinyPulse 1.8s ease-in-out infinite; }
+  .profile-sticker .ps-check { position: absolute; top: -5px; right: -5px; background: var(--matcha); color: white; border-radius: 50%; width: 16px; height: 16px; font-size: 10px; display: flex; align-items: center; justify-content: center; }
+  .profile-sticker:disabled { cursor: default; }
   .task-due-input { width: 116px; color: var(--ink); }
   .task-due-input.due-over { border-color: var(--sail-red); color: var(--sail-red); }
   .task-due-input.due-met { border-color: var(--matcha); }
@@ -1176,6 +1207,7 @@
     /* calendar: allow horizontal scroll */
     #calendar-grid { overflow-x: auto; }
     .cal-week-grid { min-width: 640px; }
+    .market-shelf { grid-template-columns: repeat(2, 1fr); }
     .paper-card { padding: 14px; }
     .modal { width: 94%; padding: 18px; }
     /* World Cup cards already stack; make chips full-width friendly */
@@ -1186,6 +1218,358 @@
     #pomodoro, #msgboard { bottom: 70px; }
     #pomo-panel, #board-panel { width: 170px; }
     .page-title { font-size: 20px; }
+  }
+
+  /* ══════════════════════════════════════════════
+     PLANNING SCRATCHPAD — spiral notebook
+     ══════════════════════════════════════════════ */
+  .notebook {
+    position: relative;
+    background: #FFFDF6;
+    border: 2.5px solid var(--ocean-light);
+    border-radius: 4px 20px 20px 4px;
+    box-shadow: 4px 6px 0 var(--ocean-light), 0 3px 16px rgba(59,155,212,0.12);
+    padding: 26px 26px 22px 74px;
+    margin-bottom: 24px;
+    overflow: hidden;
+  }
+  /* the cardboard binding strip down the left edge */
+  .notebook::before {
+    content: '';
+    position: absolute; top: 0; left: 0;
+    width: 46px; height: 100%;
+    background: linear-gradient(90deg, var(--ocean-pale) 0%, #CDE7F6 68%, rgba(40,118,176,0.16) 100%);
+    border-right: 2px dashed rgba(40,118,176,0.30);
+  }
+  /* the red margin rule */
+  .notebook::after {
+    content: '';
+    position: absolute; top: 0; left: 62px;
+    width: 2px; height: 100%;
+    background: rgba(232,83,106,0.40);
+  }
+  .nb-rings {
+    position: absolute; top: 0; left: 8px;
+    width: 32px; height: 100%;
+    display: flex; flex-direction: column; align-items: center;
+    gap: 20px; padding-top: 30px;
+    z-index: 2; pointer-events: none;
+  }
+  .nb-ring {
+    width: 27px; height: 13px;
+    border: 3px solid #9FAEB8;
+    border-radius: 50%;
+    border-bottom-color: rgba(255,255,255,0.55);
+    transform: rotate(-8deg);
+    flex-shrink: 0;
+  }
+  .nb-head {
+    position: relative; z-index: 1;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 10px;
+    margin-bottom: 14px;
+  }
+  .nb-title {
+    font-family: 'Kalam', cursive;
+    font-size: 24px; font-weight: 700;
+    color: var(--ocean-deep);
+  }
+  .nb-saved {
+    font-size: 11px; font-weight: 800;
+    color: var(--matcha);
+    opacity: 0; transition: opacity 0.25s;
+  }
+  .nb-saved.show { opacity: 1; }
+  .nb-paper { position: relative; z-index: 1; }
+  .nb-textarea {
+    display: block;
+    width: 100%;
+    min-height: 336px;
+    border: none; outline: none;
+    resize: vertical;
+    color: var(--ink);
+    font-family: 'Patrick Hand', cursive;
+    font-size: 19px;
+    line-height: 28px;
+    padding: 0;
+    background-color: transparent;
+    /* ruled lines, spaced to the exact line-height so text sits on them */
+    background-image: repeating-linear-gradient(
+      transparent, transparent 27px,
+      rgba(59,155,212,0.26) 27px, rgba(59,155,212,0.26) 28px);
+    background-attachment: local;
+  }
+  .nb-textarea::placeholder { color: rgba(107,78,61,0.42); }
+  .nb-divider {
+    position: relative; z-index: 1;
+    height: 0; border: none;
+    border-top: 2px dashed rgba(40,118,176,0.25);
+    margin: 18px 0 14px;
+  }
+  .nb-sub {
+    position: relative; z-index: 1;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 8px; margin-bottom: 10px;
+  }
+  .nb-sub-label {
+    font-family: 'Kalam', cursive;
+    font-size: 17px; font-weight: 700;
+    color: var(--ocean-deep);
+  }
+  .nb-links {
+    position: relative; z-index: 1;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .nb-link {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--warm-white);
+    border: 2px solid var(--ocean-pale);
+    border-left: 6px solid var(--ocean);
+    border-radius: 12px;
+    padding: 8px 10px;
+    box-shadow: 1px 2px 0 rgba(59,155,212,0.16);
+  }
+  .nb-link.done { opacity: 0.55; }
+  .nb-link-text { flex: 1; font-size: 13px; font-weight: 700; }
+  .nb-link.done .nb-link-text { text-decoration: line-through; }
+  .nb-link-meta { font-size: 11px; font-weight: 800; color: var(--ink-light); white-space: nowrap; }
+  .nb-link-due { font-size: 11px; font-weight: 800; color: var(--ocean-deep); white-space: nowrap; }
+  .nb-link-due.over { color: var(--sail-red); }
+  .nb-link-x {
+    border: none; background: transparent; cursor: pointer;
+    font-size: 16px; font-weight: 800; color: var(--ink-light);
+    line-height: 1; padding: 2px 4px; border-radius: 6px;
+  }
+  .nb-link-x:hover { background: var(--strawberry-pale); color: var(--sail-red); }
+  .nb-empty {
+    position: relative; z-index: 1;
+    font-family: 'Patrick Hand', cursive;
+    font-size: 15px; color: var(--ink-light);
+    padding: 4px 2px;
+  }
+
+  /* ── notebook index tabs ── */
+  .nb-tabs {
+    display: flex; gap: 6px; flex-wrap: wrap;
+    padding-left: 74px; margin-bottom: -3px;
+    position: relative; z-index: 3;
+  }
+  .nb-tab {
+    font-family: 'Kalam', cursive;
+    font-size: 14px; font-weight: 700;
+    padding: 8px 16px 11px;
+    border: 2.5px solid var(--ocean-light); border-bottom: none;
+    border-radius: 12px 12px 0 0;
+    background: var(--ocean-pale); color: var(--ocean-deep);
+    cursor: pointer; box-shadow: 2px -2px 0 rgba(59,155,212,0.14);
+  }
+  .nb-tab:hover { background: #E4F2FB; }
+  .nb-tab.active {
+    background: #FFFDF6; color: var(--sunset-deep);
+    padding-bottom: 13px; box-shadow: 2px -3px 0 rgba(59,155,212,0.10);
+  }
+  .nb-pane { display: none; }
+  .nb-pane.active { display: block; }
+  @media (max-width: 900px) { .nb-tabs { padding-left: 62px; } }
+
+  /* ── one-day timeline (2am → 2am) ── */
+  .tl { --tl-hour: 46px; }
+  .tl-head {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 8px; margin-bottom: 8px;
+  }
+  .tl-date { font-family: 'Kalam', cursive; font-size: 18px; font-weight: 700; color: var(--ocean-deep); }
+  .tl-total { font-size: 11px; font-weight: 800; color: var(--ink-light); }
+  .tl-scroll {
+    max-height: 520px; overflow-y: auto;
+    border: 2px solid var(--ocean-pale); border-radius: 14px;
+    background: var(--warm-white);
+    padding: 10px 0;            /* breathing room lives here, NOT on .tl-body, so
+                                   the hour rows and every absolutely-positioned
+                                   marker share one origin at y=0 */
+  }
+  .tl-body { position: relative; }
+  .tl-hour { position: relative; height: var(--tl-hour); }
+  /* the hour line starts where the lane starts, so it never runs behind the label */
+  .tl-hour::before {
+    content: ''; position: absolute; top: 0; left: 66px; right: 8px;
+    border-top: 1px solid rgba(59,155,212,0.28);
+  }
+  .tl-hour::after {
+    content: ''; position: absolute; top: 50%; left: 66px; right: 8px;
+    border-top: 1px dashed rgba(59,155,212,0.16);
+  }
+  .tl-hour-label {
+    position: absolute; left: 0; top: 0; width: 56px;
+    transform: translateY(-50%);        /* centres the text ON the line at any font size */
+    text-align: right; font-size: 10px; font-weight: 800; color: var(--ink-light);
+  }
+  /* closing line + label for the 2:00 AM that ends the day */
+  .tl-endcap { position: absolute; left: 0; right: 0; height: 0; }
+  .tl-endcap::before {
+    content: ''; position: absolute; top: 0; left: 66px; right: 8px;
+    border-top: 1px solid rgba(59,155,212,0.28);
+  }
+  .tl-lane { position: absolute; top: 0; left: 66px; right: 8px; }
+  .tl-entry {
+    position: absolute; left: 0; right: 0;
+    border-radius: 8px; padding: 3px 7px;
+    color: white; font-size: 11px; font-weight: 800; line-height: 1.25;
+    overflow: hidden; cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.16);
+    border-left: 4px solid rgba(0,0,0,0.20);
+  }
+  .tl-entry:hover { filter: brightness(1.06); }
+  .tl-entry.editable { cursor: grab; touch-action: none; user-select: none; }
+  .tl-entry.dragging {
+    cursor: grabbing; opacity: 0.94; z-index: 6;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.30);
+    filter: brightness(1.08);
+  }
+  /* empty-space drag target + the preview block it draws */
+  .tl-lane[data-editable="1"] { cursor: crosshair; }
+  .tl-ghost {
+    position: absolute; left: 0; right: 0;
+    border: 2.5px dashed var(--ocean-deep);
+    border-radius: 8px;
+    background: rgba(59,155,212,0.20);
+    pointer-events: none; z-index: 4;
+    display: flex; align-items: flex-start; justify-content: flex-start;
+    overflow: hidden;
+  }
+  .tl-ghost-time {
+    font-size: 10px; font-weight: 800; color: var(--ocean-deep);
+    background: var(--warm-white);
+    border-radius: 0 0 6px 0; padding: 1px 6px; white-space: nowrap;
+  }
+
+  /* thin grab strips along the top and bottom edges for resizing */
+  .tl-rs { position: absolute; left: 0; right: 0; height: 9px; cursor: ns-resize; z-index: 3; }
+  .tl-rs.top { top: -1px; }
+  .tl-rs.bot { bottom: -1px; }
+  .tl-entry.editable:hover .tl-rs::after {
+    content: ''; position: absolute; left: 50%; top: 3px;
+    transform: translateX(-50%);
+    width: 26px; height: 3px; border-radius: 2px;
+    background: rgba(255,255,255,0.8);
+  }
+  .tl-entry .tle-time { font-weight: 700; opacity: 0.9; font-size: 10px; }
+  .tl-entry .tle-tasks { font-size: 10px; opacity: 0.95; font-weight: 700; }
+  .tl-newday {
+    position: absolute; left: 60px; right: 8px;
+    border-top: 2.5px dashed var(--sunset-deep);
+  }
+  .tl-newday span {
+    position: absolute; right: 4px; top: -8px;
+    background: var(--butter-light); border: 1.5px solid var(--butter);
+    border-radius: 6px; padding: 1px 6px;
+    font-size: 9px; font-weight: 800; color: var(--sunset-deep); white-space: nowrap;
+  }
+  .tl-now { position: absolute; left: 60px; right: 8px; border-top: 2px solid var(--sail-red); }
+  .tl-now::before {
+    content: ''; position: absolute; left: -4px; top: -4px;
+    width: 7px; height: 7px; border-radius: 50%; background: var(--sail-red);
+  }
+  .tl-empty {
+    font-family: 'Patrick Hand', cursive; font-size: 15px;
+    color: var(--ink-light); padding: 10px 12px;
+  }
+
+  /* ── two-day planner ── */
+  .plan2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 820px) { .plan2 { grid-template-columns: 1fr; } }
+
+  /* ── week view of saved logs ── */
+  .wk { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+  .wk-day {
+    border: 2px solid var(--ocean-pale); border-radius: 12px;
+    overflow: hidden; background: var(--warm-white); cursor: pointer;
+  }
+  .wk-day:hover { border-color: var(--ocean); }
+  .wk-day.empty { opacity: 0.5; cursor: default; }
+  .wk-day.is-today { border-color: var(--sunset); }
+  .wk-head {
+    font-size: 10px; font-weight: 800; text-align: center; padding: 4px 2px;
+    background: var(--ocean-pale); color: var(--ocean-deep); line-height: 1.3;
+  }
+  .wk-day.is-today .wk-head { background: var(--butter-light); color: var(--sunset-deep); }
+  .wk-strip { position: relative; height: 150px; }
+  .wk-block { position: absolute; left: 3px; right: 3px; border-radius: 3px; min-height: 2px; }
+  .wk-foot { font-size: 9px; font-weight: 800; text-align: center; padding: 3px; color: var(--ink-light); }
+  @media (max-width: 720px) {
+    .wk { grid-template-columns: repeat(4, 1fr); }
+    .wk-strip { height: 110px; }
+  }
+
+  /* ── saved-log table of contents ── */
+  .log-toc { display: flex; flex-direction: column; gap: 8px; }
+  .log-row {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 10px 12px; border: 2px solid var(--ocean-pale);
+    border-radius: 12px; background: var(--warm-white); cursor: pointer;
+  }
+  .log-row:hover { border-color: var(--ocean); }
+  .log-row.active { border-color: var(--sunset); background: var(--butter-light); }
+  .log-row-date { font-size: 13px; font-weight: 800; color: var(--ink); }
+  .log-row-total { font-size: 11px; font-weight: 800; color: var(--ink-light); }
+  .log-chips { display: flex; gap: 3px; flex-wrap: wrap; flex: 1; }
+  .log-chip { width: 11px; height: 11px; border-radius: 3px; }
+  .edited-mark {
+    font-size: 10px; font-weight: 800; color: var(--sunset-deep);
+    background: var(--butter-light); border: 1.5px solid var(--butter);
+    border-radius: 6px; padding: 1px 6px; white-space: nowrap;
+  }
+
+  /* ── entry modal task picker ── */
+  .ent-tasks { display: flex; flex-direction: column; gap: 6px; max-height: 168px; overflow-y: auto; }
+  .ent-task {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; font-weight: 700; color: var(--ink);
+    border: 2px solid var(--ocean-pale); border-radius: 10px; padding: 6px 8px;
+    cursor: pointer; background: var(--warm-white);
+  }
+  .ent-task.on { border-color: var(--ocean); background: var(--ocean-pale); }
+  .ent-task input { accent-color: var(--ocean); }
+
+  /* ── profile: lifetime focus time ── */
+  .profile-focus {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--butter-light);
+    border: 2px solid var(--butter);
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin: 8px 0 4px;
+    font-size: 13px; font-weight: 700; color: var(--ink);
+  }
+  .profile-focus .pf-emoji { font-size: 20px; }
+  .profile-focus b { color: var(--sunset-deep); }
+  .profile-focus .pf-sub {
+    display: block;
+    font-size: 11px; font-weight: 700; color: var(--ink-light);
+    margin-top: 2px;
+  }
+
+  /* ── calendar: task due-date chips ── */
+  .cal-due {
+    display: flex; align-items: center; gap: 4px;
+    font-size: 10px; font-weight: 800; color: white;
+    border-radius: 6px; padding: 3px 6px;
+    cursor: pointer;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    border-left: 3px solid rgba(0,0,0,0.22);
+  }
+  .cal-due .cd-mark { font-size: 9px; opacity: 0.95; }
+  .cal-due.is-done { opacity: 0.5; text-decoration: line-through; }
+  .cal-due.is-over { box-shadow: 0 0 0 2px var(--sail-red); }
+
+  @media (max-width: 900px) {
+    .notebook { padding: 20px 16px 18px 62px; }
+    .notebook::after { left: 52px; }
+    .nb-textarea { font-size: 17px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .nb-saved { transition: none; }
   }
 </style>
 </head>
@@ -1343,6 +1727,9 @@
       <button class="nav-btn" onclick="showSection('worldcup')" id="nav-worldcup">
         <span class="emoji">🏆</span> <span>World Cup</span>
       </button>
+      <button class="nav-btn" onclick="showSection('planning')" id="nav-planning">
+        <span class="emoji">📓</span> <span>Planning</span>
+      </button>
     </div>
 
     <hr class="sidebar-divider">
@@ -1437,6 +1824,11 @@
             <option value="short-first">Shortest first</option>
             <option value="long-first">Longest first</option>
           </select>
+          <select class="assignee-select" id="sort-due" onchange="changeSort()" title="Sort by due date">
+            <option value="">Sort: Due date ▾</option>
+            <option value="soon-first">Due soonest</option>
+            <option value="late-first">Due latest</option>
+          </select>
           <select class="assignee-select" id="sort-type" onchange="changeSort()" title="Filter by activity"></select>
         </div>
 
@@ -1500,8 +1892,10 @@
         </div>
         <div id="calendar-grid"></div>
         <div style="font-size:12px; font-weight:600; color:var(--ink-light); margin-top:10px;">
-          Each post shows a colored band from its <b>start</b> day to its <b>publish</b> day. Click any post to edit it or turn it into a task.
+          Each post shows a colored band from its <b>start</b> day to its <b>publish</b> day. Click any post to edit it or turn it into a task.<br>
+          Your own task due dates land on the day they're due (⏰ upcoming · ❗overdue · ✓ done), tinted by activity category. Click one to open it on the board.
         </div>
+        <div id="cal-due-legend" style="display:flex; flex-wrap:wrap; gap:10px; margin-top:8px;"></div>
       </div>
     </div>
 
@@ -1517,9 +1911,10 @@
             <b>🏆 How the World Cup works</b>
             <div class="rules-note">
               • Tap a category's circle each day you do it — that builds your 🔥 streak.<br>
-              • Miss a day and that streak resets to <b>0</b>.<br>
-              • Keep a category checked <b>26+ days in one month</b> and you catch a 🎣 fish (one per category, per month) — worth 10 leaderboard points.<br>
-              • Days roll over at <b>midnight Eastern Time</b> (not your computer's clock).<br>
+              • Miss a day and that streak resets to <b>0</b>, but the check-in still counts toward your month.<br>
+              • <b>Every</b> check-in this month earns leaderboard points, consecutive or not: your month total ÷ 10. Go to the gym 19 scattered days and that's <b>1.9 points</b>.<br>
+              • Keep a category checked <b>26 days in one month</b> and you catch <b>3 🎣 fish</b> (once per category, per month).<br>
+              • Days roll over at <b>1:00 AM Eastern Time</b> (a little grace for night owls).<br>
               • Everyone sets their <b>own</b> categories — tap "⚙️ my goals" on your card.
             </div>
           </div>
@@ -1527,6 +1922,123 @@
         </div>
         <div style="overflow-x:auto;">
           <table id="worldcup-table"></table>
+        </div>
+      </div>
+
+      <!-- FISH MARKET -->
+      <div class="paper-card" style="margin-top:24px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:6px;">
+          <div style="font-family:'Kalam',cursive; font-size:22px; font-weight:700; color:var(--ocean-deep);">🐠 Fish Market</div>
+          <div class="market-balance" id="market-balance">🎣 0 fish</div>
+        </div>
+        <div style="font-size:12px; font-weight:700; color:var(--ink-light); margin-bottom:14px;">
+          Spend the fish you catch on stickers for your profile. Buy one, then equip it from your player profile on the leaderboard.
+        </div>
+        <div id="market-shelf" class="market-shelf"></div>
+      </div>
+    </div>
+
+    <!-- PLANNING SECTION (private spiral notebook) -->
+    <div id="section-planning" class="page-section">
+      <div class="page-header">
+        <div class="page-title">📓 Plan<span>ning</span></div>
+        <span style="font-size:13px; font-weight:700; color:#E8F1F8;" id="planning-owner">your own page, separate from everyone else's</span>
+      </div>
+
+      <div class="nb-tabs">
+        <button class="nb-tab active" id="nbtab-notes" onclick="showNbTab('notes')">✍️ Notes</button>
+        <button class="nb-tab" id="nbtab-log" onclick="showNbTab('log')">🕑 Log</button>
+        <button class="nb-tab" id="nbtab-saved" onclick="showNbTab('saved')">📚 Saved logs</button>
+      </div>
+
+      <div class="notebook">
+        <div class="nb-rings" id="nb-rings"></div>
+
+        <!-- ══ NOTES ══ -->
+        <div class="nb-pane active" id="nbpane-notes">
+          <div class="nb-head">
+            <div class="nb-title">✍️ Notes to self</div>
+            <span class="nb-saved" id="nb-saved">saved ✓</span>
+          </div>
+
+          <div class="nb-paper">
+            <textarea class="nb-textarea" id="nb-textarea" spellcheck="true"
+              placeholder="Brain dump. Half-thoughts welcome…"
+              oninput="onPlanningInput()" onblur="savePlanningNow()"></textarea>
+          </div>
+
+          <hr class="nb-divider">
+
+          <div class="nb-sub">
+            <div class="nb-sub-label">🔗 Tasks I'm thinking about</div>
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+              <select class="assignee-select" id="nb-task-picker" title="Pin a task from the board"></select>
+              <button class="btn-secondary" onclick="addPlanningLink()" style="font-size:12px;">＋ Pin task</button>
+            </div>
+          </div>
+
+          <div class="nb-links" id="nb-links"></div>
+
+          <hr class="nb-divider">
+
+          <!-- two-day planner, same mechanic as the log -->
+          <div class="nb-sub">
+            <div class="nb-sub-label">🗓️ Next two days</div>
+            <span style="font-size:11px; font-weight:700; color:var(--ink-light);">
+              blocks run 2am → 2am · drag empty space to add · drag a block to move · drag an edge to resize
+            </span>
+          </div>
+          <div class="plan2" id="plan2-grid"></div>
+        </div>
+
+        <!-- ══ LOG ══ -->
+        <div class="nb-pane" id="nbpane-log">
+          <div class="nb-head">
+            <div class="nb-title">🕑 Today's log</div>
+            <span class="nb-saved" id="nb-log-saved">saved ✓</span>
+          </div>
+          <div style="font-size:12px; font-weight:700; color:var(--ink-light); margin-bottom:12px;">
+            What you actually did. Log the first block, then each new activity starts where the last one ended.
+            Drag empty space to add a block, drag a block to move it, drag its edge to resize, click it to edit.
+          </div>
+          <div id="log-today"></div>
+        </div>
+
+        <!-- ══ SAVED LOGS ══ -->
+        <div class="nb-pane" id="nbpane-saved">
+          <div class="nb-head">
+            <div class="nb-title">📚 Saved logs</div>
+            <select class="assignee-select" id="log-person" onchange="onLogPersonChange()" title="Whose logs to show"></select>
+          </div>
+
+          <div class="nb-sub"><div class="nb-sub-label">This past week</div></div>
+          <div class="wk" id="log-week"></div>
+
+          <hr class="nb-divider">
+
+          <div class="nb-sub">
+            <div class="nb-sub-label">📑 Contents</div>
+            <span style="font-size:11px; font-weight:700; color:var(--ink-light);" id="log-count"></span>
+          </div>
+          <div class="log-toc" id="log-toc"></div>
+
+          <div id="log-detail" style="margin-top:18px;"></div>
+        </div>
+      </div>
+
+      <!-- pie of logged time, under the notebook -->
+      <div class="paper-card">
+        <div class="nb-sub">
+          <div class="nb-sub-label">🥧 Where your logged time actually went</div>
+          <select class="assignee-select" id="logpie-range" onchange="renderLogPie()">
+            <option value="today">Today</option>
+            <option value="week" selected>Last 7 days</option>
+            <option value="all">All time</option>
+          </select>
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap:24px; align-items:center;">
+          <div id="logpie-svg"></div>
+          <div id="logpie-legend" style="flex:1; min-width:180px;"></div>
         </div>
       </div>
     </div>
@@ -1701,6 +2213,49 @@
   </div>
 </div>
 
+<!-- LOG / PLAN ACTIVITY ENTRY MODAL -->
+<div class="modal-overlay" id="entry-modal" style="display:none" onclick="if(event.target===this) closeModal('entry-modal')">
+  <div class="modal">
+    <div class="modal-title" id="entry-title">🕑 Log an activity</div>
+    <div style="font-size:12px; font-weight:700; color:var(--ink-light); margin-bottom:12px;" id="entry-daylabel"></div>
+
+    <div class="form-group">
+      <label class="form-label">What were you doing?</label>
+      <input class="form-input" id="entry-label" placeholder="e.g. storyboarding the reel" maxlength="80">
+    </div>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <div class="form-group" style="flex:1; min-width:120px;">
+        <label class="form-label">Start</label>
+        <input class="form-input" id="entry-start" type="time" step="300" oninput="updateEntryPreview()">
+      </div>
+      <div class="form-group" style="flex:1; min-width:120px;">
+        <label class="form-label">End</label>
+        <input class="form-input" id="entry-end" type="time" step="300" oninput="updateEntryPreview()">
+      </div>
+    </div>
+    <div style="font-size:11px; font-weight:700; color:var(--ink-light); margin:-6px 0 12px;" id="entry-dur">—</div>
+
+    <div class="form-group">
+      <label class="form-label">Activity</label>
+      <select class="form-input" id="entry-type" onchange="updateEntryPreview()"></select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Tasks worked on <span style="font-weight:600; color:var(--ink-light);">(optional)</span></label>
+      <div class="ent-tasks" id="entry-tasks"></div>
+    </div>
+
+    <div class="modal-footer" style="justify-content:space-between;">
+      <button class="btn-secondary" id="entry-delete" onclick="deleteEntryFromModal()" style="display:none; color:var(--sail-red);">🗑 Delete</button>
+      <div style="display:flex; gap:8px; margin-left:auto;">
+        <button class="btn-secondary" onclick="closeModal('entry-modal')">Cancel</button>
+        <button class="btn-primary" onclick="saveEntryFromModal()">Save ✨</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- LIVE SYNC MODAL -->
 <div class="modal-overlay" id="sync-modal" style="display:none" onclick="if(event.target===this) closeModal('sync-modal')">
   <div class="modal">
@@ -1831,6 +2386,7 @@ let state = {
   sortPriority: '',
   sortType: '',
   sortTime: '',
+  sortDue: '',
   selectedTemplate: 'weekly',
   templates: null, // populated below if null
   wsName: 'WAY OF BOATS',
@@ -2151,6 +2707,7 @@ function showSection(name) {
   if (name === 'tasks') { renderTasks(); renderPostReminders(); }
   if (name === 'calendar') renderCalendar();
   if (name === 'worldcup') renderWorldCup();
+  if (name === 'planning') renderPlanning();
 }
 
 // ══════════════════════════════════════════════
@@ -2548,15 +3105,15 @@ function togglePCheck(meetingId, personId, idx) {
   const m = state.meetings.find(x => x.id === meetingId);
   const chk = m?.checks?.[personId]?.[idx];
   if (!chk) return;
+  // If a board task is linked, drive it through toggleTask so the on-time ⭐,
+  // the sync back to this checkbox, and every other surface all happen. Ticking
+  // here used to set task.done directly, which silently skipped the star.
+  const task = findLinkedTask(chk.linkId);
+  if (task) { toggleTask(task.id); return; }
   chk.done = !chk.done;
   if (chk.done) playSound('ding');
-  // sync the linked board task
-  const task = findLinkedTask(chk.linkId);
-  if (task) task.done = chk.done;
   save();
-  renderMeetings();
-  renderTasks();
-  renderLeaderboard();
+  refreshTaskSurfaces();
 }
 function editPCheck(meetingId, personId, idx, value) {
   const m = state.meetings.find(x => x.id === meetingId);
@@ -2999,8 +3556,24 @@ function changeSort() {
   state.sortPriority = document.getElementById('sort-priority').value;
   state.sortType = document.getElementById('sort-type').value;
   state.sortTime = document.getElementById('sort-time').value;
+  const dueSel = document.getElementById('sort-due');
+  state.sortDue = dueSel ? dueSel.value : '';
   state.filterPerson = document.getElementById('filter-person').value;
   renderTasks();
+}
+
+// Every surface that shows task state, refreshed in one place. Checking a task
+// off anywhere — board, meeting checklist, pomodoro list, notebook, leaderboard
+// drawer — has to show up everywhere else immediately, so all togglers call this
+// instead of each maintaining its own partial list of re-renders.
+function refreshTaskSurfaces() {
+  try { renderTasks(); } catch(e) {}          // also refreshes the pomodoro to-do list
+  try { renderLeaderboard(); } catch(e) {}
+  try { renderPersonExpand(); } catch(e) {}   // the meeting person drawer, if open
+  try { renderMeetings(); } catch(e) {}
+  try { renderCalendar(); } catch(e) {}
+  try { renderPlanningLinks(); } catch(e) {}
+  try { renderPie(); } catch(e) {}
 }
 
 function toggleTask(id) {
@@ -3034,11 +3607,7 @@ function toggleTask(id) {
     if (chk) { chk.classList.toggle('checked', t.done); chk.textContent = t.done ? '✓' : ''; }
   }
   save();
-  requestAnimationFrame(() => {
-    renderTasks();
-    renderLeaderboard();
-    if (t.linkedCheck) renderMeetings();
-  });
+  requestAnimationFrame(refreshTaskSurfaces);
 }
 
 function deleteTask(id) {
@@ -3148,6 +3717,9 @@ function applyBatch() {
 function renderTasks() {
   renderAssigneeSelect();
   if (typeof renderPomoTodos === 'function') renderPomoTodos();
+  // keep the due-date dropdown showing the sort that's actually applied (survives reloads)
+  const dueSel = document.getElementById('sort-due');
+  if (dueSel && dueSel.value !== (state.sortDue || '')) dueSel.value = state.sortDue || '';
   const list = document.getElementById('task-list');
   let tasks = state.tasks.slice();
   if (state.currentFilter === 'open') tasks = tasks.filter(t => !t.done);
@@ -3167,6 +3739,19 @@ function renderTasks() {
   // sort by time estimate (uses subtask sum when present)
   if (state.sortTime === 'short-first') tasks.sort((a,b) => taskEffectiveMins(a) - taskEffectiveMins(b));
   else if (state.sortTime === 'long-first') tasks.sort((a,b) => taskEffectiveMins(b) - taskEffectiveMins(a));
+
+  // sort by due date — tasks with no due date always sink to the bottom,
+  // since "no deadline" isn't earlier OR later than a real one.
+  if (state.sortDue === 'soon-first' || state.sortDue === 'late-first') {
+    const dir = state.sortDue === 'soon-first' ? 1 : -1;
+    tasks.sort((a, b) => {
+      const ad = a.due || '', bd = b.due || '';
+      if (!ad && !bd) return 0;
+      if (!ad) return 1;
+      if (!bd) return -1;
+      return ad < bd ? -dir : (ad > bd ? dir : 0);
+    });
+  }
 
   if (tasks.length === 0) {
     list.innerHTML = `<div class="empty-state" style="padding:24px"><div class="empty-emoji">✅</div><p>${state.currentFilter==='done'?'No completed tasks yet!':'No tasks match — try clearing a filter!'}</p></div>`;
@@ -3237,6 +3822,8 @@ function setTaskDue(id, value) {
   save();
   renderTasks();
   renderLeaderboard();
+  renderCalendar();          // the day chip moves with the date
+  renderPlanningLinks();
 }
 function setTaskPriority(id, value) {
   const t = state.tasks.find(x => x.id === id);
@@ -3244,7 +3831,7 @@ function setTaskPriority(id, value) {
 }
 function setTaskType(id, value) {
   const t = state.tasks.find(x => x.id === id);
-  if (t) { t.type = value; save(); if (state.sortType) renderTasks(); }
+  if (t) { t.type = value; save(); if (state.sortType) renderTasks(); renderCalendar(); }
 }
 function setTaskMins(id, value) {
   const t = state.tasks.find(x => x.id === id);
@@ -3291,7 +3878,7 @@ function editSubtask(id, si, value) {
 }
 function toggleSubtask(id, si) {
   const t = state.tasks.find(x => x.id === id);
-  if (t && t.subtasks[si]) { t.subtasks[si].done = !t.subtasks[si].done; if (t.subtasks[si].done) playSound('ding'); save(); renderTasks(); }
+  if (t && t.subtasks[si]) { t.subtasks[si].done = !t.subtasks[si].done; if (t.subtasks[si].done) playSound('ding'); save(); refreshTaskSurfaces(); }
 }
 function delSubtask(id, si) {
   const t = state.tasks.find(x => x.id === id);
@@ -3432,15 +4019,128 @@ function wcCheckIn(catId) {
   renderLeaderboard();
 }
 
+// Completing a category's month (26+ check-in days) pays out this many fish.
+const STREAK_FISH_REWARD = 3;
+
 function awardStreakFish(p, catId, mk) {
   if (!p.fish) p.fish = [];
   const cat = getWcCategories(p.id).find(c => c.id === catId);
   const label = cat ? cat.label : 'habit';
-  p.fish.push({ emoji: '🐟', name: 'Consistency Fish (' + label + ', ' + mk + ')', minutes: 0, at: Date.now(), fromStreak: true, catId, month: mk });
-  showToast(`🎣 ${escHtml(p.name)} earned a fish — 25+ days of ${label} this month! 🔥`);
+  for (let i = 0; i < STREAK_FISH_REWARD; i++) {
+    p.fish.push({ emoji: '🐟', name: 'Consistency Fish (' + label + ', ' + mk + ')', minutes: 0, at: Date.now() + i, fromStreak: true, catId, month: mk });
+  }
+  showToast(`🎣 ${escHtml(p.name)} earned ${STREAK_FISH_REWARD} fish — 26 days of ${label} this month! 🔥`);
+}
+
+// Total World Cup check-ins this month, across every category. Days do NOT have
+// to be consecutive — 19 scattered gym days counts as 19.
+function wcMonthChecks(pid, monthKey) {
+  const p = personById(pid);
+  if (!p) return 0;
+  const wc = p.wc || {};
+  const mk = monthKey || estMonthKey();
+  return getWcCategories(pid).reduce((s, c) => {
+    const rec = wc[c.id];
+    return s + ((rec && rec.monthCounts && rec.monthCounts[mk]) || 0);
+  }, 0);
+}
+// Those check-ins are worth a tenth of a point each: 19 → 1.9
+function wcStreakPoints(pid, monthKey) {
+  return wcMonthChecks(pid, monthKey) / 10;
+}
+
+// ══════════════════════════════════════════════
+// FISH MARKET — spend caught fish on profile stickers
+// ══════════════════════════════════════════════
+// 9 items. "special" = shiny/animated, costs more. id must stay stable.
+const MARKET_ITEMS = [
+  { id: 'st_star',    emoji: '🌟', name: 'Gold Star',      cost: 3,  special: false },
+  { id: 'st_heart',   emoji: '💖', name: 'Sparkle Heart',  cost: 3,  special: false },
+  { id: 'st_crown',   emoji: '👑', name: 'Crown',          cost: 4,  special: false },
+  { id: 'st_rocket',  emoji: '🚀', name: 'Rocket',         cost: 4,  special: false },
+  { id: 'st_rainbow', emoji: '🌈', name: 'Rainbow',        cost: 5,  special: false },
+  { id: 'st_fire',    emoji: '🔥', name: 'Blazing Flame',  cost: 6,  special: true },
+  { id: 'st_diamond', emoji: '💎', name: 'Shiny Diamond',  cost: 8,  special: true },
+  { id: 'st_trophy',  emoji: '🏆', name: 'Champion Cup',   cost: 10, special: true },
+  { id: 'st_whale',   emoji: '🐋', name: 'Legendary Whale', cost: 12, special: true }
+];
+function marketItem(id) { return MARKET_ITEMS.find(i => i.id === id); }
+
+function renderMarket() {
+  const shelf = document.getElementById('market-shelf');
+  const bal = document.getElementById('market-balance');
+  if (!shelf) return;
+  const myId = myPersonId();
+  const me = myId ? personById(myId) : null;
+  const fishCount = me ? (me.fish || []).length : 0;
+  const owned = (me && me.stickers) || [];
+  if (bal) bal.innerHTML = `🎣 ${fishCount} fish`;
+
+  shelf.innerHTML = MARKET_ITEMS.map(item => {
+    const isOwned = owned.includes(item.id);
+    const canAfford = fishCount >= item.cost;
+    const btn = !me
+      ? `<div class="market-locked">set your name to buy</div>`
+      : isOwned
+        ? `<div class="market-owned">✓ Owned</div>`
+        : `<button class="market-buy ${canAfford?'':'disabled'}" ${canAfford?'':'disabled'} onclick="buyMarketItem('${item.id}')">🎣 ${item.cost}</button>`;
+    return `<div class="market-item ${item.special?'special':''} ${isOwned?'is-owned':''}">
+      ${item.special ? '<div class="market-badge">✨ special</div>' : ''}
+      <div class="market-emoji ${item.special?'shiny':''}">${item.emoji}</div>
+      <div class="market-name">${escHtml(item.name)}</div>
+      ${btn}
+    </div>`;
+  }).join('');
+}
+
+function buyMarketItem(id) {
+  const myId = myPersonId();
+  if (!myId) { showToast('Set your name to a crew member first! 🪪'); return; }
+  const me = personById(myId);
+  const item = marketItem(id);
+  if (!item) return;
+  if (!me.stickers) me.stickers = [];
+  if (me.stickers.includes(id)) { showToast('You already own that one!'); return; }
+  const fish = me.fish || [];
+  if (fish.length < item.cost) { showToast(`Not enough fish — need ${item.cost} 🎣`); return; }
+  // spend the fish: remove `cost` fish, preferring non-streak/plain ones first
+  // (so consistency fish that carry leaderboard weight are spent last)
+  const spendOrder = fish.map((f, idx) => ({ f, idx }))
+    .sort((a, b) => (a.f.fromStreak?1:0) - (b.f.fromStreak?1:0));
+  const removeIdx = new Set(spendOrder.slice(0, item.cost).map(o => o.idx));
+  me.fish = fish.filter((f, idx) => !removeIdx.has(idx));
+  me.stickers.push(id);
+  playSound('ding');
+  showToast(`🛍️ Bought ${item.name}! Equip it from your profile.`);
+  save();
+  renderMarket();
+  renderLeaderboard();
+}
+
+// equip/unequip stickers (called from the player profile). Max 3 shown on profile.
+function toggleSticker(pid, id) {
+  const p = personById(pid);
+  if (!p) return;
+  if (!p.activeStickers) p.activeStickers = [];
+  const i = p.activeStickers.indexOf(id);
+  if (i > -1) { p.activeStickers.splice(i, 1); }
+  else {
+    if (p.activeStickers.length >= 3) { showToast('You can show up to 3 stickers — remove one first.'); return; }
+    p.activeStickers.push(id);
+  }
+  save();
+  openPlayerProfile(pid);   // re-render the profile
+  renderLeaderboard();
+}
+// small helper: the emoji string for a person's equipped stickers
+function stickerStrip(p) {
+  const act = (p.activeStickers || []).map(id => marketItem(id)).filter(Boolean);
+  if (!act.length) return '';
+  return ' ' + act.map(it => `<span class="sticker-badge ${it.special?'shiny':''}" title="${escAttr(it.name)}">${it.emoji}</span>`).join('');
 }
 
 function renderWorldCup() {
+  renderMarket();
   reconcileStreaks();
   const table = document.getElementById('worldcup-table');
   if (!table) return;
@@ -3468,7 +4168,7 @@ function renderWorldCup() {
       const rec = wc[c.id] || { streak: 0, last: null, monthCounts: {} };
       const checkedToday = rec.last === today;
       const monthCount = (rec.monthCounts && rec.monthCounts[mk]) || 0;
-      const nearFish = monthCount > 0 ? ` · ${monthCount}/26 this month` : '';
+      const nearFish = monthCount > 0 ? ` · ${monthCount}/26 this month (+${(monthCount / 10).toFixed(1)} pts)` : '';
       return `<div class="wc-chip">
         <button class="wc-check ${checkedToday ? 'checked' : ''}" ${isMe ? '' : 'disabled'}
           onclick="wcCheckIn('${c.id}')" title="${isMe ? 'Check in for today' : 'Only ' + escAttr(p.name) + ' can check this'}">${checkedToday ? '✓' : ''}</button>
@@ -3586,13 +4286,16 @@ function renderLeaderboard() {
       const done = counts[p.id]?.done || 0;
       const total = counts[p.id]?.total || 0;
       const ratio = total > 0 ? (done / total) : 0;
-      // total streak across all World Cup categories
+      // 🔥 streak stays the consecutive-day count for display, but POINTS now come
+      // from how many times you checked in this month, consecutive or not.
       const wc = p.wc || {};
       const streak = getWcCategories(p.id).reduce((s, c) => s + ((wc[c.id] && wc[c.id].streak) || 0), 0);
+      const monthChecks = wcMonthChecks(p.id);
+      const streakPts = monthChecks / 10;
       const stars = p.stars || 0;
-      // FORMULA: (fish*3) + (10 * done/total) + (streak/5) + (total tasks/5) + (stars/2)
-      const points = Math.round((fish * 3) + ((ratio * done)) + (streak / 3) + (total / 10) + (stars / 2));
-      return { ...p, done, total, fish, focusMinutes, streak, stars, points };
+      // FORMULA: (fish*3) + (10 * done/total) + (month check-ins/10) + (total tasks/5) + (stars/2)
+      const points = Math.round((fish * 3) + (10 * ratio) + streakPts + (total / 5) + (stars / 2));
+      return { ...p, done, total, fish, focusMinutes, streak, monthChecks, streakPts, stars, points };
     })
     .sort((a, b) => b.points - a.points || b.done - a.done);
 
@@ -3604,8 +4307,8 @@ function renderLeaderboard() {
     <div class="leaderboard-sub">
       <div class="rules-box">
         <b>🧮 How points work</b>
-        <div class="rules-formula">Points = (🎣&nbsp;×&nbsp;3) + (10&nbsp;×&nbsp;done&nbsp;÷&nbsp;total) + (🔥&nbsp;streak&nbsp;÷&nbsp;5) + (tasks&nbsp;÷&nbsp;5) + (⭐&nbsp;÷&nbsp;2)</div>
-        <div class="rules-note">🎣 fish come from the World Cup (26+ check-in days in a month) and focus sessions. ⭐ stars are earned by finishing a task on or before its due date.</div>
+        <div class="rules-formula">Points = (🎣&nbsp;×&nbsp;3) + (10&nbsp;×&nbsp;done&nbsp;÷&nbsp;total) + (✅&nbsp;check-ins&nbsp;this&nbsp;month&nbsp;÷&nbsp;10) + (tasks&nbsp;÷&nbsp;5) + (⭐&nbsp;÷&nbsp;2)</div>
+        <div class="rules-note">✅ every check-in this month counts, streak or not — 19 gym days is 19&nbsp;÷&nbsp;10 = 1.9 points. 🎣 fish come from the World Cup (${STREAK_FISH_REWARD} fish for hitting 26 days in a month) and focus sessions. ⭐ stars are earned by finishing a task on or before its due date.</div>
       </div>
     </div>
     <div class="leaderboard-list">
@@ -3617,8 +4320,8 @@ function renderLeaderboard() {
         return `<div class="lb-row ${rankClass}" onclick="openPlayerProfile('${p.id}')" style="cursor:pointer" title="View ${escAttr(p.name)}'s profile">
           <span class="lb-rank">${medal}</span>
           <div style="width:28px;height:28px;border-radius:50%;background:${p.color};flex-shrink:0;border:2px solid rgba(255,255,255,0.7)"></div>
-          <span class="lb-name">${escHtml(p.name)} ${starDisplay}
-            <span style="display:block;font-size:10px;font-weight:700;color:var(--ink-light)">✅ ${p.done}/${p.total} · 🎣 ${p.fish} · 🔥 ${p.streak}</span>
+          <span class="lb-name">${escHtml(p.name)}${stickerStrip(p)} ${starDisplay}
+            <span style="display:block;font-size:10px;font-weight:700;color:var(--ink-light)">✅ ${p.done}/${p.total} · 🎣 ${p.fish} · 🔥 ${p.streak} · 📅 ${p.monthChecks} this month (+${p.streakPts.toFixed(1)})</span>
           </span>
           <div class="lb-bar-wrap"><div class="lb-bar" style="width:${barW}%;background:${p.color}"></div></div>
           <span class="lb-score">${p.points}<span> pts</span></span>
@@ -3642,6 +4345,8 @@ function openPlayerProfile(pid) {
   const streak = getWcCategories(pid).reduce((s, c) => s + ((wc[c.id] && wc[c.id].streak) || 0), 0);
   const stars = p.stars || 0;
   const fishArr = p.fish || [];
+  const focusMins = focusMinutesFor(pid);
+  const sessions = p.pomoSessions || 0;
 
   // group fish by name to show counts of each kind
   const byKind = {};
@@ -3660,11 +4365,25 @@ function openPlayerProfile(pid) {
         <span class="profile-fish-count">×${k.count}</span>
       </div>`).join('');
 
+  // stickers owned from the Fish Market
+  const owned = (p.stickers || []).map(id => marketItem(id)).filter(Boolean);
+  const active = p.activeStickers || [];
+  const isMe = pid === myPersonId();
+  const stickersHtml = owned.length === 0
+    ? `<div style="font-size:11px;font-weight:600;color:var(--ink-light);padding:6px;">No stickers yet — visit the 🐠 Fish Market under World Cup!</div>`
+    : owned.map(it => {
+        const on = active.includes(it.id);
+        return `<button class="profile-sticker ${it.special?'shiny':''} ${on?'equipped':''}" ${isMe?'':'disabled'}
+          onclick="toggleSticker('${pid}', '${it.id}')" title="${isMe ? (on?'Click to unequip':'Click to equip') : escAttr(it.name)}">
+          <span class="ps-emoji">${it.emoji}</span>${on?'<span class="ps-check">✓</span>':''}
+        </button>`;
+      }).join('');
+
   document.getElementById('player-modal-body').innerHTML = `
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
       <div style="width:46px;height:46px;border-radius:50%;background:${p.color};border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.2);flex-shrink:0;"></div>
       <div>
-        <div style="font-family:'Kalam',cursive;font-size:24px;font-weight:700;color:var(--ocean-deep);">${escHtml(p.name)}</div>
+        <div style="font-family:'Kalam',cursive;font-size:24px;font-weight:700;color:var(--ocean-deep);">${escHtml(p.name)}${stickerStrip(p)}</div>
         <div style="font-size:12px;font-weight:700;color:var(--ink-light);">🎣 ${fishArr.length} fish · ⭐ ${stars} stars · 🔥 ${streak} streak</div>
       </div>
     </div>
@@ -3672,8 +4391,17 @@ function openPlayerProfile(pid) {
       <div class="profile-stat"><b>${done}/${total}</b><span>tasks done</span></div>
       <div class="profile-stat"><b>${fishArr.length}</b><span>total fish</span></div>
       <div class="profile-stat"><b>${stars}</b><span>on-time ⭐</span></div>
-      <div class="profile-stat"><b>${streak}</b><span>🔥 streak</span></div>
+      <div class="profile-stat"><b>${formatMinutes(focusMins)}</b><span>focus time</span></div>
     </div>
+    <div class="profile-focus">
+      <span class="pf-emoji">⏳</span>
+      <div>
+        <b>${formatDurationLong(focusMins)}</b> of focus logged
+        <span class="pf-sub">${sessions} pomodoro session${sessions === 1 ? '' : 's'} · 🔥 ${streak} streak · 📅 ${wcMonthChecks(pid)} check-ins this month (+${wcStreakPoints(pid).toFixed(1)} pts)</span>
+      </div>
+    </div>
+    <div style="font-size:12px;font-weight:800;color:var(--ocean-deep);text-transform:uppercase;letter-spacing:0.04em;margin:14px 0 6px;">🏷️ Stickers ${isMe?'<span style="font-weight:600;text-transform:none;color:var(--ink-light)">(tap to equip, up to 3)</span>':''}</div>
+    <div class="profile-sticker-row">${stickersHtml}</div>
     <div style="font-size:12px;font-weight:800;color:var(--ocean-deep);text-transform:uppercase;letter-spacing:0.04em;margin:14px 0 6px;">🐟 Fish collection</div>
     <div class="profile-fish-list">${fishHtml}</div>
   `;
@@ -3945,8 +4673,12 @@ function saveMyName() {
   if (sbChannel) { try { sbChannel.track({ id: myUserId, name: state.myName, color: myColor }); } catch(e){} }
   // save name without pushing whole doc unnecessarily
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  // anything done before a name was set now belongs to this profile
+  claimLocalFocusMinutes();
+  claimLocalPlanning();
   closeModal('myname-modal');
   renderOnlineUsers();
+  renderPlanning();
   showToast('Name saved! 🪪');
 }
 
@@ -4015,6 +4747,10 @@ function renderAll() {
   renderLeaderboard();
   renderOnlineUsers();
   renderAssigneeSelect();
+  // these two read from tasks/people too, so keep them fresh after remote syncs.
+  // Both guard against overwriting a field you're actively typing in.
+  try { renderCalendar(); } catch(e) {}
+  try { renderPlanning(); } catch(e) {}
 }
 
 // ══════════════════════════════════════════════
@@ -4217,6 +4953,7 @@ const BOAT_MESSAGES = [
   { text: "Where you come from shaped your oars — but you still choose where to row.", book: "in the spirit of Outliers, Malcolm Gladwell" },
   { text: "The underdog wins by playing a different game. What rule could you break today?", book: "in the spirit of David and Goliath, Malcolm Gladwell" },
   // ── Work-focus questions (randomized prompts) ──
+  { text: "What's the cost? What's the gain? Weigh both before you commit the hours.", book: "a question for you 🎯" },
   { text: "What's the ONE thing that, if finished today, would make everything else easier?", book: "a question for you 🎯" },
   { text: "What have you been avoiding? Name it and give it ten honest minutes.", book: "a question for you 🎯" },
   { text: "If you only had 30 minutes today, what would you spend them on?", book: "a question for you 🎯" },
@@ -4330,6 +5067,976 @@ function myPersonId() {
   if (!n) return null;
   const p = state.people.find(x => x.name.trim().toLowerCase() === n);
   return p ? p.id : null;
+}
+
+// ══════════════════════════════════════════════
+// PLANNING SCRATCHPAD  (private spiral notebook, per person)
+// ══════════════════════════════════════════════
+// Kept on the person as `planning: { text, links: [taskId] }` so it rides the
+// same per-item sync as everything else. Before a name is set there's no person
+// to attach it to, so it falls back to a local draft that gets folded in later.
+const PLANNING_LOCAL_KEY = 'boats_planning_draft';
+
+function getPlanning() {
+  const id = myPersonId();
+  if (!id) {
+    try { return JSON.parse(localStorage.getItem(PLANNING_LOCAL_KEY) || '{}') || {}; }
+    catch(e) { return {}; }
+  }
+  const p = personById(id);
+  if (!p) return {};
+  if (!p.planning) p.planning = { text: '', links: [] };
+  if (!Array.isArray(p.planning.links)) p.planning.links = [];
+  return p.planning;
+}
+
+function savePlanning(obj) {
+  const id = myPersonId();
+  if (!id) { localStorage.setItem(PLANNING_LOCAL_KEY, JSON.stringify(obj)); return; }
+  const p = personById(id);
+  if (!p) return;
+  p.planning = obj;
+  save();
+}
+
+// Move a pre-name draft onto the profile once they claim one.
+function claimLocalPlanning() {
+  const id = myPersonId();
+  if (!id) return;
+  let draft = null;
+  try { draft = JSON.parse(localStorage.getItem(PLANNING_LOCAL_KEY) || 'null'); } catch(e) {}
+  if (!draft) return;
+  const hasText = (draft.text || '').trim();
+  const hasLinks = (draft.links || []).length;
+  if (!hasText && !hasLinks) { localStorage.removeItem(PLANNING_LOCAL_KEY); return; }
+  const p = personById(id);
+  if (!p) return;
+  if (!p.planning) p.planning = { text: '', links: [] };
+  // keep both: the draft goes above anything already on the page
+  p.planning.text = hasText
+    ? (draft.text + (p.planning.text ? '\n\n' + p.planning.text : ''))
+    : p.planning.text;
+  const merged = new Set([...(draft.links || []), ...(p.planning.links || [])]);
+  p.planning.links = [...merged];
+  localStorage.removeItem(PLANNING_LOCAL_KEY);
+  save();
+}
+
+let planningSaveTimer = null;
+function onPlanningInput() {
+  clearTimeout(planningSaveTimer);
+  planningSaveTimer = setTimeout(savePlanningNow, 500);   // debounce: don't sync every keystroke
+}
+
+function savePlanningNow() {
+  clearTimeout(planningSaveTimer);
+  const ta = document.getElementById('nb-textarea');
+  if (!ta) return;
+  const cur = getPlanning();
+  if ((cur.text || '') === ta.value) return;      // nothing changed
+  cur.text = ta.value;
+  if (!Array.isArray(cur.links)) cur.links = [];
+  savePlanning(cur);
+  flashSaved();
+}
+
+function flashSaved() {
+  const el = document.getElementById('nb-saved');
+  if (!el) return;
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 1200);
+}
+
+function renderPlanning() {
+  claimLocalPlanning();
+  const ta = document.getElementById('nb-textarea');
+  if (!ta) return;
+  const data = getPlanning();
+  // don't stomp what someone is actively typing
+  if (document.activeElement !== ta) ta.value = data.text || '';
+
+  const owner = document.getElementById('planning-owner');
+  if (owner) {
+    const id = myPersonId();
+    const p = id ? personById(id) : null;
+    owner.textContent = p
+      ? `${p.name}'s page, separate from everyone else's`
+      : 'set "My Name" in the sidebar to keep this page with your profile';
+  }
+
+  // the spiral binding — count of rings scales with the notebook's height
+  const rings = document.getElementById('nb-rings');
+  if (rings && !rings.childElementCount) {
+    rings.innerHTML = Array.from({ length: 18 }, () => '<div class="nb-ring"></div>').join('');
+  }
+
+  renderPlanningLinks();
+  renderPlan2();
+  renderLogPie();
+  if (nbTab === 'log') renderLogToday();
+  if (nbTab === 'saved') renderSavedLogs();
+}
+
+// The picker of board tasks available to pin, + the pinned list itself.
+function renderPlanningLinks() {
+  const data = getPlanning();
+  const links = Array.isArray(data.links) ? data.links : [];
+
+  const picker = document.getElementById('nb-task-picker');
+  if (picker) {
+    const avail = myOpenBoardTasks().filter(t => !links.includes(t.id));
+    picker.innerHTML = `<option value="">Pin a task from the board…</option>` +
+      avail.map(t => `<option value="${t.id}">${escHtml(t.text)}</option>`).join('');
+    if (!avail.length) {
+      picker.innerHTML = `<option value="">No open tasks to pin</option>`;
+    }
+  }
+
+  const wrap = document.getElementById('nb-links');
+  if (!wrap) return;
+
+  // resolve live from the board, and drop links whose task was deleted
+  const resolved = links.map(id => state.tasks.find(t => t.id === id)).filter(Boolean);
+  if (resolved.length !== links.length) {
+    data.links = resolved.map(t => t.id);
+    savePlanning(data);
+  }
+
+  if (!resolved.length) {
+    wrap.innerHTML = `<div class="nb-empty">Nothing pinned yet — pull a task over from the board to think it through here.</div>`;
+    return;
+  }
+
+  const todayKey = estDateKey();
+  wrap.innerHTML = resolved.map(t => {
+    const meta = typeMeta(t.type || getActivityTypes()[0].id);
+    const overdue = t.due && !t.done && t.due < todayKey;
+    const dueHtml = t.due
+      ? `<span class="nb-link-due ${overdue ? 'over' : ''}">${overdue ? '❗' : '⏰'} ${escHtml(t.due)}</span>`
+      : '';
+    return `<div class="nb-link ${t.done ? 'done' : ''}" style="border-left-color:${meta.color}">
+      <div class="task-check ${t.done ? 'checked' : ''}" onclick="togglePlanningTask(${t.id})" title="${t.done ? 'Mark as not done' : 'Mark as done'}">${t.done ? '✓' : ''}</div>
+      <span class="nb-link-text">${escHtml(t.text)}</span>
+      ${dueHtml}
+      <span class="nb-link-meta">${escHtml(meta.label)} · ${formatMinutes(taskEffectiveMins(t))}</span>
+      <button class="nb-link-x" onclick="removePlanningLink(${t.id})" title="Unpin from this page (keeps the task on the board)">×</button>
+    </div>`;
+  }).join('');
+}
+
+function addPlanningLink() {
+  const sel = document.getElementById('nb-task-picker');
+  if (!sel) return;
+  const id = parseInt(sel.value, 10);
+  if (!id) return;
+  const data = getPlanning();
+  if (!Array.isArray(data.links)) data.links = [];
+  if (!data.links.includes(id)) data.links.push(id);
+  savePlanning(data);
+  sel.value = '';
+  renderPlanningLinks();
+  flashSaved();
+}
+
+// Unpins from the notebook only — the task stays on the board.
+function removePlanningLink(id) {
+  const data = getPlanning();
+  data.links = (data.links || []).filter(x => x !== id);
+  savePlanning(data);
+  renderPlanningLinks();
+}
+
+// Ticking a pinned task ticks the real board task, so it stays in sync everywhere.
+function togglePlanningTask(id) {
+  toggleTask(id);
+  renderPlanningLinks();
+}
+
+// ══════════════════════════════════════════════
+// DAY LOG + TWO-DAY PLANNER
+// ══════════════════════════════════════════════
+// A logged day runs 2am → 2am, so late nights stay on the day they belong to.
+// Times are stored as minutes from midnight OF THE LOG'S DATE, which means the
+// after-midnight tail is simply > 1440 (e.g. 1500 = 1:00am the next morning).
+const LOG_DAY_START = 120;    // 2:00 AM
+const LOG_DAY_END   = 1560;   // 2:00 AM the following day
+const LOG_HOUR_H    = 46;     // px per hour in the timeline
+
+function minToLabel(m) {
+  const mm = ((m % 1440) + 1440) % 1440;
+  const h = Math.floor(mm / 60), mi = mm % 60;
+  const ampm = h < 12 ? 'AM' : 'PM';
+  let h12 = h % 12; if (h12 === 0) h12 = 12;
+  return `${h12}:${String(mi).padStart(2, '0')} ${ampm}`;
+}
+function minToTimeInput(m) {
+  const mm = ((m % 1440) + 1440) % 1440;
+  return `${String(Math.floor(mm / 60)).padStart(2, '0')}:${String(mm % 60).padStart(2, '0')}`;
+}
+function parseTimeInput(str) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec((str || '').trim());
+  if (!m) return null;
+  const h = +m[1], mi = +m[2];
+  if (h > 23 || mi > 59) return null;
+  return h * 60 + mi;
+}
+// A clock time before 2am belongs to the tail of the logged day, not its start.
+function resolveStartMin(str) {
+  const cm = parseTimeInput(str);
+  if (cm == null) return null;
+  const cand = cm < LOG_DAY_START ? cm + 1440 : cm;
+  return Math.min(cand, LOG_DAY_END - 5);
+}
+function resolveEndMin(startMin, str) {
+  const cm = parseTimeInput(str);
+  if (cm == null) return null;
+  let cand = cm < LOG_DAY_START ? cm + 1440 : cm;
+  if (cand <= startMin) cand += 1440;      // rolled past midnight
+  return Math.min(cand, LOG_DAY_END);
+}
+function keyPlusDays(key, n) {
+  const [y, m, d] = key.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + n);
+  return ymd(dt);
+}
+function keyLabel(key, withYear) {
+  const [y, m, d] = key.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const mons = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${days[dt.getDay()]} ${mons[dt.getMonth()]} ${dt.getDate()}` + (withYear ? ` ${y}` : '');
+}
+
+// ── storage ──
+function personLogs(pid) {
+  const p = personById(pid);
+  if (!p) return {};
+  if (!p.logs || typeof p.logs !== 'object' || Array.isArray(p.logs)) p.logs = {};
+  return p.logs;
+}
+function getLog(pid, dateKey, create) {
+  const logs = personLogs(pid);
+  if (!logs[dateKey] && create) {
+    logs[dateKey] = { date: dateKey, entries: [], createdAt: Date.now(), edited: false, editedAt: null };
+  }
+  const L = logs[dateKey];
+  if (L && !Array.isArray(L.entries)) L.entries = [];
+  return L || null;
+}
+// Changing a day that has already passed counts as an edit; adding to today
+// while today is still happening is just logging.
+function markLogEdited(L) {
+  if (L && L.date !== estDateKey()) { L.edited = true; L.editedAt = Date.now(); }
+}
+function planDays() {
+  const d = getPlanning();
+  if (!d.days || typeof d.days !== 'object' || Array.isArray(d.days)) d.days = {};
+  return d.days;
+}
+function entriesFor(mode, dateKey, pid) {
+  if (mode === 'plan') {
+    const days = planDays();
+    if (!Array.isArray(days[dateKey])) days[dateKey] = [];
+    return days[dateKey];
+  }
+  const L = getLog(pid || myPersonId(), dateKey, true);
+  return L ? L.entries : [];
+}
+function persistEntries(mode, dateKey) {
+  if (mode === 'plan') { const d = getPlanning(); savePlanning(d); }
+  else save();
+}
+function totalLogged(entries) {
+  return (entries || []).reduce((s, e) => s + Math.max(0, e.endMin - e.startMin), 0);
+}
+
+// ── notebook tabs ──
+let nbTab = 'notes';
+function showNbTab(name) {
+  nbTab = name;
+  ['notes','log','saved'].forEach(t => {
+    const pane = document.getElementById('nbpane-' + t);
+    const tab  = document.getElementById('nbtab-' + t);
+    if (pane) pane.classList.toggle('active', t === name);
+    if (tab)  tab.classList.toggle('active', t === name);
+  });
+  if (name === 'log')   renderLogToday();
+  if (name === 'saved') renderSavedLogs();
+  if (name === 'notes') renderPlan2();
+}
+
+// ── the timeline itself ──
+function renderTimeline(entries, opts) {
+  opts = opts || {};
+  const span = LOG_DAY_END - LOG_DAY_START;
+  const totalH = (span / 60) * LOG_HOUR_H;
+  const pos = m => ((m - LOG_DAY_START) / span) * totalH;
+
+  let hours = '';
+  for (let m = LOG_DAY_START; m < LOG_DAY_END; m += 60) {
+    hours += `<div class="tl-hour"><span class="tl-hour-label">${minToLabel(m)}</span></div>`;
+  }
+
+  const sorted = (entries || []).slice().sort((a, b) => a.startMin - b.startMin);
+  const blocks = sorted.map(e => {
+    const meta = typeMeta(e.type || getActivityTypes()[0].id);
+    const top = pos(e.startMin);
+    const h = Math.max(18, pos(e.endMin) - pos(e.startMin));
+    const dur = e.endMin - e.startMin;
+    const names = (e.taskIds || [])
+      .map(id => (state.tasks.find(t => t.id === id) || {}).text)
+      .filter(Boolean);
+    // Editable blocks carry their identity in data-* so one delegated pointer
+    // handler can drag/resize any timeline without per-element wiring.
+    const dragAttrs = opts.editable
+      ? `class="tl-entry editable" data-mode="${opts.mode}" data-date="${opts.dateKey}" data-id="${e.id}"`
+      : `class="tl-entry"`;
+    const handles = opts.editable
+      ? `<div class="tl-rs top"></div><div class="tl-rs bot"></div>` : '';
+    return `<div ${dragAttrs} style="top:${top.toFixed(1)}px;height:${h.toFixed(1)}px;background:${meta.color}"
+      title="${escAttr((e.label || meta.label) + ' · ' + minToLabel(e.startMin) + '–' + minToLabel(e.endMin) + (opts.editable ? ' · drag to move, drag an edge to resize, click to edit' : ''))}">
+      ${handles}
+      <div>${escHtml(e.label || meta.label)}</div>
+      <div class="tle-time">${minToLabel(e.startMin)}–${minToLabel(e.endMin)} · ${formatMinutes(dur)}</div>
+      ${names.length ? `<div class="tle-tasks">🔗 ${escHtml(names.join(', '))}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  // the midnight boundary — where the new day begins
+  const ndTop = pos(1440);
+  const newDayLabel = opts.dateKey ? keyLabel(keyPlusDays(opts.dateKey, 1)) : 'next day';
+  const newDay = `<div class="tl-newday" style="top:${ndTop.toFixed(1)}px"><span>▲ ${escHtml(newDayLabel)} — new day</span></div>`;
+
+  // a live "you are here" line, only on today
+  let nowLine = '';
+  if (opts.showNow) {
+    const now = new Date();
+    let cm = now.getHours() * 60 + now.getMinutes();
+    if (cm < LOG_DAY_START) cm += 1440;
+    if (cm >= LOG_DAY_START && cm <= LOG_DAY_END) {
+      nowLine = `<div class="tl-now" style="top:${pos(cm).toFixed(1)}px"></div>`;
+    }
+  }
+
+  return `<div class="tl">
+    <div class="tl-scroll"><div class="tl-body" style="height:${totalH}px">
+      ${hours}
+      <div class="tl-endcap" style="top:${totalH}px"><span class="tl-hour-label">${minToLabel(LOG_DAY_END)}</span></div>
+      ${newDay}${nowLine}
+      <div class="tl-lane" style="height:${totalH}px"
+        ${opts.editable ? `data-editable="1" data-mode="${opts.mode}" data-date="${opts.dateKey}"` : ''}>${blocks}</div>
+    </div></div>
+  </div>`;
+}
+
+// ── today's log tab ──
+function renderLogToday() {
+  const wrap = document.getElementById('log-today');
+  if (!wrap) return;
+  const pid = myPersonId();
+  const key = estDateKey();
+  const entries = pid ? entriesFor('log', key, pid) : [];
+  const total = totalLogged(entries);
+
+  wrap.innerHTML = `
+    <div class="tl-head">
+      <div>
+        <div class="tl-date">${keyLabel(key, true)}</div>
+        <div class="tl-total">${entries.length} ${entries.length === 1 ? 'activity' : 'activities'} · ${formatMinutes(total)} logged</div>
+      </div>
+      <button class="btn-primary" onclick="openEntryModal('log','${key}',null)" style="font-size:13px;">＋ Log an activity</button>
+    </div>
+    ${entries.length ? '' : `<div class="tl-empty">Nothing logged yet today. Add your first block and the next one will pick up where it ended.</div>`}
+    ${renderTimeline(entries, { mode: 'log', dateKey: key, editable: true, showNow: true })}
+  `;
+  scrollTimelineIntoView(wrap, entries);
+}
+
+// Start the scroll near the action instead of at 2am.
+function scrollTimelineIntoView(wrap, entries) {
+  const sc = wrap.querySelector('.tl-scroll');
+  if (!sc) return;
+  const span = LOG_DAY_END - LOG_DAY_START;
+  const totalH = (span / 60) * LOG_HOUR_H;
+  let anchor;
+  if (entries && entries.length) anchor = Math.min(...entries.map(e => e.startMin));
+  else { const n = new Date(); anchor = n.getHours() * 60 + n.getMinutes(); if (anchor < LOG_DAY_START) anchor += 1440; }
+  const top = ((anchor - LOG_DAY_START) / span) * totalH;
+  sc.scrollTop = Math.max(0, top - 60);
+}
+
+// ── two-day planner on the notes tab ──
+function renderPlan2() {
+  const grid = document.getElementById('plan2-grid');
+  if (!grid) return;
+  const today = estDateKey();
+  grid.innerHTML = [0, 1].map(off => {
+    const key = keyPlusDays(today, off);
+    const entries = entriesFor('plan', key);
+    const total = totalLogged(entries);
+    return `<div>
+      <div class="tl-head">
+        <div>
+          <div class="tl-date">${off === 0 ? 'Today' : 'Tomorrow'}</div>
+          <div class="tl-total">${keyLabel(key)} · ${formatMinutes(total)} planned</div>
+        </div>
+        <button class="btn-secondary" onclick="openEntryModal('plan','${key}',null)" style="font-size:12px;">＋ Plan</button>
+      </div>
+      ${renderTimeline(entries, { mode: 'plan', dateKey: key, editable: true, showNow: off === 0 })}
+    </div>`;
+  }).join('');
+  grid.querySelectorAll('.tl-scroll').forEach((sc, i) => {
+    const key = keyPlusDays(today, i);
+    const es = entriesFor('plan', key);
+    const span = LOG_DAY_END - LOG_DAY_START, totalH = (span / 60) * LOG_HOUR_H;
+    let anchor = es.length ? Math.min(...es.map(e => e.startMin)) : 480;
+    sc.scrollTop = Math.max(0, ((anchor - LOG_DAY_START) / span) * totalH - 60);
+  });
+}
+
+// ── saved logs tab ──
+let logViewPerson = null;   // whose archive we're looking at
+let logViewDate = null;     // which log is expanded
+
+function onLogPersonChange() {
+  const sel = document.getElementById('log-person');
+  logViewPerson = sel ? sel.value : null;
+  logViewDate = null;
+  renderSavedLogs();
+}
+
+function renderSavedLogs() {
+  const sel = document.getElementById('log-person');
+  if (!sel) return;
+  if (!logViewPerson) logViewPerson = myPersonId() || (state.people[0] && state.people[0].id) || '';
+  sel.innerHTML = state.people.map(p =>
+    `<option value="${p.id}">${escHtml(p.name)}${p.id === myPersonId() ? ' (you)' : ''}</option>`).join('');
+  if (!state.people.length) sel.innerHTML = `<option value="">No crew yet</option>`;
+  sel.value = logViewPerson;
+
+  renderLogWeek();
+  renderLogToc();
+  renderLogDetail();
+}
+
+// Week view: the last 7 days as seven miniature one-day logs.
+function renderLogWeek() {
+  const wrap = document.getElementById('log-week');
+  if (!wrap) return;
+  const today = estDateKey();
+  const span = LOG_DAY_END - LOG_DAY_START;
+  wrap.innerHTML = [6,5,4,3,2,1,0].map(back => {
+    const key = keyPlusDays(today, -back);
+    const L = getLog(logViewPerson, key, false);
+    const entries = (L && L.entries) || [];
+    const blocks = entries.map(e => {
+      const meta = typeMeta(e.type || getActivityTypes()[0].id);
+      const top = ((e.startMin - LOG_DAY_START) / span) * 100;
+      const h = Math.max(1.2, ((e.endMin - e.startMin) / span) * 100);
+      return `<div class="wk-block" style="top:${top.toFixed(2)}%;height:${h.toFixed(2)}%;background:${meta.color}"></div>`;
+    }).join('');
+    const has = entries.length > 0;
+    return `<div class="wk-day ${has ? '' : 'empty'} ${key === today ? 'is-today' : ''}"
+        ${has ? `onclick="openSavedLog('${key}')"` : ''} title="${escAttr(keyLabel(key, true))}">
+      <div class="wk-head">${keyLabel(key).replace(' ', '<br>')}</div>
+      <div class="wk-strip">${blocks}</div>
+      <div class="wk-foot">${has ? formatMinutes(totalLogged(entries)) : '—'}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderLogToc() {
+  const wrap = document.getElementById('log-toc');
+  const count = document.getElementById('log-count');
+  if (!wrap) return;
+  const logs = personLogs(logViewPerson);
+  const keys = Object.keys(logs).filter(k => (logs[k].entries || []).length).sort().reverse();
+  if (count) count.textContent = keys.length ? `${keys.length} log${keys.length === 1 ? '' : 's'}` : '';
+
+  if (!keys.length) {
+    wrap.innerHTML = `<div class="nb-empty">No saved logs yet. Anything logged on the Log tab shows up here.</div>`;
+    return;
+  }
+  wrap.innerHTML = keys.map(k => {
+    const L = logs[k];
+    const total = totalLogged(L.entries);
+    const chips = L.entries.slice().sort((a,b)=>a.startMin-b.startMin).map(e => {
+      const meta = typeMeta(e.type || getActivityTypes()[0].id);
+      return `<span class="log-chip" style="background:${meta.color}" title="${escAttr(e.label || meta.label)}"></span>`;
+    }).join('');
+    return `<div class="log-row ${k === logViewDate ? 'active' : ''}" onclick="openSavedLog('${k}')">
+      <span class="log-row-date">${keyLabel(k, true)}</span>
+      <span class="log-row-total">${L.entries.length} · ${formatMinutes(total)}</span>
+      <span class="log-chips">${chips}</span>
+      ${L.edited ? `<span class="edited-mark" title="Changed after the day it covers">✏️ edited</span>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function openSavedLog(key) {
+  logViewDate = (logViewDate === key) ? null : key;
+  renderLogToc();
+  renderLogDetail();
+  if (logViewDate) {
+    const d = document.getElementById('log-detail');
+    if (d) setTimeout(() => d.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 40);
+  }
+}
+
+function renderLogDetail() {
+  const wrap = document.getElementById('log-detail');
+  if (!wrap) return;
+  if (!logViewDate) { wrap.innerHTML = ''; return; }
+  const L = getLog(logViewPerson, logViewDate, false);
+  if (!L) { wrap.innerHTML = ''; return; }
+  const mine = logViewPerson === myPersonId();
+  const total = totalLogged(L.entries);
+  wrap.innerHTML = `
+    <hr class="nb-divider">
+    <div class="tl-head">
+      <div>
+        <div class="tl-date">${keyLabel(logViewDate, true)}</div>
+        <div class="tl-total">
+          ${L.entries.length} ${L.entries.length === 1 ? 'activity' : 'activities'} · ${formatMinutes(total)}
+          ${L.edited ? ` · <span style="color:var(--sunset-deep);font-weight:800;">edited ${new Date(L.editedAt).toLocaleDateString()}</span>` : ''}
+        </div>
+      </div>
+      ${mine ? `<button class="btn-secondary" onclick="openEntryModal('log','${logViewDate}',null)" style="font-size:12px;">＋ Add to this day</button>` : ''}
+    </div>
+    ${mine ? '' : `<div class="tl-total" style="margin-bottom:8px;">Viewing someone else's log — read only.</div>`}
+    ${renderTimeline(L.entries, { mode: 'log', dateKey: logViewDate, editable: mine, showNow: false })}
+  `;
+  scrollTimelineIntoView(wrap, L.entries);
+}
+
+// ── the add / edit activity modal ──
+let entryCtx = { mode: 'log', dateKey: null, entryId: null, taskIds: [] };
+
+function openEntryModal(mode, dateKey, entryId, preset) {
+  if (mode === 'log' && !myPersonId()) {
+    showToast('Set "My Name" in the sidebar first so the log knows whose it is 🪪');
+    return;
+  }
+  const entries = entriesFor(mode, dateKey);
+  const existing = entryId ? entries.find(e => e.id === entryId) : null;
+  entryCtx = { mode, dateKey, entryId: entryId || null, taskIds: existing ? (existing.taskIds || []).slice() : [] };
+
+  document.getElementById('entry-title').textContent = existing
+    ? (mode === 'plan' ? '✏️ Edit planned block' : '✏️ Edit activity')
+    : (mode === 'plan' ? '🗓️ Plan an activity' : '🕑 Log an activity');
+  document.getElementById('entry-daylabel').textContent =
+    keyLabel(dateKey, true) + ' · day runs 2:00 AM → 2:00 AM';
+
+  // activity type options
+  const tsel = document.getElementById('entry-type');
+  tsel.innerHTML = getActivityTypes().map(at =>
+    `<option value="${at.id}">${escHtml(at.label)}</option>`).join('');
+
+  let startMin, endMin;
+  if (existing) {
+    startMin = existing.startMin; endMin = existing.endMin;
+    document.getElementById('entry-label').value = existing.label || '';
+    tsel.value = existing.type || getActivityTypes()[0].id;
+  } else if (preset) {
+    // times came from dragging out a range on the timeline
+    startMin = preset.startMin;
+    endMin = preset.endMin;
+    document.getElementById('entry-label').value = '';
+    tsel.value = getActivityTypes()[0].id;
+  } else {
+    // pick up where the previous block ended
+    startMin = entries.length ? Math.max(...entries.map(e => e.endMin)) : defaultStartFor(dateKey);
+    if (startMin >= LOG_DAY_END - 5) startMin = LOG_DAY_END - 65;
+    endMin = Math.min(startMin + 60, LOG_DAY_END);
+    document.getElementById('entry-label').value = '';
+    tsel.value = getActivityTypes()[0].id;
+  }
+  document.getElementById('entry-start').value = minToTimeInput(startMin);
+  document.getElementById('entry-end').value = minToTimeInput(endMin);
+  document.getElementById('entry-delete').style.display = existing ? 'inline-flex' : 'none';
+
+  renderEntryTasks();
+  updateEntryPreview();
+  document.getElementById('entry-modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('entry-label').focus(), 60);
+}
+
+function defaultStartFor(dateKey) {
+  if (dateKey === estDateKey()) {
+    const n = new Date();
+    let cm = n.getHours() * 60 + n.getMinutes();
+    cm = Math.floor(cm / 5) * 5;
+    if (cm < LOG_DAY_START) cm += 1440;
+    return Math.min(cm, LOG_DAY_END - 65);
+  }
+  return 540;   // 9:00 AM
+}
+
+function renderEntryTasks() {
+  const wrap = document.getElementById('entry-tasks');
+  if (!wrap) return;
+  const myId = myPersonId();
+  const pool = state.tasks.filter(t => (!myId || t.assigneeId === myId) &&
+    (!t.done || entryCtx.taskIds.includes(t.id)));
+  if (!pool.length) {
+    wrap.innerHTML = `<div style="font-size:12px;font-weight:700;color:var(--ink-light);">No tasks on the board to attach.</div>`;
+    return;
+  }
+  wrap.innerHTML = pool.map(t => {
+    const on = entryCtx.taskIds.includes(t.id);
+    const meta = typeMeta(t.type || getActivityTypes()[0].id);
+    return `<label class="ent-task ${on ? 'on' : ''}">
+      <input type="checkbox" ${on ? 'checked' : ''} onchange="toggleEntryTask(${t.id}, this.checked)">
+      <span style="width:9px;height:9px;border-radius:2px;background:${meta.color};display:inline-block;"></span>
+      <span style="flex:1;">${escHtml(t.text)}</span>
+    </label>`;
+  }).join('');
+}
+function toggleEntryTask(id, on) {
+  if (on) { if (!entryCtx.taskIds.includes(id)) entryCtx.taskIds.push(id); }
+  else entryCtx.taskIds = entryCtx.taskIds.filter(x => x !== id);
+  renderEntryTasks();
+}
+
+function updateEntryPreview() {
+  const out = document.getElementById('entry-dur');
+  if (!out) return;
+  const s = resolveStartMin(document.getElementById('entry-start').value);
+  if (s == null) { out.textContent = '—'; return; }
+  const e = resolveEndMin(s, document.getElementById('entry-end').value);
+  if (e == null) { out.textContent = '—'; return; }
+  const crosses = e > 1440 && s <= 1440;
+  out.innerHTML = `${minToLabel(s)} → ${minToLabel(e)} · <b>${formatMinutes(e - s)}</b>` +
+    (crosses ? ` <span style="color:var(--sunset-deep);">(runs past midnight into ${escHtml(keyLabel(keyPlusDays(entryCtx.dateKey, 1)))})</span>` : '');
+}
+
+function saveEntryFromModal() {
+  const label = document.getElementById('entry-label').value.trim();
+  const startMin = resolveStartMin(document.getElementById('entry-start').value);
+  if (startMin == null) { showToast('Give the block a start time ⏰'); return; }
+  const endMin = resolveEndMin(startMin, document.getElementById('entry-end').value);
+  if (endMin == null) { showToast('Give the block an end time ⏰'); return; }
+  if (endMin <= startMin) { showToast('The end needs to come after the start ⏰'); return; }
+  const type = document.getElementById('entry-type').value;
+
+  const { mode, dateKey, entryId } = entryCtx;
+  const entries = entriesFor(mode, dateKey);
+  if (entryId) {
+    const e = entries.find(x => x.id === entryId);
+    if (e) Object.assign(e, { startMin, endMin, type, label, taskIds: entryCtx.taskIds.slice() });
+  } else {
+    entries.push({ id: Date.now() + Math.floor(Math.random() * 1000),
+      startMin, endMin, type, label, taskIds: entryCtx.taskIds.slice() });
+  }
+  if (mode === 'log') markLogEdited(getLog(myPersonId(), dateKey, true));
+  persistEntries(mode, dateKey);
+  closeModal('entry-modal');
+  afterEntryChange(mode);
+  showToast(mode === 'plan' ? '🗓️ Planned!' : '🕑 Logged!');
+}
+
+function deleteEntryFromModal() {
+  const { mode, dateKey, entryId } = entryCtx;
+  if (!entryId) return;
+  const entries = entriesFor(mode, dateKey);
+  const idx = entries.findIndex(e => e.id === entryId);
+  if (idx > -1) entries.splice(idx, 1);
+  if (mode === 'log') markLogEdited(getLog(myPersonId(), dateKey, true));
+  persistEntries(mode, dateKey);
+  closeModal('entry-modal');
+  afterEntryChange(mode);
+}
+
+function afterEntryChange(mode) {
+  if (mode === 'plan') { renderPlan2(); flashSaved(); }
+  else {
+    renderLogToday();
+    if (nbTab === 'saved') renderSavedLogs();
+    const ls = document.getElementById('nb-log-saved');
+    if (ls) { ls.classList.add('show'); clearTimeout(ls._t); ls._t = setTimeout(() => ls.classList.remove('show'), 1200); }
+  }
+  renderLogPie();
+}
+
+// ══════════════════════════════════════════════
+// DRAG + RESIZE on the timelines (Google-Calendar style)
+// ══════════════════════════════════════════════
+// Drag a block's middle to move it, drag its top/bottom edge to resize. Snaps to
+// 5-minute steps. A press that barely moves is treated as a click and opens the
+// editor instead, so both gestures live on the same element.
+const DRAG_SNAP = 5;         // minutes
+const DRAG_THRESHOLD = 4;    // px of movement before it counts as a drag
+let dragCtx = null;
+let createCtx = null;   // dragging out a brand-new block on empty space
+
+// Convert a viewport Y inside a lane to a snapped minute value in the day window.
+function laneMinuteAt(rect, clientY) {
+  const span = LOG_DAY_END - LOG_DAY_START;
+  const raw = LOG_DAY_START + ((clientY - rect.top) / rect.height) * span;
+  const snapped = Math.round(raw / DRAG_SNAP) * DRAG_SNAP;
+  return Math.max(LOG_DAY_START, Math.min(snapped, LOG_DAY_END));
+}
+
+function applyEntryGeometry(el, s, en, laneH) {
+  const span = LOG_DAY_END - LOG_DAY_START;
+  el.style.top = (((s - LOG_DAY_START) / span) * laneH).toFixed(1) + 'px';
+  el.style.height = Math.max(18, ((en - s) / span) * laneH).toFixed(1) + 'px';
+  const t = el.querySelector('.tle-time');
+  if (t) t.textContent = `${minToLabel(s)}–${minToLabel(en)} · ${formatMinutes(en - s)}`;
+}
+
+function tlPointerDown(e) {
+  if (e.button != null && e.button !== 0) return;   // left button / touch only
+  const el = e.target.closest && e.target.closest('.tl-entry.editable');
+  if (el) {
+    const lane = el.closest('.tl-lane');
+    if (!lane) return;
+    const mode = el.dataset.mode, dateKey = el.dataset.date, id = +el.dataset.id;
+    const ent = entriesFor(mode, dateKey).find(x => x.id === id);
+    if (!ent) return;
+    const onTop = e.target.classList && e.target.classList.contains('top');
+    const onBot = e.target.classList && e.target.classList.contains('bot');
+    dragCtx = {
+      el, mode, dateKey, id, ent,
+      kind: onTop ? 'top' : (onBot ? 'bot' : 'move'),
+      startY: e.clientY,
+      origStart: ent.startMin, origEnd: ent.endMin,
+      liveStart: ent.startMin, liveEnd: ent.endMin,
+      laneH: lane.getBoundingClientRect().height,
+      moved: 0
+    };
+    e.preventDefault();
+    return;
+  }
+
+  // ── empty space: drag out a new block ──
+  // Touch is excluded on purpose so a finger drag still scrolls the timeline;
+  // on touch, the "＋ Plan" / "＋ Log an activity" button is the way in.
+  if (e.pointerType === 'touch') return;
+  const lane = e.target.closest && e.target.closest('.tl-lane[data-editable="1"]');
+  if (!lane) return;
+  const rect = lane.getBoundingClientRect();
+  createCtx = {
+    lane, rect,
+    mode: lane.dataset.mode, dateKey: lane.dataset.date,
+    anchor: laneMinuteAt(rect, e.clientY),
+    startY: e.clientY, moved: 0,
+    ghost: null, liveStart: null, liveEnd: null
+  };
+  e.preventDefault();
+}
+
+function tlPointerMove(e) {
+  if (createCtx) { createDragMove(e); return; }
+  const d = dragCtx;
+  if (!d) return;
+  const dy = e.clientY - d.startY;
+  d.moved = Math.max(d.moved, Math.abs(dy));
+  if (d.moved <= DRAG_THRESHOLD) return;
+  d.el.classList.add('dragging');
+
+  const span = LOG_DAY_END - LOG_DAY_START;
+  const dm = Math.round(((dy / d.laneH) * span) / DRAG_SNAP) * DRAG_SNAP;
+  let s = d.origStart, en = d.origEnd;
+  if (d.kind === 'move') {
+    const dur = d.origEnd - d.origStart;
+    s = Math.max(LOG_DAY_START, Math.min(d.origStart + dm, LOG_DAY_END - dur));
+    en = s + dur;
+  } else if (d.kind === 'top') {
+    s = Math.max(LOG_DAY_START, Math.min(d.origStart + dm, d.origEnd - DRAG_SNAP));
+    en = d.origEnd;
+  } else {
+    en = Math.min(LOG_DAY_END, Math.max(d.origEnd + dm, d.origStart + DRAG_SNAP));
+    s = d.origStart;
+  }
+  d.liveStart = s; d.liveEnd = en;
+  applyEntryGeometry(d.el, s, en, d.laneH);
+}
+
+// Grow a dashed preview block between the anchor and the cursor.
+function createDragMove(e) {
+  const c = createCtx;
+  c.moved = Math.max(c.moved, Math.abs(e.clientY - c.startY));
+  if (c.moved <= DRAG_THRESHOLD) return;
+
+  const cur = laneMinuteAt(c.rect, e.clientY);
+  let s = Math.min(c.anchor, cur), en = Math.max(c.anchor, cur);
+  if (en - s < DRAG_SNAP) en = s + DRAG_SNAP;         // never zero-length
+  if (en > LOG_DAY_END) { en = LOG_DAY_END; s = Math.min(s, en - DRAG_SNAP); }
+  c.liveStart = s; c.liveEnd = en;
+
+  if (!c.ghost) {
+    c.ghost = document.createElement('div');
+    c.ghost.className = 'tl-ghost';
+    c.ghost.innerHTML = `<span class="tl-ghost-time"></span>`;
+    c.lane.appendChild(c.ghost);
+  }
+  const span = LOG_DAY_END - LOG_DAY_START;
+  c.ghost.style.top = (((s - LOG_DAY_START) / span) * c.rect.height).toFixed(1) + 'px';
+  c.ghost.style.height = Math.max(14, ((en - s) / span) * c.rect.height).toFixed(1) + 'px';
+  c.ghost.querySelector('.tl-ghost-time').textContent =
+    `${minToLabel(s)}–${minToLabel(en)} · ${formatMinutes(en - s)}`;
+}
+
+function tlPointerUp() {
+  if (createCtx) {
+    const c = createCtx;
+    createCtx = null;
+    if (c.ghost) c.ghost.remove();
+    // Only a real drag creates something — a stray click does nothing.
+    if (c.moved <= DRAG_THRESHOLD || c.liveStart == null) return;
+    openEntryModal(c.mode, c.dateKey, null, { startMin: c.liveStart, endMin: c.liveEnd });
+    return;
+  }
+
+  const d = dragCtx;
+  if (!d) return;
+  dragCtx = null;
+  d.el.classList.remove('dragging');
+
+  if (d.moved <= DRAG_THRESHOLD) {       // a tap, not a drag → edit it
+    openEntryModal(d.mode, d.dateKey, d.id);
+    return;
+  }
+  if (d.liveStart === d.origStart && d.liveEnd === d.origEnd) return;
+  d.ent.startMin = d.liveStart;
+  d.ent.endMin = d.liveEnd;
+  if (d.mode === 'log') markLogEdited(getLog(myPersonId(), d.dateKey, true));
+  persistEntries(d.mode, d.dateKey);
+  afterEntryChange(d.mode);
+}
+
+document.addEventListener('pointerdown', tlPointerDown);
+document.addEventListener('pointermove', tlPointerMove);
+document.addEventListener('pointerup', tlPointerUp);
+document.addEventListener('pointercancel', tlPointerUp);
+
+// ── pie of logged time by activity ──
+function renderLogPie() {
+  const svgEl = document.getElementById('logpie-svg');
+  const legEl = document.getElementById('logpie-legend');
+  if (!svgEl || !legEl) return;
+  const rangeSel = document.getElementById('logpie-range');
+  const range = rangeSel ? rangeSel.value : 'week';
+  const pid = myPersonId();
+  const logs = pid ? personLogs(pid) : {};
+  const today = estDateKey();
+
+  const byType = {};
+  Object.keys(logs).forEach(k => {
+    if (range === 'today' && k !== today) return;
+    if (range === 'week' && (k < keyPlusDays(today, -6) || k > today)) return;
+    (logs[k].entries || []).forEach(e => {
+      const id = e.type || getActivityTypes()[0].id;
+      byType[id] = (byType[id] || 0) + Math.max(0, e.endMin - e.startMin);
+    });
+  });
+
+  const entries = Object.entries(byType).filter(([, m]) => m > 0).sort((a, b) => b[1] - a[1]);
+  const total = entries.reduce((s, [, m]) => s + m, 0);
+
+  if (!total) {
+    svgEl.innerHTML = `<div style="width:200px;height:200px;border-radius:50%;background:var(--ocean-pale);display:flex;align-items:center;justify-content:center;font-size:40px;">🥧</div>`;
+    legEl.innerHTML = `<div style="font-size:13px;font-weight:600;color:var(--ink-light);">Nothing logged in this range yet. Log a few activities and the split shows up here.</div>`;
+    return;
+  }
+
+  const cx = 100, cy = 100, r = 92;
+  let angle = -Math.PI / 2, paths = '';
+  const rows = [];
+  entries.forEach(([id, mins]) => {
+    const frac = mins / total;
+    const a2 = angle + frac * Math.PI * 2;
+    const meta = typeMeta(id);
+    const col = meta.color || '#3B9BD4';
+    if (frac >= 0.999) {
+      paths += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${col}"/>`;
+    } else {
+      const x1 = cx + r * Math.cos(angle), y1 = cy + r * Math.sin(angle);
+      const x2 = cx + r * Math.cos(a2),   y2 = cy + r * Math.sin(a2);
+      paths += `<path d="M${cx},${cy} L${x1.toFixed(2)},${y1.toFixed(2)} A${r},${r} 0 ${frac > 0.5 ? 1 : 0} 1 ${x2.toFixed(2)},${y2.toFixed(2)} Z" fill="${col}" stroke="white" stroke-width="2"/>`;
+    }
+    rows.push(`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+      ${fishIcon(col, 20)}
+      <span style="font-size:13px;font-weight:700;flex:1;">${escHtml(meta.label)}</span>
+      <span style="font-size:12px;font-weight:800;color:var(--ink-light);">${formatMinutes(mins)} · ${Math.round(frac * 100)}%</span>
+    </div>`);
+    angle = a2;
+  });
+
+  svgEl.innerHTML = `<svg width="200" height="200" viewBox="0 0 200 200">${paths}</svg>`;
+  legEl.innerHTML = rows.join('') +
+    `<div style="margin-top:8px;font-size:12px;font-weight:800;color:var(--ocean-deep);">Total logged: ${formatMinutes(total)}</div>`;
+}
+
+// ══════════════════════════════════════════════
+// FOCUS TIME BANK  (lifetime pomodoro minutes, per person)
+// ══════════════════════════════════════════════
+// Every session adds the minutes actually focused to the person's running
+// total, so 30m + 1m + 120m adds up to 151 → "2 hours and 31 minutes".
+// Stored on the person as `pomoMinutes` so it syncs and survives updates.
+function addFocusMinutes(mins) {
+  mins = Math.round(mins);
+  if (!mins || mins <= 0) return;
+  const id = myPersonId();
+  if (!id) {
+    // no name set yet — hold it locally and fold it in once they claim a profile
+    const cur = parseInt(localStorage.getItem('boats_focus_mins') || '0', 10) || 0;
+    localStorage.setItem('boats_focus_mins', String(cur + mins));
+    return;
+  }
+  const p = personById(id);
+  if (!p) return;
+  p.pomoMinutes  = (p.pomoMinutes  || 0) + mins;
+  p.pomoSessions = (p.pomoSessions || 0) + 1;
+  save();
+  renderPomo();
+}
+
+// If someone focused before setting their name, move that time onto their profile.
+function claimLocalFocusMinutes() {
+  const id = myPersonId();
+  if (!id) return;
+  const pending = parseInt(localStorage.getItem('boats_focus_mins') || '0', 10) || 0;
+  if (pending <= 0) return;
+  const p = personById(id);
+  if (!p) return;
+  p.pomoMinutes = (p.pomoMinutes || 0) + pending;
+  localStorage.removeItem('boats_focus_mins');
+  save();
+}
+
+function focusMinutesFor(pid) {
+  const p = personById(pid);
+  if (!p) return 0;
+  let mins = p.pomoMinutes || 0;
+  if (pid === myPersonId()) {
+    mins += parseInt(localStorage.getItem('boats_focus_mins') || '0', 10) || 0;
+  }
+  return mins;
+}
+
+// "2 hours and 31 minutes" — spelled out, for the profile.
+function formatDurationLong(mins) {
+  mins = Math.max(0, parseInt(mins, 10) || 0);
+  const h = Math.floor(mins / 60), m = mins % 60;
+  const hPart = h ? `${h} hour${h === 1 ? '' : 's'}` : '';
+  const mPart = m ? `${m} minute${m === 1 ? '' : 's'}` : '';
+  if (hPart && mPart) return `${hPart} and ${mPart}`;
+  return hPart || mPart || '0 minutes';
+}
+
+// Seconds of the CURRENT session already added to the total, so a session
+// can never be counted twice (e.g. time-up followed by a Reset click).
+let pomoBankedSecs = 0;
+function bankPomoTime() {
+  const elapsed = (pomoMinutes * 60) - pomoRemaining;   // focused so far, this session
+  const fresh = elapsed - pomoBankedSecs;
+  if (fresh <= 0) return;
+  pomoBankedSecs = elapsed;
+  addFocusMinutes(fresh / 60);
 }
 
 // ── THINGS TO DO RIGHT NOW (pulled from the Task Board) ──
@@ -4466,7 +6173,9 @@ function setPomoMinutes(val) {
   pomoMinutes = v;
   localStorage.setItem('boats_pomo_min', String(v));
   if (document.activeElement === document.getElementById('pomo-minutes')) userSetMinutes = true;
-  if (!pomoRunning) { pomoRemaining = v * 60; renderPomo(); }
+  // Changing the dial restarts the clock, so the "already banked" guard has to
+  // reset too — otherwise the next session's elapsed time measures short.
+  if (!pomoRunning) { pomoRemaining = v * 60; pomoBankedSecs = 0; renderPomo(); }
 }
 function startPausePomo() {
   const btn = document.getElementById('pomo-startbtn');
@@ -4512,6 +6221,7 @@ function pomoTick() {
         pomoRunning = false;
         pomoEndTime = null;
         pomoRemaining = 0;
+        bankPomoTime();   // no fish here, but the minutes focused still count
         document.getElementById('pomo-toggle').classList.remove('casting');
         document.getElementById('pomodoro').classList.remove('pomo-running');
         document.getElementById('pomo-startbtn').textContent = '🎣 Cast';
@@ -4534,6 +6244,7 @@ function pomoTick() {
 //   So finishing all tasks in a ≥45-min session = 2 fish; under 45 min = just the bonus.
 const POMO_FISH_MIN_MINUTES = 45;
 function finishPomoSession(earlyBonus) {
+  bankPomoTime();   // log the minutes focused BEFORE the timer is reset below
   stopPomoTick();
   pomoRunning = false;
   pomoEndTime = null;
@@ -4568,6 +6279,7 @@ function finishPomoSession(earlyBonus) {
   renderPomoTodos();
 
   pomoRemaining = pomoMinutes * 60;
+  pomoBankedSecs = 0;        // fresh session from here on
   renderPomo();
 }
 
@@ -4590,10 +6302,12 @@ function catchFish(isBonus) {
   renderLeaderboard();
 }
 function resetPomo() {
+  bankPomoTime();            // credit whatever was focused before the reset
   stopPomoTick();
   pomoRunning = false;
   pomoEndTime = null;
   pomoRemaining = pomoMinutes * 60;
+  pomoBankedSecs = 0;
   document.getElementById('pomo-startbtn').textContent = '🎣 Cast';
   document.getElementById('pomodoro').classList.remove('pomo-running');
   document.getElementById('pomo-toggle').classList.remove('casting');
@@ -4693,13 +6407,36 @@ function renderCalendar() {
         ${showText ? `${emoji} ${escHtml(seg.post.title || 'Untitled')}${seg.isPublishDay?' <span class=\"cp-pub\">🚀</span>':''}` : (seg.isPublishDay?'🚀':'&nbsp;')}
       </div>`;
     }).join('');
+    // tasks of mine due on this day, tinted by their activity category
+    const todayKey = estDateKey();
+    const dueHtml = tasksDueOnDay(d).map(t => {
+      const meta = typeMeta(t.type || getActivityTypes()[0].id);
+      const overdue = !t.done && ymd(d) < todayKey;
+      const mark = t.done ? '✓' : (overdue ? '❗' : '⏰');
+      return `<div class="cal-due ${t.done?'is-done':''} ${overdue?'is-over':''}"
+        style="background:${meta.color}"
+        onclick="goToTaskFromCalendar(${t.id})"
+        title="Due ${escAttr(t.due)} · ${escAttr(meta.label)}${t.done?' · done':(overdue?' · overdue':'')} — click to open on the board">
+        <span class="cd-mark">${mark}</span>${escHtml(t.text)}
+      </div>`;
+    }).join('');
     return `<div class="cal-cell ${other?'other-month':''} ${isToday?'today':''}" ondblclick="quickAddPost('${ymd(d)}')">
       <span class="cal-cell-date">${d.getDate()}</span>
       ${postHtml}
+      ${dueHtml}
     </div>`;
   }).join('');
 
   grid.innerHTML = headRow + `<div class="${gridClass}">${cells}</div>`;
+
+  // legend so the due-date colors are readable without hovering
+  const legend = document.getElementById('cal-due-legend');
+  if (legend) {
+    legend.innerHTML = getActivityTypes().map(at => `
+      <span style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:800;color:var(--ink-light);">
+        <span style="width:11px;height:11px;border-radius:3px;background:${at.color};display:inline-block;"></span>${escHtml(at.label)}
+      </span>`).join('');
+  }
 }
 
 // For a given day, return the posts that overlap it (start..publish inclusive) as segments.
@@ -4720,6 +6457,33 @@ function postsForDay(d) {
     }
   });
   return segs;
+}
+
+// ── DUE DATES ON THE CALENDAR ──
+// Your own tasks that are due on a given day. Coloured by activity category so
+// the month reads at a glance: all the blue days are one kind of work, etc.
+// Falls back to showing everyone's tasks only when you haven't set your name yet.
+function tasksDueOnDay(d) {
+  const key = ymd(d);
+  const myId = myPersonId();
+  return (state.tasks || []).filter(t => {
+    if (!t.due || t.due !== key) return false;
+    return myId ? t.assigneeId === myId : true;
+  });
+}
+
+// Jump from a calendar chip to that task on the board.
+function goToTaskFromCalendar(id) {
+  showSection('tasks');
+  document.getElementById('nav-tasks').classList.add('active');
+  setTimeout(() => {
+    const el = document.getElementById('task-item-' + id);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.style.transition = 'box-shadow 0.3s';
+    el.style.boxShadow = '0 0 0 3px var(--sunset)';
+    setTimeout(() => { el.style.boxShadow = ''; }, 1600);
+  }, 60);
 }
 
 function quickAddPost(dayKey) { openPostModal(null, dayKey); }
