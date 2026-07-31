@@ -194,6 +194,9 @@
   #main {
     margin-left: var(--sidebar-w);
     flex: 1;
+    min-width: 0;        /* a flex item defaults to min-width:auto, which stops it
+                            shrinking below its content and forces page-wide
+                            sideways scroll on narrow phones */
     padding: 28px 32px 120px;
     min-height: 100vh;
     position: relative;
@@ -1118,31 +1121,35 @@
 
   /* ── CONTENT CALENDAR ── */
   .cal-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
-  .cal-nav { display: flex; align-items: center; gap: 8px; }
+  .cal-nav { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
   .cal-arrow { padding: 4px 12px !important; font-size: 18px !important; line-height: 1; }
-  .cal-period-label { font-family: 'Kalam', cursive; font-size: 20px; font-weight: 700; color: var(--ocean-deep); min-width: 150px; text-align: center; }
-  .cal-toolbar-right { display: flex; align-items: center; gap: 10px; }
+  .cal-period-label { font-family: 'Kalam', cursive; font-size: clamp(15px, 2.4vw, 20px); font-weight: 700; color: var(--ocean-deep); min-width: clamp(90px, 18vw, 150px); text-align: center; }
+  .cal-toolbar-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
   .cal-view-toggle { display: flex; background: var(--ocean-pale); border-radius: 20px; padding: 3px; }
-  .cal-view-btn { border: none; background: transparent; font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 13px; color: var(--ink-light); padding: 5px 14px; border-radius: 18px; cursor: pointer; }
+  .cal-view-btn { border: none; background: transparent; font-family: 'Nunito', sans-serif; font-weight: 800; font-size: clamp(11px, 1.5vw, 13px); color: var(--ink-light); padding: 5px clamp(8px, 1.4vw, 14px); border-radius: 18px; cursor: pointer; }
   .cal-view-btn.active { background: white; color: var(--ocean-deep); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
 
   #calendar-grid { user-select: none; }
-  .cal-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 4px; }
-  .cal-weekday { text-align: center; font-size: 11px; font-weight: 800; color: var(--ink-light); text-transform: uppercase; letter-spacing: 0.04em; padding: 4px 0; }
-  .cal-month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .cal-weekdays { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: clamp(2px, 0.4vw, 4px); margin-bottom: 4px; }
+  .cal-weekday { text-align: center; font-size: clamp(8px, 1vw, 11px); font-weight: 800; color: var(--ink-light); text-transform: uppercase; letter-spacing: 0.04em; padding: 4px 0; overflow: hidden; }
+  .cal-month-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: clamp(2px, 0.4vw, 4px); }
   .cal-cell {
     background: white; border: 2px solid var(--ocean-pale); border-radius: 10px;
-    min-height: 92px; padding: 4px; position: relative; display: flex; flex-direction: column; gap: 2px;
+    /* scales with the viewport instead of being pinned at 92px */
+    min-height: clamp(58px, 11vw, 116px);
+    padding: clamp(2px, 0.4vw, 5px);
+    position: relative; display: flex; flex-direction: column; gap: 2px;
+    min-width: 0;
   }
   .cal-cell.other-month { opacity: 0.4; }
   .cal-cell.today { border-color: var(--sunset); box-shadow: 0 0 0 2px var(--sunset-light); }
-  .cal-cell-date { font-size: 12px; font-weight: 800; color: var(--ink); align-self: flex-end; padding: 1px 4px; }
+  .cal-cell-date { font-size: clamp(9px, 1.05vw, 12px); font-weight: 800; color: var(--ink); align-self: flex-end; padding: 1px 4px; }
   .cal-cell.today .cal-cell-date { background: var(--sunset); color: white; border-radius: 50%; min-width: 20px; text-align: center; }
-  .cal-week-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
-  .cal-week-grid .cal-cell { min-height: 220px; }
+  .cal-week-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: clamp(3px, 0.5vw, 6px); }
+  .cal-week-grid .cal-cell { min-height: clamp(150px, 26vw, 260px); }
 
   .cal-post {
-    font-size: 10px; font-weight: 800; color: white;
+    font-size: clamp(8px, 0.95vw, 10px); font-weight: 800; color: white;
     border-radius: 6px; padding: 3px 6px; cursor: pointer;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     display: flex; align-items: center; gap: 4px;
@@ -1204,9 +1211,9 @@
     #pomo-panel { width: 190px; }
     #msgboard { bottom: 80px; left: 10px; }
     #board-panel { width: 200px; }
-    /* calendar: allow horizontal scroll */
-    #calendar-grid { overflow-x: auto; }
-    .cal-week-grid { min-width: 640px; }
+    /* calendar now scales down to fit rather than scrolling sideways */
+    #calendar-grid { overflow-x: visible; }
+    .cal-week-grid { min-width: 0; }
     .market-shelf { grid-template-columns: repeat(2, 1fr); }
     .paper-card { padding: 14px; }
     .modal { width: 94%; padding: 18px; }
@@ -1531,6 +1538,94 @@
   .ent-task.on { border-color: var(--ocean); background: var(--ocean-pale); }
   .ent-task input { accent-color: var(--ocean); }
 
+  /* ── pomodoro tooltip (lives on body, so the scrolling list can't clip it) ── */
+  .pomo-tip {
+    position: fixed; z-index: 200; display: none;
+    max-width: 260px;
+    background: var(--ink); color: white;
+    font-size: 12px; font-weight: 700; line-height: 1.35;
+    padding: 7px 10px; border-radius: 9px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.28);
+    pointer-events: none;
+    word-break: break-word;
+  }
+
+  /* ── pomodoro resize handles ── */
+  #pomo-panel { position: relative; }
+  .pomo-rs { position: absolute; z-index: 4; touch-action: none; }
+  .pomo-rs.left   { left: -3px; top: 12px; bottom: 12px; width: 10px; cursor: ew-resize; }
+  .pomo-rs.top    { top: -3px; left: 12px; right: 12px; height: 10px; cursor: ns-resize; }
+  .pomo-rs.corner { top: -3px; left: -3px; width: 16px; height: 16px; cursor: nwse-resize; }
+  .pomo-rs::after {
+    content: ''; position: absolute; border-radius: 3px;
+    background: var(--ocean-light); opacity: 0; transition: opacity 0.15s;
+  }
+  .pomo-rs.left::after   { top: 50%; left: 3px; width: 3px; height: 26px; transform: translateY(-50%); }
+  .pomo-rs.top::after    { left: 50%; top: 3px; height: 3px; width: 26px; transform: translateX(-50%); }
+  .pomo-rs.corner::after { top: 4px; left: 4px; width: 7px; height: 7px; border-radius: 50%; }
+  #pomo-panel:hover .pomo-rs::after { opacity: 0.85; }
+  body.pomo-resizing { cursor: nwse-resize; user-select: none; }
+  /* when the user has set a size, let the to-do list absorb the extra room */
+  #pomodoro:not(.pomo-collapsed) #pomo-panel.pomo-sized { display: flex; flex-direction: column; }
+  #pomo-panel.pomo-sized #pomo-todo-list { max-height: none; flex: 1 1 auto; min-height: 48px; }
+  #pomo-panel.pomo-sized .pomo-catch { flex-shrink: 0; }
+
+  /* ── task search ── */
+  .task-search-wrap { position: relative; display: flex; align-items: center; }
+  .task-search-ico {
+    position: absolute; left: 9px; font-size: 12px; pointer-events: none; opacity: 0.7;
+  }
+  .task-search {
+    font-family: inherit; font-size: 12px; font-weight: 700; color: var(--ink);
+    background: var(--warm-white);
+    border: 2px solid var(--ocean-light); border-radius: 20px;
+    padding: 6px 26px 6px 27px;
+    width: 190px; max-width: 100%;
+    outline: none;
+  }
+  .task-search:focus { border-color: var(--ocean); box-shadow: 0 0 0 3px var(--ocean-pale); }
+  .task-search::-webkit-search-cancel-button { display: none; }
+  .task-search-x {
+    position: absolute; right: 7px;
+    border: none; background: transparent; cursor: pointer;
+    font-size: 15px; font-weight: 800; color: var(--ink-light); line-height: 1; padding: 2px 3px;
+  }
+  .task-search-x:hover { color: var(--sail-red); }
+  @media (max-width: 560px) { .task-search { width: 100%; } .task-search-wrap { flex: 1 1 100%; } }
+
+  /* ── admin panel ── */
+  .admin-row {
+    border: 2px solid var(--ocean-pale); border-radius: 12px;
+    padding: 10px 12px; margin-bottom: 8px; background: var(--warm-white);
+  }
+  .admin-row-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; font-size: 13px; }
+  .admin-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .admin-meta { font-size: 11px; font-weight: 800; color: var(--ink-light); }
+  .admin-row-acts { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .admin-row-acts .btn-secondary { font-size: 11px; padding: 4px 9px; }
+  .admin-hint { font-size: 10px; font-weight: 700; color: var(--ink-light); margin-right: auto; }
+  /* editable score fields */
+  .admin-nums {
+    display: flex; gap: 10px; flex-wrap: wrap;
+    padding: 8px 0 10px; margin-bottom: 8px;
+    border-bottom: 2px dashed var(--ocean-pale);
+  }
+  .admin-num {
+    display: flex; flex-direction: column; gap: 3px;
+    font-size: 10px; font-weight: 800; color: var(--ocean-deep);
+    text-transform: none;
+  }
+  .admin-num input {
+    width: 86px; font-size: 14px; font-weight: 800; text-align: center;
+    border: 2px solid var(--ocean-light); border-radius: 9px; padding: 5px 6px;
+    font-family: inherit; color: var(--ink); background: white;
+  }
+  .admin-num input:focus {
+    outline: none; border-color: var(--ocean);
+    box-shadow: 0 0 0 3px var(--ocean-pale);
+  }
+  @media (max-width: 560px) { .admin-num input { width: 100%; } .admin-num { flex: 1 1 44%; } }
+
   /* ── profile: lifetime focus time ── */
   .profile-focus {
     display: flex; align-items: center; gap: 10px;
@@ -1552,7 +1647,7 @@
   /* ── calendar: task due-date chips ── */
   .cal-due {
     display: flex; align-items: center; gap: 4px;
-    font-size: 10px; font-weight: 800; color: white;
+    font-size: clamp(8px, 0.95vw, 10px); font-weight: 800; color: white;
     border-radius: 6px; padding: 3px 6px;
     cursor: pointer;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -1635,6 +1730,9 @@
 <div id="pomodoro" class="pomo-collapsed">
   <button id="pomo-toggle" onclick="togglePomo()" title="Fishing focus timer">🎣</button>
   <div id="pomo-panel">
+    <div class="pomo-rs left"   onpointerdown="pomoResizeDown(event,'left')"   ondblclick="resetPomoSize()" title="Drag to widen · double-click to reset"></div>
+    <div class="pomo-rs top"    onpointerdown="pomoResizeDown(event,'top')"    ondblclick="resetPomoSize()" title="Drag to grow taller · double-click to reset"></div>
+    <div class="pomo-rs corner" onpointerdown="pomoResizeDown(event,'corner')" ondblclick="resetPomoSize()" title="Drag to resize · double-click to reset"></div>
     <div class="pomo-title">🎣 Cast a Focus Line</div>
 
     <!-- goal -->
@@ -1729,6 +1827,9 @@
       </button>
       <button class="nav-btn" onclick="showSection('planning')" id="nav-planning">
         <span class="emoji">📓</span> <span>Planning</span>
+      </button>
+      <button class="nav-btn" onclick="showSection('admin')" id="nav-admin" style="display:none">
+        <span class="emoji">🛠️</span> <span>Admin</span>
       </button>
     </div>
 
@@ -1829,6 +1930,12 @@
             <option value="soon-first">Due soonest</option>
             <option value="late-first">Due latest</option>
           </select>
+          <div class="task-search-wrap">
+            <span class="task-search-ico">🔍</span>
+            <input id="task-search" class="task-search" type="search" placeholder="Search tasks…"
+              oninput="onTaskSearch(this.value)" autocomplete="off">
+            <button class="task-search-x" id="task-search-x" onclick="clearTaskSearch()" title="Clear" style="display:none">×</button>
+          </div>
           <select class="assignee-select" id="sort-type" onchange="changeSort()" title="Filter by activity"></select>
         </div>
 
@@ -1845,17 +1952,8 @@
 
         <div class="task-list" id="task-list"></div>
       </div>
-    </div>
 
-    <!-- LEADERBOARD SECTION -->
-    <div id="section-leaderboard" class="page-section">
-      <div class="page-header">
-        <div class="page-title">🏆 Leader<span>board</span></div>
-        <span style="font-size:13px; font-weight:700; color:var(--ink-light);">Based on completed tasks</span>
-      </div>
-      <div id="leaderboard-panel"></div>
-
-      <div class="paper-card" style="margin-top:24px;">
+      <div class="paper-card">
         <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
           <div style="font-family:'Kalam',cursive; font-size:20px; font-weight:700; color:var(--ocean-deep);">🥧 Time by Activity</div>
           <select class="assignee-select" id="pie-person" onchange="renderPie()"></select>
@@ -1866,6 +1964,16 @@
         </div>
         <div id="pie-recs" style="margin-top:16px;"></div>
       </div>
+    </div>
+
+    <!-- LEADERBOARD SECTION -->
+    <div id="section-leaderboard" class="page-section">
+      <div class="page-header">
+        <div class="page-title">🏆 Leader<span>board</span></div>
+        <span style="font-size:13px; font-weight:700; color:var(--ink-light);">Based on completed tasks</span>
+      </div>
+      <div id="leaderboard-panel"></div>
+
     </div>
 
     <!-- CALENDAR SECTION -->
@@ -2030,15 +2138,63 @@
       <div class="paper-card">
         <div class="nb-sub">
           <div class="nb-sub-label">🥧 Where your logged time actually went</div>
-          <select class="assignee-select" id="logpie-range" onchange="renderLogPie()">
-            <option value="today">Today</option>
-            <option value="week" selected>Last 7 days</option>
-            <option value="all">All time</option>
-          </select>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <select class="assignee-select" id="logpie-person" onchange="renderLogPie()" title="Whose logged time to show"></select>
+            <select class="assignee-select" id="logpie-range" onchange="renderLogPie()">
+              <option value="today">Today</option>
+              <option value="week" selected>Last 7 days</option>
+              <option value="all">All time</option>
+            </select>
+          </div>
         </div>
         <div style="display:flex; flex-wrap:wrap; gap:24px; align-items:center;">
           <div id="logpie-svg"></div>
           <div id="logpie-legend" style="flex:1; min-width:180px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADMIN SECTION (only reachable when your name is adminmilo) -->
+    <div id="section-admin" class="page-section">
+      <div class="page-header">
+        <div class="page-title">🛠️ Ad<span>min</span></div>
+        <span style="font-size:13px; font-weight:700; color:#E8F1F8;">overrides &amp; resets — this account is invisible to the crew</span>
+      </div>
+
+      <div class="paper-card">
+        <div class="nb-sub"><div class="nb-sub-label">🧹 Clear finished tasks from a meeting</div></div>
+        <div style="font-size:12px; font-weight:700; color:var(--ink-light); margin-bottom:10px;">
+          Deletes every task already marked done under one meeting, for everyone. Unfinished tasks are left alone.
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+          <select class="assignee-select" id="admin-meeting" onchange="renderAdminMeetingCount()"></select>
+          <button class="btn-secondary" onclick="adminClearDoneFromMeeting()" style="color:var(--sail-red);">🧹 Clear done tasks</button>
+          <span style="font-size:12px; font-weight:800; color:var(--ocean-deep);" id="admin-meeting-count"></span>
+        </div>
+      </div>
+
+      <div class="paper-card">
+        <div class="nb-sub"><div class="nb-sub-label">🎛️ Per-player overrides</div></div>
+        <div style="font-size:12px; font-weight:700; color:var(--ink-light); margin-bottom:10px;">
+          Type a number and press Enter (or click away) to set it exactly — no confirmation needed.
+          Points ± is added on top of the computed score and may be negative.
+        </div>
+        <div id="admin-players"></div>
+      </div>
+
+      <div class="paper-card">
+        <div class="nb-sub"><div class="nb-sub-label">💣 Reset everyone</div></div>
+        <div style="font-size:12px; font-weight:700; color:var(--ink-light); margin-bottom:10px;">
+          Use these when you want a clean slate for a new scoring period. Each one asks first.
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn-secondary" onclick="adminResetAll('fish')">🎣 Clear all fish</button>
+          <button class="btn-secondary" onclick="adminResetAll('streaks')">🔥 Clear all streaks &amp; check-ins</button>
+          <button class="btn-secondary" onclick="adminResetAll('stars')">⭐ Clear all stars</button>
+          <button class="btn-secondary" onclick="adminResetAll('focus')">⏳ Clear all focus time</button>
+          <button class="btn-secondary" onclick="adminResetAll('logs')">🕑 Clear all day logs</button>
+          <button class="btn-secondary" onclick="adminResetAll('adjust')">🎛️ Clear all adjustments</button>
+          <button class="btn-secondary" onclick="adminResetAll('everything')" style="color:var(--sail-red);">💣 Reset all scoring</button>
         </div>
       </div>
     </div>
@@ -2209,6 +2365,21 @@
     </div>
     <div class="modal-footer">
       <button class="btn-primary" onclick="saveMyName()">Save ✨</button>
+    </div>
+  </div>
+</div>
+
+<!-- IN-APP CONFIRM (native confirm() can be silently suppressed by the browser
+     via "prevent this page from creating additional dialogs", which makes
+     destructive actions look broken) -->
+<div class="modal-overlay" id="confirm-modal" style="display:none" onclick="if(event.target===this) closeModal('confirm-modal')">
+  <div class="modal" style="max-width:430px">
+    <div class="modal-title" id="confirm-title">⚠️ Are you sure?</div>
+    <div id="confirm-body" style="font-size:13px; font-weight:700; color:var(--ink); line-height:1.5; margin-bottom:6px;"></div>
+    <div style="font-size:12px; font-weight:600; color:var(--ink-light); margin-bottom:14px;">This can't be undone.</div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('confirm-modal')">Cancel</button>
+      <button class="btn-primary" id="confirm-ok" onclick="runPendingConfirm()">Yes, do it</button>
     </div>
   </div>
 </div>
@@ -2387,6 +2558,7 @@ let state = {
   sortType: '',
   sortTime: '',
   sortDue: '',
+  taskSearch: '',
   selectedTemplate: 'weekly',
   templates: null, // populated below if null
   wsName: 'WAY OF BOATS',
@@ -2708,6 +2880,8 @@ function showSection(name) {
   if (name === 'calendar') renderCalendar();
   if (name === 'worldcup') renderWorldCup();
   if (name === 'planning') renderPlanning();
+  if (name === 'admin') renderAdmin();
+  if (name === 'tasks') { try { renderPie(); } catch(e) {} }
 }
 
 // ══════════════════════════════════════════════
@@ -2923,7 +3097,7 @@ function renderMeetingCards(meetings) {
     if (state.people.length === 0) {
       peopleCols = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-emoji">⚓</div><p>No crew yet!</p><small>Add people in "Edit People" and they'll appear here as columns.</small></div>`;
     } else {
-      peopleCols = state.people.map(p => {
+      peopleCols = visiblePeople().map(p => {
         const hsl = hexToHsl(p.color);
         const bg = `hsl(${hsl[0]},${hsl[1]}%,${Math.min(96, hsl[2] + 22)}%)`;
         const border = p.color;
@@ -3391,7 +3565,7 @@ function renderAssigneeSelect() {
       sel.innerHTML = `<option value="">— add crew first —</option>`;
     } else {
       const cur = sel.value;
-      sel.innerHTML = state.people.map(p => `<option value="${p.id}">${escHtml(p.name)}</option>`).join('');
+      sel.innerHTML = visiblePeople().map(p => `<option value="${p.id}">${escHtml(p.name)}</option>`).join('');
       if (cur) sel.value = cur;
     }
   }
@@ -3415,14 +3589,14 @@ function renderAssigneeSelect() {
   if (psel) {
     const cur = state.filterPerson || '';
     psel.innerHTML = `<option value="">👥 Everyone</option>` +
-      state.people.map(p => `<option value="${p.id}">${escHtml(p.name)}</option>`).join('');
+      visiblePeople().map(p => `<option value="${p.id}">${escHtml(p.name)}</option>`).join('');
     psel.value = cur;
   }
   // batch dropdowns
   const bt = document.getElementById('batch-type');
   if (bt) bt.innerHTML = `<option value="">Activity…</option>` + getActivityTypes().map(t => `<option value="${t.id}">${escHtml(t.label)}</option>`).join('');
   const bp = document.getElementById('batch-person');
-  if (bp) bp.innerHTML = `<option value="">Assignee…</option>` + state.people.map(p => `<option value="${p.id}">${escHtml(p.name)}</option>`).join('');
+  if (bp) bp.innerHTML = `<option value="">Assignee…</option>` + visiblePeople().map(p => `<option value="${p.id}">${escHtml(p.name)}</option>`).join('');
 }
 
 function personById(id) { return state.people.find(p => p.id === id); }
@@ -3576,6 +3750,277 @@ function refreshTaskSurfaces() {
   try { renderPie(); } catch(e) {}
 }
 
+// ══════════════════════════════════════════════
+// ADMIN  (name yourself "adminmilo" to unlock)
+// ══════════════════════════════════════════════
+// The admin is deliberately invisible: never listed as crew, never on the
+// leaderboard or World Cup, never in an assignee dropdown. It's a control
+// account, not a player. Every display list goes through visiblePeople().
+const ADMIN_NAME = 'adminmilo';
+
+function isAdmin() {
+  return (state.myName || '').trim().toLowerCase() === ADMIN_NAME;
+}
+function isHiddenPerson(p) {
+  const n = (typeof p === 'string' ? p : (p && p.name) || '');
+  return n.trim().toLowerCase() === ADMIN_NAME;
+}
+function visiblePeople() {
+  return (state.people || []).filter(p => !isHiddenPerson(p));
+}
+
+function refreshAdminVisibility() {
+  const btn = document.getElementById('nav-admin');
+  if (btn) btn.style.display = isAdmin() ? 'flex' : 'none';
+  // if we're sitting on the admin page and the name changed, bail out
+  if (!isAdmin()) {
+    const sec = document.getElementById('section-admin');
+    if (sec && sec.classList.contains('active')) showSection('tasks');
+  }
+}
+
+// ── admin panel ──
+function renderAdmin() {
+  if (!isAdmin()) return;
+  renderAdminMeetings();
+  renderAdminPlayers();
+}
+
+function renderAdminMeetings() {
+  const sel = document.getElementById('admin-meeting');
+  if (!sel) return;
+  const ms = state.meetings || [];
+  sel.innerHTML = ms.length
+    ? ms.map(m => `<option value="${m.id}">${escHtml(m.title || 'Untitled')} · ${escHtml(m.date || '')}</option>`).join('')
+    : `<option value="">No meetings yet</option>`;
+  renderAdminMeetingCount();
+}
+
+function adminDoneTasksForMeeting(mid) {
+  return state.tasks.filter(t => String(t.meetingId) === String(mid) && t.done);
+}
+
+function renderAdminMeetingCount() {
+  const out = document.getElementById('admin-meeting-count');
+  const sel = document.getElementById('admin-meeting');
+  if (!out || !sel) return;
+  if (!sel.value) { out.textContent = ''; return; }
+  const n = adminDoneTasksForMeeting(sel.value).length;
+  out.textContent = n ? `${n} done task${n === 1 ? '' : 's'} will be removed` : 'nothing done here yet';
+}
+
+function adminClearDoneFromMeeting() {
+  if (!isAdmin()) return;
+  const sel = document.getElementById('admin-meeting');
+  if (!sel || !sel.value) return;
+  const mid = sel.value;
+  const doomed = adminDoneTasksForMeeting(mid);
+  if (!doomed.length) { showToast('Nothing done to clear here.'); return; }
+  const m = (state.meetings || []).find(x => String(x.id) === String(mid));
+  askConfirm(`Delete ${doomed.length} completed task(s) from "${(m && m.title) || 'this meeting'}"?`,
+    () => adminDoClearDone(doomed), 'Delete them');
+}
+
+function adminDoClearDone(doomed) {
+  const ids = new Set(doomed.map(t => t.id));
+  const links = new Set(doomed.map(t => t.linkedCheck).filter(Boolean));
+  state.tasks = state.tasks.filter(t => !ids.has(t.id));
+  // drop the matching meeting checklist rows so nothing dangles
+  (state.meetings || []).forEach(mm => {
+    if (!mm.checks) return;
+    Object.keys(mm.checks).forEach(pid => {
+      mm.checks[pid] = (mm.checks[pid] || []).filter(c => !(c.linkId && links.has(c.linkId)));
+    });
+  });
+  // and unpin them from anyone's notebook / pomodoro session
+  (state.people || []).forEach(p => {
+    if (p.planning && Array.isArray(p.planning.links)) {
+      p.planning.links = p.planning.links.filter(id => !ids.has(id));
+    }
+  });
+  if (typeof pomoTaskIds !== 'undefined') pomoTaskIds = pomoTaskIds.filter(id => !ids.has(id));
+  save();
+  refreshTaskSurfaces();
+  renderAdmin();
+  showToast(`🧹 Cleared ${doomed.length} done task(s).`);
+}
+
+function renderAdminPlayers() {
+  const wrap = document.getElementById('admin-players');
+  if (!wrap) return;
+  const people = visiblePeople();
+  if (!people.length) {
+    wrap.innerHTML = `<div class="nb-empty">No crew to manage yet.</div>`;
+    return;
+  }
+  wrap.innerHTML = people.map(p => {
+    const fish = (p.fish || []).length;
+    const realFish = (p.fish || []).filter(f => !f.fromAdmin).length;
+    const checks = wcMonthChecks(p.id);
+    return `<div class="admin-row">
+      <div class="admin-row-head">
+        <span class="admin-dot" style="background:${p.color || 'var(--ocean)'}"></span>
+        <b>${escHtml(p.name)}</b>
+        <span class="admin-meta">📅 ${checks} check-in${checks === 1 ? '' : 's'} this month · 🔥 ${totalStreakFor(p.id)} · ${Object.keys(personLogs(p.id)).length} log(s)</span>
+      </div>
+      <div class="admin-nums">
+        <label class="admin-num">🎣 fish
+          <input type="number" min="0" max="999" step="1" value="${fish}"
+            onchange="adminSetFish('${p.id}', this.value)" onkeydown="if(event.key==='Enter') this.blur()">
+        </label>
+        <label class="admin-num">⭐ stars
+          <input type="number" min="0" max="9999" step="1" value="${p.stars || 0}"
+            onchange="adminSetStars('${p.id}', this.value)" onkeydown="if(event.key==='Enter') this.blur()">
+        </label>
+        <label class="admin-num">⏳ focus (min)
+          <input type="number" min="0" max="999999" step="1" value="${focusMinutesFor(p.id)}"
+            onchange="adminSetFocus('${p.id}', this.value)" onkeydown="if(event.key==='Enter') this.blur()">
+        </label>
+        <label class="admin-num">🎛️ points ±
+          <input type="number" step="1" value="${p.pointsAdjust || 0}"
+            onchange="adminSetAdjust('${p.id}', this.value)" onkeydown="if(event.key==='Enter') this.blur()">
+        </label>
+      </div>
+      <div class="admin-row-acts">
+        <span class="admin-hint">${realFish} earned${fish - realFish > 0 ? ` + ${fish - realFish} granted` : ''}</span>
+        <button class="btn-secondary" onclick="adminClear('${p.id}','streaks')">clear streaks &amp; check-ins</button>
+        <button class="btn-secondary" onclick="adminClear('${p.id}','logs')">clear logs</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── in-app confirm ──
+let pendingConfirm = null;
+function askConfirm(message, fn, okLabel) {
+  pendingConfirm = fn;
+  const body = document.getElementById('confirm-body');
+  const ok = document.getElementById('confirm-ok');
+  if (!body || !ok) { if (typeof fn === 'function') fn(); return; }   // fail open
+  body.textContent = message;
+  ok.textContent = okLabel || 'Yes, do it';
+  document.getElementById('confirm-modal').style.display = 'flex';
+}
+function runPendingConfirm() {
+  const fn = pendingConfirm;
+  pendingConfirm = null;
+  closeModal('confirm-modal');
+  if (typeof fn === 'function') fn();
+}
+
+// ── direct value setters (no dialog: typing a number IS the confirmation) ──
+function clampInt(v, lo, hi) {
+  const n = parseInt(v, 10);
+  if (isNaN(n)) return lo;
+  return Math.max(lo, Math.min(n, hi));
+}
+function totalStreakFor(pid) {
+  const p = personById(pid);
+  if (!p) return 0;
+  const wc = p.wc || {};
+  return getWcCategories(pid).reduce((s, c) => s + ((wc[c.id] && wc[c.id].streak) || 0), 0);
+}
+
+// Set an exact fish count. Growing adds admin-granted fish (0 minutes, so they
+// never inflate focus time); shrinking drops granted ones first so genuine
+// catches survive as long as possible.
+function adminSetFish(pid, val) {
+  if (!isAdmin()) return;
+  const p = personById(pid);
+  if (!p) return;
+  const n = clampInt(val, 0, 999);
+  if (!Array.isArray(p.fish)) p.fish = [];
+  while (p.fish.length > n) {
+    const i = p.fish.findIndex(f => f.fromAdmin);
+    p.fish.splice(i > -1 ? i : p.fish.length - 1, 1);
+  }
+  let seq = 0;
+  while (p.fish.length < n) {
+    p.fish.push({ emoji: '🐟', name: 'Granted by admin', minutes: 0, at: Date.now() + (seq++), fromAdmin: true });
+  }
+  save();
+  adminAfterChange(`${p.name}: fish set to ${n}`);
+}
+
+function adminSetStars(pid, val) {
+  if (!isAdmin()) return;
+  const p = personById(pid);
+  if (!p) return;
+  p.stars = clampInt(val, 0, 9999);
+  save();
+  adminAfterChange(`${p.name}: stars set to ${p.stars}`);
+}
+
+function adminSetFocus(pid, val) {
+  if (!isAdmin()) return;
+  const p = personById(pid);
+  if (!p) return;
+  p.pomoMinutes = clampInt(val, 0, 999999);
+  if (pid === myPersonId()) { try { localStorage.removeItem('boats_focus_mins'); } catch(e) {} }
+  save();
+  adminAfterChange(`${p.name}: focus time set to ${formatMinutes(p.pomoMinutes)}`);
+}
+
+function adminAfterChange(msg) {
+  renderLeaderboard();
+  try { renderWorldCup(); } catch(e) {}
+  try { renderPomo(); } catch(e) {}
+  try { renderLogPie(); } catch(e) {}
+  renderAdmin();
+  if (msg) showToast('✅ ' + msg);
+}
+
+function adminWipe(p, what) {
+  if (what === 'fish')    p.fish = [];
+  if (what === 'stars')   p.stars = 0;
+  if (what === 'focus')   { p.pomoMinutes = 0; p.pomoSessions = 0; }
+  if (what === 'logs')    p.logs = {};
+  if (what === 'adjust')  p.pointsAdjust = 0;
+  if (what === 'streaks') {
+    const wc = p.wc || {};
+    Object.keys(wc).forEach(cid => {
+      wc[cid] = { streak: 0, last: null, monthCounts: {}, monthFish: {} };
+    });
+    p.wc = wc;
+  }
+}
+
+function adminClear(pid, what) {
+  if (!isAdmin()) return;
+  const p = personById(pid);
+  if (!p) return;
+  const label = { fish:'fish', streaks:'streaks and check-ins', stars:'stars', focus:'focus time', logs:'day logs' }[what] || what;
+  askConfirm(`Clear ${p.name}'s ${label}?`, () => {
+    adminWipe(p, what);
+    save();
+    adminAfterChange(`Cleared ${label} for ${p.name}`);
+  }, 'Clear it');
+}
+
+function adminSetAdjust(pid, val) {
+  if (!isAdmin()) return;
+  const p = personById(pid);
+  if (!p) return;
+  const n = parseInt(val, 10);
+  p.pointsAdjust = isNaN(n) ? 0 : n;
+  save();
+  adminAfterChange(`${p.name}: points adjustment set to ${p.pointsAdjust > 0 ? '+' : ''}${p.pointsAdjust}`);
+}
+
+function adminResetAll(what) {
+  if (!isAdmin()) return;
+  const people = visiblePeople();
+  const labels = { fish:'all fish', streaks:'all streaks and check-ins', stars:'all stars',
+    focus:'all focus time', logs:'all day logs', adjust:'all point adjustments',
+    everything:'EVERYTHING — fish, streaks, stars, focus time and adjustments' };
+  askConfirm(`Reset ${labels[what] || what} for all ${people.length} crew member(s)?`, () => {
+    const kinds = what === 'everything' ? ['fish','streaks','stars','focus','adjust'] : [what];
+    people.forEach(p => kinds.forEach(k => adminWipe(p, k)));
+    save();
+    adminAfterChange(`Reset ${labels[what] || what}`);
+  }, 'Reset them');
+}
+
 function toggleTask(id) {
   const t = state.tasks.find(x => x.id === id);
   if (!t) return;
@@ -3714,12 +4159,46 @@ function applyBatch() {
   showToast(`Updated ${batchSelected.size} task(s) ✏️`);
 }
 
+// ── task search ──
+// Matches the task title, its subtasks and its assignee's name, so you can find
+// something by any of the words you'd actually remember about it.
+function onTaskSearch(v) {
+  state.taskSearch = v || '';
+  const x = document.getElementById('task-search-x');
+  if (x) x.style.display = state.taskSearch ? 'block' : 'none';
+  renderTasks();
+}
+function clearTaskSearch() {
+  state.taskSearch = '';
+  const el = document.getElementById('task-search');
+  if (el) el.value = '';
+  const x = document.getElementById('task-search-x');
+  if (x) x.style.display = 'none';
+  renderTasks();
+  if (el) el.focus();
+}
+function taskMatchesSearch(t, q) {
+  if (!q) return true;
+  const hay = [
+    t.text || '',
+    (t.subtasks || []).map(st => st.text || '').join(' '),
+    (personById(t.assigneeId) || {}).name || '',
+    typeMeta(t.type || getActivityTypes()[0].id).label || ''
+  ].join(' ').toLowerCase();
+  // every whitespace-separated term must appear somewhere
+  return q.toLowerCase().split(/\s+/).filter(Boolean).every(term => hay.includes(term));
+}
+
 function renderTasks() {
   renderAssigneeSelect();
   if (typeof renderPomoTodos === 'function') renderPomoTodos();
   // keep the due-date dropdown showing the sort that's actually applied (survives reloads)
   const dueSel = document.getElementById('sort-due');
   if (dueSel && dueSel.value !== (state.sortDue || '')) dueSel.value = state.sortDue || '';
+  const sEl = document.getElementById('task-search');
+  if (sEl && document.activeElement !== sEl && sEl.value !== (state.taskSearch || '')) sEl.value = state.taskSearch || '';
+  const sX = document.getElementById('task-search-x');
+  if (sX) sX.style.display = (state.taskSearch || '') ? 'block' : 'none';
   const list = document.getElementById('task-list');
   let tasks = state.tasks.slice();
   if (state.currentFilter === 'open') tasks = tasks.filter(t => !t.done);
@@ -3729,6 +4208,9 @@ function renderTasks() {
   if (state.filterPerson) tasks = tasks.filter(t => t.assigneeId === state.filterPerson);
   // filter by activity type
   if (state.sortType) tasks = tasks.filter(t => (t.type || getActivityTypes()[0].id) === state.sortType);
+  // free-text search
+  const q = (state.taskSearch || '').trim();
+  if (q) tasks = tasks.filter(t => taskMatchesSearch(t, q));
 
   // sort by priority
   if (state.sortPriority === 'high-first') {
@@ -3754,7 +4236,12 @@ function renderTasks() {
   }
 
   if (tasks.length === 0) {
-    list.innerHTML = `<div class="empty-state" style="padding:24px"><div class="empty-emoji">✅</div><p>${state.currentFilter==='done'?'No completed tasks yet!':'No tasks match — try clearing a filter!'}</p></div>`;
+    const searching = !!(state.taskSearch || '').trim();
+    list.innerHTML = `<div class="empty-state" style="padding:24px"><div class="empty-emoji">${searching ? '🔍' : '✅'}</div>
+      <p>${searching
+          ? `Nothing matches “${escHtml(state.taskSearch.trim())}”`
+          : (state.currentFilter === 'done' ? 'No completed tasks yet!' : 'No tasks match — try clearing a filter!')}</p>
+      ${searching ? `<small><button class="filter-chip" onclick="clearTaskSearch()">Clear search</button></small>` : ''}</div>`;
     return;
   }
 
@@ -4154,7 +4641,7 @@ function renderWorldCup() {
   }
 
   // Each person has their own categories, so render a card per sailor.
-  const ranked = state.people.map(p => {
+  const ranked = visiblePeople().map(p => {
     const wc = p.wc || {};
     const cats = getWcCategories(p.id);
     const total = cats.reduce((s, c) => s + ((wc[c.id] && wc[c.id].streak) || 0), 0);
@@ -4272,13 +4759,13 @@ function renderLeaderboard() {
   const panel = document.getElementById('leaderboard-panel');
   const counts = getTaskCountsByPerson();
 
-  if (state.people.length === 0) {
+  if (visiblePeople().length === 0) {
     panel.innerHTML = `<div class="leaderboard-title">🏆 Hall of Fame</div>
       <div class="empty-state"><div class="empty-emoji">⚓</div><p>No crew yet!</p><small>Add people in "Edit People" to start the race.</small></div>`;
     return;
   }
 
-  const sorted = state.people
+  const sorted = visiblePeople()
     .map(p => {
       const fishArr = p.fish || [];
       const fish = fishArr.length;
@@ -4294,8 +4781,10 @@ function renderLeaderboard() {
       const streakPts = monthChecks / 10;
       const stars = p.stars || 0;
       // FORMULA: (fish*3) + (10 * done/total) + (month check-ins/10) + (total tasks/5) + (stars/2)
-      const points = Math.round((fish * 3) + (10 * ratio) + streakPts + (total / 5) + (stars / 2));
-      return { ...p, done, total, fish, focusMinutes, streak, monthChecks, streakPts, stars, points };
+      // plus any manual admin adjustment (pointsAdjust, can be negative)
+      const adjust = p.pointsAdjust || 0;
+      const points = Math.round((fish * 3) + (10 * ratio) + streakPts + (total / 5) + (stars / 2)) + adjust;
+      return { ...p, done, total, fish, focusMinutes, streak, monthChecks, streakPts, stars, adjust, points };
     })
     .sort((a, b) => b.points - a.points || b.done - a.done);
 
@@ -4321,7 +4810,7 @@ function renderLeaderboard() {
           <span class="lb-rank">${medal}</span>
           <div style="width:28px;height:28px;border-radius:50%;background:${p.color};flex-shrink:0;border:2px solid rgba(255,255,255,0.7)"></div>
           <span class="lb-name">${escHtml(p.name)}${stickerStrip(p)} ${starDisplay}
-            <span style="display:block;font-size:10px;font-weight:700;color:var(--ink-light)">✅ ${p.done}/${p.total} · 🎣 ${p.fish} · 🔥 ${p.streak} · 📅 ${p.monthChecks} this month (+${p.streakPts.toFixed(1)})</span>
+            <span style="display:block;font-size:10px;font-weight:700;color:var(--ink-light)">✅ ${p.done}/${p.total} · 🎣 ${p.fish} · 🔥 ${p.streak} · 📅 ${p.monthChecks} this month (+${p.streakPts.toFixed(1)})${p.adjust ? ` · <b style="color:var(--sunset-deep)">${p.adjust > 0 ? '+' : ''}${p.adjust} adj</b>` : ''}</span>
           </span>
           <div class="lb-bar-wrap"><div class="lb-bar" style="width:${barW}%;background:${p.color}"></div></div>
           <span class="lb-score">${p.points}<span> pts</span></span>
@@ -4417,7 +4906,7 @@ function renderPie() {
   // populate person selector
   const cur = psel.value;
   psel.innerHTML = `<option value="">Everyone</option>` +
-    state.people.map(p => `<option value="${p.id}">${escHtml(p.name)}</option>`).join('');
+    visiblePeople().map(p => `<option value="${p.id}">${escHtml(p.name)}</option>`).join('');
   if (cur) psel.value = cur;
   const who = psel.value;
 
@@ -4516,7 +5005,7 @@ function openPeopleConfig() {
   if (state.people.length === 0) {
     list.innerHTML = `<div style="text-align:center; padding:16px; color:var(--ink-light); font-weight:600; font-size:13px;">No crew yet — add your first sailor below! ⛵</div>`;
   } else {
-    list.innerHTML = state.people.map((p, i) => `
+    list.innerHTML = (isAdmin() ? state.people : visiblePeople()).map((p, i) => `
       <div class="people-config-row" data-pid="${p.id}" style="flex-direction:column; align-items:stretch; gap:8px;">
         <div style="display:flex; align-items:center; gap:8px;">
           <div style="flex:1; display:flex; flex-direction:column; gap:2px;">
@@ -4676,6 +5165,7 @@ function saveMyName() {
   // anything done before a name was set now belongs to this profile
   claimLocalFocusMinutes();
   claimLocalPlanning();
+  refreshAdminVisibility();
   closeModal('myname-modal');
   renderOnlineUsers();
   renderPlanning();
@@ -4688,9 +5178,9 @@ function saveMyName() {
 function renderOnlineUsers() {
   const list = document.getElementById('online-users-list');
   // Build the roster: all crew members, plus me if I'm not in the list.
-  const roster = state.people.map(p => ({ name: p.name, color: p.color }));
+  const roster = visiblePeople().map(p => ({ name: p.name, color: p.color }));
   const myName = (state.myName || '').trim();
-  if (myName && !roster.some(r => r.name.trim().toLowerCase() === myName.toLowerCase())) {
+  if (myName && !isAdmin() && !roster.some(r => r.name.trim().toLowerCase() === myName.toLowerCase())) {
     roster.unshift({ name: myName, color: myColor });
   }
   if (roster.length === 0) {
@@ -4751,6 +5241,10 @@ function renderAll() {
   // Both guard against overwriting a field you're actively typing in.
   try { renderCalendar(); } catch(e) {}
   try { renderPlanning(); } catch(e) {}
+  try { renderPie(); } catch(e) {}
+  try { loadPomoSize(); } catch(e) {}
+  try { refreshAdminVisibility(); } catch(e) {}
+  try { renderAdmin(); } catch(e) {}
 }
 
 // ══════════════════════════════════════════════
@@ -5511,7 +6005,7 @@ function renderSavedLogs() {
   const sel = document.getElementById('log-person');
   if (!sel) return;
   if (!logViewPerson) logViewPerson = myPersonId() || (state.people[0] && state.people[0].id) || '';
-  sel.innerHTML = state.people.map(p =>
+  sel.innerHTML = visiblePeople().map(p =>
     `<option value="${p.id}">${escHtml(p.name)}${p.id === myPersonId() ? ' (you)' : ''}</option>`).join('');
   if (!state.people.length) sel.innerHTML = `<option value="">No crew yet</option>`;
   sel.value = logViewPerson;
@@ -5920,17 +6414,31 @@ function renderLogPie() {
   if (!svgEl || !legEl) return;
   const rangeSel = document.getElementById('logpie-range');
   const range = rangeSel ? rangeSel.value : 'week';
-  const pid = myPersonId();
-  const logs = pid ? personLogs(pid) : {};
+
+  // who are we charting? defaults to you, but any crew member (or everyone
+  // combined) can be picked — same idea as the saved-log browser.
+  const psel = document.getElementById('logpie-person');
+  if (psel) {
+    const want = psel.value || myPersonId() || 'all';
+    psel.innerHTML = `<option value="all">🌍 Everyone</option>` +
+      visiblePeople().map(p =>
+        `<option value="${p.id}">${escHtml(p.name)}${p.id === myPersonId() ? ' (you)' : ''}</option>`).join('');
+    psel.value = [...psel.options].some(o => o.value === want) ? want : 'all';
+  }
+  const who = psel ? psel.value : (myPersonId() || 'all');
+  const targets = who === 'all' ? visiblePeople().map(p => p.id) : [who];
   const today = estDateKey();
 
   const byType = {};
-  Object.keys(logs).forEach(k => {
-    if (range === 'today' && k !== today) return;
-    if (range === 'week' && (k < keyPlusDays(today, -6) || k > today)) return;
-    (logs[k].entries || []).forEach(e => {
-      const id = e.type || getActivityTypes()[0].id;
-      byType[id] = (byType[id] || 0) + Math.max(0, e.endMin - e.startMin);
+  targets.forEach(tid => {
+    const logs = personLogs(tid);
+    Object.keys(logs).forEach(k => {
+      if (range === 'today' && k !== today) return;
+      if (range === 'week' && (k < keyPlusDays(today, -6) || k > today)) return;
+      (logs[k].entries || []).forEach(e => {
+        const id = e.type || getActivityTypes()[0].id;
+        byType[id] = (byType[id] || 0) + Math.max(0, e.endMin - e.startMin);
+      });
     });
   });
 
@@ -5967,8 +6475,9 @@ function renderLogPie() {
   });
 
   svgEl.innerHTML = `<svg width="200" height="200" viewBox="0 0 200 200">${paths}</svg>`;
+  const whoLabel = who === 'all' ? 'everyone' : ((personById(who) || {}).name || 'this person');
   legEl.innerHTML = rows.join('') +
-    `<div style="margin-top:8px;font-size:12px;font-weight:800;color:var(--ocean-deep);">Total logged: ${formatMinutes(total)}</div>`;
+    `<div style="margin-top:8px;font-size:12px;font-weight:800;color:var(--ocean-deep);">Total logged by ${escHtml(whoLabel)}: ${formatMinutes(total)}</div>`;
 }
 
 // ══════════════════════════════════════════════
@@ -6079,6 +6588,113 @@ function addPomoSubtask(id) {
   renderPomoTodos();
   maybeSuggestTime();
 }
+// ══════════════════════════════════════════════
+// POMODORO: hover tooltip + resizable panel
+// ══════════════════════════════════════════════
+// The tooltip lives on <body> rather than inside the panel, because the to-do
+// list scrolls (overflow:auto) and would clip anything positioned within it.
+let pomoTipEl = null;
+function showPomoTip(el) {
+  const text = el.dataset.full || el.textContent || '';
+  if (!text) return;
+  if (!pomoTipEl) {
+    pomoTipEl = document.createElement('div');
+    pomoTipEl.className = 'pomo-tip';
+    document.body.appendChild(pomoTipEl);
+  }
+  pomoTipEl.textContent = text;
+  pomoTipEl.style.display = 'block';
+  const r = el.getBoundingClientRect();
+  const tw = pomoTipEl.offsetWidth, th = pomoTipEl.offsetHeight;
+  // Anchor off the PANEL's edge, not the row's — anchoring to the row would let
+  // the tip overlap the panel and cover the very text it's revealing.
+  const panel = document.getElementById('pomo-panel');
+  const pr = panel ? panel.getBoundingClientRect() : r;
+  let left = pr.left - tw - 12;
+  if (left < 8) left = Math.min(pr.right + 12, window.innerWidth - tw - 8);
+  let top = r.top + r.height / 2 - th / 2;
+  top = Math.max(8, Math.min(top, window.innerHeight - th - 8));
+  pomoTipEl.style.left = Math.max(8, left) + 'px';
+  pomoTipEl.style.top = top + 'px';
+}
+function hidePomoTip() { if (pomoTipEl) pomoTipEl.style.display = 'none'; }
+
+// ── resizable panel ──
+const POMO_SIZE_KEY = 'boats_pomo_size';
+const POMO_MIN_W = 200, POMO_MIN_H = 260;
+
+// Never let the panel reach the sidebar: measure the sidebar's actual right edge
+// so this keeps working when the layout goes responsive.
+function pomoMaxWidth() {
+  const sb = document.getElementById('sidebar');
+  const sbRight = sb ? sb.getBoundingClientRect().right : 0;
+  const gap = 20;                 // visible breathing room from the menu
+  const rightInset = 22;          // #pomodoro's own right offset
+  return Math.max(POMO_MIN_W, window.innerWidth - sbRight - gap - rightInset);
+}
+function pomoMaxHeight() {
+  return Math.max(POMO_MIN_H, window.innerHeight - 150);
+}
+
+function loadPomoSize() {
+  let sz = null;
+  try { sz = JSON.parse(localStorage.getItem(POMO_SIZE_KEY) || 'null'); } catch(e) {}
+  if (!sz) return;
+  applyPomoSize(sz.w, sz.h);
+}
+function applyPomoSize(w, h) {
+  const panel = document.getElementById('pomo-panel');
+  if (!panel) return;
+  const cw = Math.round(Math.max(POMO_MIN_W, Math.min(w, pomoMaxWidth())));
+  const ch = Math.round(Math.max(POMO_MIN_H, Math.min(h, pomoMaxHeight())));
+  panel.style.width = cw + 'px';
+  panel.style.height = ch + 'px';
+  panel.classList.add('pomo-sized');
+  try { localStorage.setItem(POMO_SIZE_KEY, JSON.stringify({ w: cw, h: ch })); } catch(e) {}
+}
+function resetPomoSize() {
+  const panel = document.getElementById('pomo-panel');
+  if (!panel) return;
+  panel.style.width = ''; panel.style.height = '';
+  panel.classList.remove('pomo-sized');
+  try { localStorage.removeItem(POMO_SIZE_KEY); } catch(e) {}
+  showToast('Timer size reset.');
+}
+
+let pomoRs = null;
+function pomoResizeDown(e, kind) {
+  const panel = document.getElementById('pomo-panel');
+  if (!panel) return;
+  const r = panel.getBoundingClientRect();
+  pomoRs = { kind, x: e.clientX, y: e.clientY, w: r.width, h: r.height };
+  document.body.classList.add('pomo-resizing');
+  e.preventDefault();
+  e.stopPropagation();
+}
+function pomoResizeMove(e) {
+  if (!pomoRs) return;
+  // dragging left/up grows the panel, since it's anchored to the bottom-right
+  const dw = pomoRs.kind === 'top' ? 0 : (pomoRs.x - e.clientX);
+  const dh = pomoRs.kind === 'left' ? 0 : (pomoRs.y - e.clientY);
+  applyPomoSize(pomoRs.w + dw, pomoRs.h + dh);
+}
+function pomoResizeUp() {
+  if (!pomoRs) return;
+  pomoRs = null;
+  document.body.classList.remove('pomo-resizing');
+}
+document.addEventListener('pointermove', pomoResizeMove);
+document.addEventListener('pointerup', pomoResizeUp);
+document.addEventListener('pointercancel', pomoResizeUp);
+// keep it legal if the window (or sidebar) changes size
+window.addEventListener('resize', () => {
+  const panel = document.getElementById('pomo-panel');
+  if (panel && panel.classList.contains('pomo-sized')) {
+    applyPomoSize(panel.getBoundingClientRect().width, panel.getBoundingClientRect().height);
+  }
+  hidePomoTip();
+});
+
 function renderPomoTodos() {
   // refresh the picker of available board tasks
   const picker = document.getElementById('pomo-task-picker');
@@ -6102,7 +6718,8 @@ function renderPomoTodos() {
     const subHtml = (hasSubs && expanded) ? `<div class="pomo-sub-list">${subs.map((st, si) => `
       <div class="pomo-sub-row">
         <div class="pomo-todo-check sm ${st.done?'checked':''}" onclick="toggleSubtask(${t.id}, ${si}); renderPomoTodos();">${st.done?'✓':''}</div>
-        <span class="pomo-sub-text ${st.done?'done':''}">${escHtml(st.text || 'subtask')}</span>
+        <span class="pomo-sub-text ${st.done?'done':''}" data-full="${escAttr(st.text || 'subtask')}"
+          onmouseenter="showPomoTip(this)" onmouseleave="hidePomoTip()">${escHtml(st.text || 'subtask')}</span>
         <span class="pomo-sub-mins">${formatMinutes(st.mins||0)}</span>
       </div>`).join('')}</div>` : '';
     return `
@@ -6110,7 +6727,8 @@ function renderPomoTodos() {
       <div class="pomo-todo-item">
         <div class="pomo-todo-check ${t.done?'checked':''}" onclick="togglePomoTask(${t.id})">${t.done?'✓':''}</div>
         <span class="pomo-fish-ico" title="${escAttr(meta.label)}">${fishIcon(meta.color, 14)}</span>
-        <span class="pomo-todo-text ${t.done?'done':''}">${escHtml(t.text || 'untitled')}</span>
+        <span class="pomo-todo-text ${t.done?'done':''}" data-full="${escAttr(t.text || 'untitled')}"
+          onmouseenter="showPomoTip(this)" onmouseleave="hidePomoTip()">${escHtml(t.text || 'untitled')}</span>
         <span class="pomo-todo-mins" title="From the board">${formatMinutes(taskEffectiveMins(t))}</span>
         <button class="pomo-todo-caret" onclick="togglePomoExpand(${t.id})" title="Show subtasks">${hasSubs ? (expanded?'▾':'▸') : ''}</button>
         <button class="pomo-todo-del" onclick="removePomoTask(${t.id})" title="Remove from this session">×</button>
