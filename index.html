@@ -1575,6 +1575,47 @@
   #pomo-panel.pomo-sized #pomo-todo-list { max-height: none; flex: 1 1 auto; min-height: 48px; }
   #pomo-panel.pomo-sized .pomo-catch { flex-shrink: 0; }
 
+  /* ── store images + admin store manager ── */
+  .market-img {
+    width: 54px; height: 54px; object-fit: cover;
+    border-radius: 12px; border: 2px solid var(--ocean-pale);
+    display: block; margin: 0 auto 4px;
+  }
+  .market-blurb { font-size: 10px; font-weight: 700; color: var(--ink-light); margin-bottom: 4px; }
+  .market-count { font-size: 10px; font-weight: 800; color: var(--matcha); margin-bottom: 4px; }
+  .admin-toggle { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; color: var(--ocean-deep); cursor: pointer; }
+  .admin-toggle input { accent-color: var(--ocean); width: 16px; height: 16px; }
+  .admin-store-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+  @media (max-width: 700px) { .admin-store-list { grid-template-columns: repeat(2, 1fr); } }
+  .admin-store-item {
+    border: 2px solid var(--ocean-pale); border-radius: 10px; padding: 8px;
+    text-align: center; background: var(--warm-white); position: relative;
+  }
+  .admin-store-item.locked { border-style: dashed; opacity: 0.9; }
+  .admin-store-item img { width: 38px; height: 38px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto 4px; }
+  .admin-store-item .em { font-size: 26px; }
+  .admin-store-item .nm { font-size: 11px; font-weight: 800; color: var(--ink); word-break: break-word; }
+  .admin-store-item .ct { font-size: 10px; font-weight: 800; color: var(--ink-light); }
+  .admin-store-x {
+    position: absolute; top: 2px; right: 4px; border: none; background: transparent;
+    color: var(--sail-red); font-size: 15px; font-weight: 800; cursor: pointer;
+  }
+  .admin-store-add { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .admin-store-add .form-input { width: auto; flex: 0 1 150px; }
+  .admin-store-add #store-new-cost { flex: 0 0 74px; }
+  .admin-store-add #store-new-emoji { flex: 0 0 64px; text-align: center; }
+
+  /* purchased collectibles on the profile */
+  .prof-buys { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+  .prof-buy {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    border: 2px solid var(--ocean-pale); border-radius: 10px;
+    padding: 6px; background: var(--warm-white); min-width: 62px;
+  }
+  .prof-buy img { width: 34px; height: 34px; object-fit: cover; border-radius: 7px; }
+  .prof-buy .em { font-size: 24px; }
+  .prof-buy .nm { font-size: 9px; font-weight: 800; color: var(--ink-light); text-align: center; }
+
   /* ── update banner ── */
   #update-banner {
     position: fixed; top: 0; left: 0; right: 0; z-index: 300;
@@ -2059,13 +2100,16 @@
       </div>
 
       <!-- FISH MARKET -->
-      <div class="paper-card" style="margin-top:24px;">
+      <div class="paper-card" id="market-card" style="margin-top:24px;">
         <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:6px;">
           <div style="font-family:'Kalam',cursive; font-size:22px; font-weight:700; color:var(--ocean-deep);">🐠 Fish Market</div>
           <div class="market-balance" id="market-balance">🎣 0 fish</div>
         </div>
         <div style="font-size:12px; font-weight:700; color:var(--ink-light); margin-bottom:14px;">
           Spend the fish you catch on stickers for your profile. Buy one, then equip it from your player profile on the leaderboard.
+        </div>
+        <div id="market-closed" style="display:none; font-size:12px; font-weight:800; color:var(--sail-red); background:var(--strawberry-pale); border-radius:10px; padding:8px 10px; margin-bottom:12px;">
+          🔒 The shop is currently closed by the admin. (You can see this because you're the admin.)
         </div>
         <div id="market-shelf" class="market-shelf"></div>
       </div>
@@ -2079,16 +2123,43 @@
       </div>
 
       <div class="nb-tabs">
-        <button class="nb-tab active" id="nbtab-notes" onclick="showNbTab('notes')">✍️ Notes</button>
-        <button class="nb-tab" id="nbtab-log" onclick="showNbTab('log')">🕑 Log</button>
-        <button class="nb-tab" id="nbtab-saved" onclick="showNbTab('saved')">📚 Saved logs</button>
+        <button class="nb-tab active" id="nbtab-logs" onclick="showNbTab('logs')">🕑 Logs</button>
+        <button class="nb-tab" id="nbtab-notes" onclick="showNbTab('notes')">✍️ Notes to self</button>
       </div>
 
       <div class="notebook">
         <div class="nb-rings" id="nb-rings"></div>
 
-        <!-- ══ NOTES ══ -->
-        <div class="nb-pane active" id="nbpane-notes">
+        <!-- ══ LOGS (today + the archive, one interface) ══ -->
+        <div class="nb-pane active" id="nbpane-logs">
+          <div class="nb-head">
+            <div class="nb-title">🕑 Logs</div>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <span class="nb-saved" id="nb-log-saved">saved ✓</span>
+              <select class="assignee-select" id="log-person" onchange="onLogPersonChange()" title="Whose logs to show"></select>
+            </div>
+          </div>
+          <div style="font-size:12px; font-weight:700; color:var(--ink-light); margin-bottom:12px;">
+            Pick a day below to open it. Drag empty space to add a block, drag a block to move it,
+            drag an edge to resize, click it to edit.
+          </div>
+
+          <div class="nb-sub"><div class="nb-sub-label">This past week</div></div>
+          <div class="wk" id="log-week"></div>
+
+          <hr class="nb-divider">
+
+          <div class="nb-sub">
+            <div class="nb-sub-label">📑 Contents</div>
+            <span style="font-size:11px; font-weight:700; color:var(--ink-light);" id="log-count"></span>
+          </div>
+          <div class="log-toc" id="log-toc"></div>
+
+          <div id="log-detail" style="margin-top:18px;"></div>
+        </div>
+
+        <!-- ══ NOTES TO SELF ══ -->
+        <div class="nb-pane" id="nbpane-notes">
           <div class="nb-head">
             <div class="nb-title">✍️ Notes to self</div>
             <span class="nb-saved" id="nb-saved">saved ✓</span>
@@ -2111,51 +2182,6 @@
           </div>
 
           <div class="nb-links" id="nb-links"></div>
-
-          <hr class="nb-divider">
-
-          <!-- two-day planner, same mechanic as the log -->
-          <div class="nb-sub">
-            <div class="nb-sub-label">🗓️ Next two days</div>
-            <span style="font-size:11px; font-weight:700; color:var(--ink-light);">
-              blocks run 2am → 2am · drag empty space to add · drag a block to move · drag an edge to resize
-            </span>
-          </div>
-          <div class="plan2" id="plan2-grid"></div>
-        </div>
-
-        <!-- ══ LOG ══ -->
-        <div class="nb-pane" id="nbpane-log">
-          <div class="nb-head">
-            <div class="nb-title">🕑 Today's log</div>
-            <span class="nb-saved" id="nb-log-saved">saved ✓</span>
-          </div>
-          <div style="font-size:12px; font-weight:700; color:var(--ink-light); margin-bottom:12px;">
-            What you actually did. Log the first block, then each new activity starts where the last one ended.
-            Drag empty space to add a block, drag a block to move it, drag its edge to resize, click it to edit.
-          </div>
-          <div id="log-today"></div>
-        </div>
-
-        <!-- ══ SAVED LOGS ══ -->
-        <div class="nb-pane" id="nbpane-saved">
-          <div class="nb-head">
-            <div class="nb-title">📚 Saved logs</div>
-            <select class="assignee-select" id="log-person" onchange="onLogPersonChange()" title="Whose logs to show"></select>
-          </div>
-
-          <div class="nb-sub"><div class="nb-sub-label">This past week</div></div>
-          <div class="wk" id="log-week"></div>
-
-          <hr class="nb-divider">
-
-          <div class="nb-sub">
-            <div class="nb-sub-label">📑 Contents</div>
-            <span style="font-size:11px; font-weight:700; color:var(--ink-light);" id="log-count"></span>
-          </div>
-          <div class="log-toc" id="log-toc"></div>
-
-          <div id="log-detail" style="margin-top:18px;"></div>
         </div>
       </div>
 
@@ -2208,6 +2234,31 @@
       </div>
 
       <div class="paper-card">
+        <div class="nb-sub">
+          <div class="nb-sub-label">🐠 Fish Market</div>
+          <label class="admin-toggle">
+            <input type="checkbox" id="admin-store-on" onchange="adminToggleStore(this.checked)">
+            <span>Shop open to the crew</span>
+          </label>
+        </div>
+        <div style="font-size:12px; font-weight:700; color:var(--ink-light); margin-bottom:10px;">
+          Nine slots. The 🩹 Streak Fixer is permanent and can't be removed — the other eight are yours.
+          Items you add here are collectibles: they can't be equipped, they just show on a player's profile.
+        </div>
+        <div id="admin-store-list" class="admin-store-list"></div>
+        <div class="admin-store-add">
+          <input class="form-input" id="store-new-name" placeholder="Item name" maxlength="28">
+          <input class="form-input" id="store-new-cost" type="number" min="1" max="99" value="4" title="Cost in fish">
+          <input class="form-input" id="store-new-emoji" placeholder="🎁" maxlength="4" title="Fallback emoji">
+          <label class="btn-secondary" style="cursor:pointer; font-size:12px;">
+            🖼️ Pick image<input type="file" accept="image/*" id="store-new-file" onchange="onStoreImagePick(this)" style="display:none">
+          </label>
+          <button class="btn-primary" onclick="adminAddStoreItem()" style="font-size:12px;">＋ Add item</button>
+        </div>
+        <div id="store-new-preview" style="margin-top:8px;"></div>
+      </div>
+
+      <div class="paper-card">
         <div class="nb-sub"><div class="nb-sub-label">💣 Reset everyone</div></div>
         <div style="font-size:12px; font-weight:700; color:var(--ink-light); margin-bottom:10px;">
           Use these when you want a clean slate for a new scoring period. Each one asks first.
@@ -2219,6 +2270,7 @@
           <button class="btn-secondary" onclick="adminResetAll('focus')">⏳ Clear all focus time</button>
           <button class="btn-secondary" onclick="adminResetAll('logs')">🕑 Clear all day logs</button>
           <button class="btn-secondary" onclick="adminResetAll('adjust')">🎛️ Clear all adjustments</button>
+          <button class="btn-secondary" onclick="adminResetAll('purchases')">🛍️ Clear all purchases</button>
           <button class="btn-secondary" onclick="adminResetAll('everything')" style="color:var(--sail-red);">💣 Reset all scoring</button>
         </div>
       </div>
@@ -2630,11 +2682,11 @@ let pushTimer = null;
 // Collections stored one-row-per-element (keyed by their .id).
 // Bump this string on every deploy — the update checker compares it against the
 // copy sitting on the server to tell a phone its cached build is out of date.
-const APP_VERSION = '2026.08.01-1';
+const APP_VERSION = '2026.08.01-2';
 
 const ITEM_COLLECTIONS = ['people', 'tasks', 'meetings', 'events', 'posts', 'messages'];
 // Singletons stored as a single row each.
-const SINGLETONS = ['templates', 'activityTypes', 'wcCategories', 'personTemplates', 'wsName', 'wsSub', 'scoreEpoch'];
+const SINGLETONS = ['templates', 'activityTypes', 'wcCategories', 'personTemplates', 'wsName', 'wsSub', 'scoreEpoch', 'storeItems', 'storeEnabled'];
 
 // A snapshot of what we last saw, so save() can push only what changed.
 let lastSnapshot = {};
@@ -2707,13 +2759,26 @@ let correctiveTimer = null;
 
 // Fields the admin owns. A person row stamped with an older epoch than the
 // room's current one is stale, and its scores are ignored.
-const SCORE_FIELDS = ['fish', 'stars', 'pomoMinutes', 'pomoSessions', 'wc', 'pointsAdjust', 'scoreEpoch'];
+const SCORE_FIELDS = ['fish', 'stars', 'pomoMinutes', 'pomoSessions', 'wc', 'pointsAdjust', 'scoreEpoch',
+                      'streakFixers', 'stickers', 'activeStickers', 'purchases'];
+// Personal work that a stale device must never overwrite. Logs and the notebook
+// belong to whoever wrote them, so an old cached copy can only ADD days we don't
+// have — never replace the ones we do. (This is what was wiping today's log.)
+const PERSONAL_FIELDS = ['logs', 'planning'];
 function currentEpoch() { return state.scoreEpoch || 0; }
 function rowEpoch(d) { return (d && d.scoreEpoch) || 0; }
 function isStaleScoreRow(d) { return rowEpoch(d) < currentEpoch(); }
 function mergeKeepingLocalScores(localP, incoming) {
   const merged = { ...incoming };
-  if (localP) SCORE_FIELDS.forEach(f => { merged[f] = localP[f]; });
+  if (!localP) return merged;
+  SCORE_FIELDS.forEach(f => { merged[f] = localP[f]; });
+  // keep our own logs, but adopt any day the stale copy has that we don't
+  const localLogs = localP.logs || {};
+  const inLogs = (incoming && incoming.logs) || {};
+  const logs = { ...localLogs };
+  Object.keys(inLogs).forEach(k => { if (!logs[k]) logs[k] = inLogs[k]; });
+  merged.logs = logs;
+  merged.planning = localP.planning || (incoming && incoming.planning);
   return merged;
 }
 // Admin actions stamp a new epoch so every other device knows the old numbers
@@ -4014,6 +4079,7 @@ function renderAdmin() {
   if (!isAdmin()) return;
   renderAdminMeetings();
   renderAdminPlayers();
+  renderAdminStore();
 }
 
 function renderAdminMeetings() {
@@ -4075,6 +4141,96 @@ function adminDoClearDone(doomed) {
   refreshTaskSurfaces();
   renderAdmin();
   showToast(`🧹 Cleared ${doomed.length} done task(s).`);
+}
+
+// ── admin: store management ──
+let pendingStoreImage = '';
+
+function adminToggleStore(on) {
+  if (!isAdmin()) return;
+  state.storeEnabled = !!on;
+  save();
+  renderMarket();
+  showToast(on ? '🛒 Shop opened for the crew' : '🔒 Shop closed');
+}
+
+// Shrink whatever they pick to a small square before storing. A raw phone photo
+// is several megabytes as a data URL, which would bloat every sync payload.
+function onStoreImagePick(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const S = 128;
+      const c = document.createElement('canvas');
+      c.width = S; c.height = S;
+      const ctx = c.getContext('2d');
+      // cover-crop to a square so nothing is squashed
+      const side = Math.min(img.width, img.height);
+      ctx.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, S, S);
+      pendingStoreImage = c.toDataURL('image/jpeg', 0.8);
+      const prev = document.getElementById('store-new-preview');
+      if (prev) prev.innerHTML = `<img src="${pendingStoreImage}" style="width:54px;height:54px;object-fit:cover;border-radius:10px;border:2px solid var(--ocean-pale)"> <span style="font-size:11px;font-weight:800;color:var(--matcha)">image ready (${Math.round(pendingStoreImage.length/1024)} KB)</span>`;
+    };
+    img.onerror = () => showToast("Couldn't read that image.");
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function adminAddStoreItem() {
+  if (!isAdmin()) return;
+  const name = (document.getElementById('store-new-name').value || '').trim();
+  const cost = clampInt(document.getElementById('store-new-cost').value, 1, 99);
+  const emoji = (document.getElementById('store-new-emoji').value || '').trim() || '🎁';
+  if (!name) { showToast('Give the item a name first.'); return; }
+  const list = Array.isArray(state.storeItems) ? state.storeItems.slice() : MARKET_ITEMS.slice(0, STORE_SLOTS - 1);
+  if (list.length >= STORE_SLOTS - 1) {
+    showToast(`The shop holds ${STORE_SLOTS} items — remove one first.`);
+    return;
+  }
+  list.push({ id: 'cust_' + Date.now(), name, cost, emoji,
+              image: pendingStoreImage || '', custom: true, special: !!pendingStoreImage });
+  state.storeItems = list;
+  save();
+  pendingStoreImage = '';
+  document.getElementById('store-new-name').value = '';
+  document.getElementById('store-new-emoji').value = '';
+  const prev = document.getElementById('store-new-preview'); if (prev) prev.innerHTML = '';
+  const f = document.getElementById('store-new-file'); if (f) f.value = '';
+  renderAdminStore(); renderMarket();
+  showToast(`🛍️ Added "${name}" to the shop`);
+}
+
+function adminRemoveStoreItem(id) {
+  if (!isAdmin() || id === STREAK_FIXER.id) return;
+  const list = Array.isArray(state.storeItems) ? state.storeItems.slice() : MARKET_ITEMS.slice(0, STORE_SLOTS - 1);
+  const item = list.find(i => i.id === id);
+  askConfirm(`Remove "${(item && item.name) || 'this item'}" from the shop? Anyone who already bought it keeps it.`, () => {
+    state.storeItems = list.filter(i => i.id !== id);
+    save();
+    renderAdminStore(); renderMarket();
+  }, 'Remove it');
+}
+
+function renderAdminStore() {
+  const box = document.getElementById('admin-store-list');
+  const toggle = document.getElementById('admin-store-on');
+  if (toggle) toggle.checked = storeIsOpen();
+  if (!box) return;
+  const items = getStoreItems();
+  box.innerHTML = items.map(it => `
+    <div class="admin-store-item ${it.permanent ? 'locked' : ''}">
+      ${it.permanent ? '' : `<button class="admin-store-x" onclick="adminRemoveStoreItem('${it.id}')" title="Remove">×</button>`}
+      ${it.image ? `<img src="${escAttr(it.image)}" alt="">` : `<div class="em">${it.emoji || '🎁'}</div>`}
+      <div class="nm">${escHtml(it.name)}</div>
+      <div class="ct">🎣 ${it.cost}${it.permanent ? ' · permanent' : ''}</div>
+    </div>`).join('') +
+    (items.length < STORE_SLOTS
+      ? `<div class="admin-store-item" style="border-style:dashed;opacity:0.6;"><div class="em">➕</div><div class="nm">${STORE_SLOTS - items.length} slot(s) free</div></div>`
+      : '');
 }
 
 function renderAdminPlayers() {
@@ -4207,6 +4363,7 @@ function adminAfterChange(msg) {
 
 function adminWipe(p, what) {
   if (what === 'fish')    p.fish = [];
+  if (what === 'purchases') { p.purchases = []; p.stickers = []; p.activeStickers = []; p.streakFixers = 0; }
   if (what === 'stars')   p.stars = 0;
   if (what === 'focus')   { p.pomoMinutes = 0; p.pomoSessions = 0; }
   if (what === 'logs')    p.logs = {};
@@ -4249,6 +4406,7 @@ function adminResetAll(what) {
   const people = visiblePeople();
   const labels = { fish:'all fish', streaks:'all streaks and check-ins', stars:'all stars',
     focus:'all focus time', logs:'all day logs', adjust:'all point adjustments',
+    purchases:'all shop purchases, stickers and streak fixers',
     everything:'EVERYTHING — fish, streaks, stars, focus time and adjustments' };
   askConfirm(`Reset ${labels[what] || what} for all ${people.length} crew member(s)?`, () => {
     const kinds = what === 'everything' ? ['fish','streaks','stars','focus','adjust'] : [what];
@@ -4694,16 +4852,30 @@ function reconcileStreaks() {
     state._streakFishCleaned = true;
     try { save(); } catch(e) {}
   }
+  let fixerUsed = null;
   state.people.forEach(p => {
     const wc = ensureWc(p);
     getWcCategories(p.id).forEach(cat => {
       const rec = wc[cat.id];
       if (!rec) return;
       if (rec.last !== today && rec.last !== yesterday) {
-        rec.streak = 0;
+        // A streak fixer buys back exactly one missed day: the streak survives
+        // and the chain is treated as unbroken through yesterday.
+        if (rec.streak > 0 && (p.streakFixers || 0) > 0) {
+          p.streakFixers -= 1;
+          rec.last = yesterday;
+          rec.fixedOn = rec.fixedOn || [];
+          rec.fixedOn.push(today);
+          if (p.id === myPersonId()) fixerUsed = cat.label || 'a habit';
+        } else {
+          rec.streak = 0;
+        }
       }
     });
   });
+  if (fixerUsed) {
+    setTimeout(() => showToast(`🩹 A streak fixer saved your ${fixerUsed} streak!`), 1200);
+  }
 }
 
 // Toggle today's check-in for me + a category
@@ -4789,54 +4961,103 @@ const MARKET_ITEMS = [
   { id: 'st_trophy',  emoji: '🏆', name: 'Champion Cup',   cost: 10, special: true },
   { id: 'st_whale',   emoji: '🐋', name: 'Legendary Whale', cost: 12, special: true }
 ];
-function marketItem(id) { return MARKET_ITEMS.find(i => i.id === id); }
+// The Streak Fixer is permanent — it always occupies the first of the nine
+// slots and the admin can't remove it. Buying one banks a token that is spent
+// automatically the first time you'd otherwise lose a streak.
+const STREAK_FIXER = { id: 'st_fixer', emoji: '🩹', name: 'Streak Fixer', cost: 5,
+                       special: true, consumable: true, permanent: true,
+                       blurb: 'Saves one missed day' };
+
+// Nine slots total: the fixer plus eight the admin controls.
+const STORE_SLOTS = 9;
+function getStoreItems() {
+  const rest = Array.isArray(state.storeItems) ? state.storeItems : MARKET_ITEMS.slice(0, STORE_SLOTS - 1);
+  return [STREAK_FIXER].concat(rest.filter(i => i && i.id !== STREAK_FIXER.id)).slice(0, STORE_SLOTS);
+}
+function storeIsOpen() { return state.storeEnabled !== false; }
+function marketItem(id) { return getStoreItems().find(i => i.id === id); }
 
 function renderMarket() {
   const shelf = document.getElementById('market-shelf');
   const bal = document.getElementById('market-balance');
+  const card = document.getElementById('market-card');
   if (!shelf) return;
+
+  // Admin can close the shop. Admins still see it (greyed) so they can reopen it.
+  if (card) card.style.display = (storeIsOpen() || isAdmin()) ? '' : 'none';
+  const closedNote = document.getElementById('market-closed');
+  if (closedNote) closedNote.style.display = storeIsOpen() ? 'none' : 'block';
+
   const myId = myPersonId();
   const me = myId ? personById(myId) : null;
   const fishCount = me ? (me.fish || []).length : 0;
   const owned = (me && me.stickers) || [];
-  if (bal) bal.innerHTML = `🎣 ${fishCount} fish`;
+  const purchases = (me && me.purchases) || [];
+  if (bal) bal.innerHTML = `🎣 ${fishCount} fish` + (me && me.streakFixers ? ` · 🩹 ${me.streakFixers}` : '');
 
-  shelf.innerHTML = MARKET_ITEMS.map(item => {
-    const isOwned = owned.includes(item.id);
+  shelf.innerHTML = getStoreItems().map(item => {
+    const isConsumable = !!item.consumable;
+    const boughtCount = isConsumable
+      ? (item.id === STREAK_FIXER.id ? ((me && me.streakFixers) || 0) : 0)
+      : 0;
+    const isOwned = !isConsumable && (owned.includes(item.id) || purchases.some(x => x.id === item.id));
     const canAfford = fishCount >= item.cost;
-    const btn = !me
-      ? `<div class="market-locked">set your name to buy</div>`
-      : isOwned
-        ? `<div class="market-owned">✓ Owned</div>`
-        : `<button class="market-buy ${canAfford?'':'disabled'}" ${canAfford?'':'disabled'} onclick="buyMarketItem('${item.id}')">🎣 ${item.cost}</button>`;
+    const shut = !storeIsOpen();
+    const btn = shut
+      ? `<div class="market-locked">shop closed</div>`
+      : !me
+        ? `<div class="market-locked">set your name to buy</div>`
+        : isOwned
+          ? `<div class="market-owned">✓ Owned</div>`
+          : `<button class="market-buy ${canAfford?'':'disabled'}" ${canAfford?'':'disabled'} onclick="buyMarketItem('${item.id}')">🎣 ${item.cost}</button>`;
+    const art = item.image
+      ? `<img class="market-img" src="${escAttr(item.image)}" alt="${escAttr(item.name)}">`
+      : `<div class="market-emoji ${item.special?'shiny':''}">${item.emoji || '🎁'}</div>`;
     return `<div class="market-item ${item.special?'special':''} ${isOwned?'is-owned':''}">
-      ${item.special ? '<div class="market-badge">✨ special</div>' : ''}
-      <div class="market-emoji ${item.special?'shiny':''}">${item.emoji}</div>
+      ${item.permanent ? '<div class="market-badge">♾️ always here</div>' : (item.special ? '<div class="market-badge">✨ special</div>' : '')}
+      ${art}
       <div class="market-name">${escHtml(item.name)}</div>
+      ${item.blurb ? `<div class="market-blurb">${escHtml(item.blurb)}</div>` : ''}
+      ${boughtCount ? `<div class="market-count">you have ${boughtCount}</div>` : ''}
       ${btn}
     </div>`;
   }).join('');
 }
 
 function buyMarketItem(id) {
+  if (!storeIsOpen()) { showToast('The shop is closed right now.'); return; }
   const myId = myPersonId();
   if (!myId) { showToast('Set your name to a crew member first! 🪪'); return; }
   const me = personById(myId);
   const item = marketItem(id);
   if (!item) return;
   if (!me.stickers) me.stickers = [];
-  if (me.stickers.includes(id)) { showToast('You already own that one!'); return; }
+  if (!me.purchases) me.purchases = [];
+  const alreadyOwned = !item.consumable &&
+    (me.stickers.includes(id) || me.purchases.some(x => x.id === id));
+  if (alreadyOwned) { showToast('You already own that one!'); return; }
+
   const fish = me.fish || [];
   if (fish.length < item.cost) { showToast(`Not enough fish — need ${item.cost} 🎣`); return; }
-  // spend the fish: remove `cost` fish, preferring non-streak/plain ones first
-  // (so consistency fish that carry leaderboard weight are spent last)
+  // spend the fish: remove `cost` fish, preferring plain ones first so the
+  // consistency fish that carry leaderboard weight are spent last
   const spendOrder = fish.map((f, idx) => ({ f, idx }))
     .sort((a, b) => (a.f.fromStreak?1:0) - (b.f.fromStreak?1:0));
   const removeIdx = new Set(spendOrder.slice(0, item.cost).map(o => o.idx));
   me.fish = fish.filter((f, idx) => !removeIdx.has(idx));
-  me.stickers.push(id);
+
+  if (item.id === STREAK_FIXER.id) {
+    me.streakFixers = (me.streakFixers || 0) + 1;
+    showToast(`🩹 Streak Fixer bought — you now have ${me.streakFixers}. It'll spend itself the next time you'd lose a streak.`);
+  } else if (item.custom) {
+    // admin-made collectible: kept as a trophy on the profile, not equippable
+    me.purchases.push({ id: item.id, name: item.name, image: item.image || '', emoji: item.emoji || '🎁', at: Date.now() });
+    showToast(`🛍️ Bought ${item.name}! It's on your profile.`);
+  } else {
+    me.stickers.push(id);
+    showToast(`🛍️ Bought ${item.name}! Equip it from your profile.`);
+  }
   playSound('ding');
-  showToast(`🛍️ Bought ${item.name}! Equip it from your profile.`);
   save();
   renderMarket();
   renderLeaderboard();
@@ -5120,6 +5341,17 @@ function openPlayerProfile(pid) {
       <div class="profile-stat"><b>${stars}</b><span>on-time ⭐</span></div>
       <div class="profile-stat"><b>${formatMinutes(focusMins)}</b><span>focus time</span></div>
     </div>
+    ${(p.purchases && p.purchases.length) || p.streakFixers ? `
+    <div style="margin:10px 0 4px;">
+      <div style="font-size:11px;font-weight:800;color:var(--ocean-deep);margin-bottom:4px;">🛍️ Purchased</div>
+      <div class="prof-buys">
+        ${p.streakFixers ? `<div class="prof-buy"><div class="em">🩹</div><div class="nm">${p.streakFixers} fixer${p.streakFixers === 1 ? '' : 's'}</div></div>` : ''}
+        ${(p.purchases || []).map(x => `<div class="prof-buy" title="${escAttr(x.name)}">
+          ${x.image ? `<img src="${escAttr(x.image)}" alt="">` : `<div class="em">${x.emoji || '🎁'}</div>`}
+          <div class="nm">${escHtml(x.name)}</div>
+        </div>`).join('')}
+      </div>
+    </div>` : ''}
     <div class="profile-focus">
       <span class="pf-emoji">⏳</span>
       <div>
@@ -5904,10 +6136,8 @@ function renderPlanning() {
   }
 
   renderPlanningLinks();
-  renderPlan2();
   renderLogPie();
-  if (nbTab === 'log') renderLogToday();
-  if (nbTab === 'saved') renderSavedLogs();
+  renderSavedLogs();
 }
 
 // The picker of board tasks available to pin, + the pinned list itself.
@@ -6085,18 +6315,18 @@ function totalLogged(entries) {
 }
 
 // ── notebook tabs ──
-let nbTab = 'notes';
+// The notebook opens on Logs. Today's log is just the first entry in the
+// archive, so there's one interface for logging and for reviewing.
+let nbTab = 'logs';
 function showNbTab(name) {
   nbTab = name;
-  ['notes','log','saved'].forEach(t => {
+  ['logs','notes'].forEach(t => {
     const pane = document.getElementById('nbpane-' + t);
     const tab  = document.getElementById('nbtab-' + t);
     if (pane) pane.classList.toggle('active', t === name);
     if (tab)  tab.classList.toggle('active', t === name);
   });
-  if (name === 'log')   renderLogToday();
-  if (name === 'saved') renderSavedLogs();
-  if (name === 'notes') renderPlan2();
+  if (name === 'logs') renderSavedLogs();
 }
 
 // ── the timeline itself ──
@@ -6163,29 +6393,6 @@ function renderTimeline(entries, opts) {
   </div>`;
 }
 
-// ── today's log tab ──
-function renderLogToday() {
-  const wrap = document.getElementById('log-today');
-  if (!wrap) return;
-  const pid = myPersonId();
-  const key = estDateKey();
-  const entries = pid ? entriesFor('log', key, pid) : [];
-  const total = totalLogged(entries);
-
-  wrap.innerHTML = `
-    <div class="tl-head">
-      <div>
-        <div class="tl-date">${keyLabel(key, true)}</div>
-        <div class="tl-total">${entries.length} ${entries.length === 1 ? 'activity' : 'activities'} · ${formatMinutes(total)} logged</div>
-      </div>
-      <button class="btn-primary" onclick="openEntryModal('log','${key}',null)" style="font-size:13px;">＋ Log an activity</button>
-    </div>
-    ${entries.length ? '' : `<div class="tl-empty">Nothing logged yet today. Add your first block and the next one will pick up where it ended.</div>`}
-    ${renderTimeline(entries, { mode: 'log', dateKey: key, editable: true, showNow: true })}
-  `;
-  scrollTimelineIntoView(wrap, entries);
-}
-
 // Start the scroll near the action instead of at 2am.
 function scrollTimelineIntoView(wrap, entries) {
   const sc = wrap.querySelector('.tl-scroll');
@@ -6199,35 +6406,6 @@ function scrollTimelineIntoView(wrap, entries) {
   sc.scrollTop = Math.max(0, top - 60);
 }
 
-// ── two-day planner on the notes tab ──
-function renderPlan2() {
-  const grid = document.getElementById('plan2-grid');
-  if (!grid) return;
-  const today = estDateKey();
-  grid.innerHTML = [0, 1].map(off => {
-    const key = keyPlusDays(today, off);
-    const entries = entriesFor('plan', key);
-    const total = totalLogged(entries);
-    return `<div>
-      <div class="tl-head">
-        <div>
-          <div class="tl-date">${off === 0 ? 'Today' : 'Tomorrow'}</div>
-          <div class="tl-total">${keyLabel(key)} · ${formatMinutes(total)} planned</div>
-        </div>
-        <button class="btn-secondary" onclick="openEntryModal('plan','${key}',null)" style="font-size:12px;">＋ Plan</button>
-      </div>
-      ${renderTimeline(entries, { mode: 'plan', dateKey: key, editable: true, showNow: off === 0 })}
-    </div>`;
-  }).join('');
-  grid.querySelectorAll('.tl-scroll').forEach((sc, i) => {
-    const key = keyPlusDays(today, i);
-    const es = entriesFor('plan', key);
-    const span = LOG_DAY_END - LOG_DAY_START, totalH = (span / 60) * LOG_HOUR_H;
-    let anchor = es.length ? Math.min(...es.map(e => e.startMin)) : 480;
-    sc.scrollTop = Math.max(0, ((anchor - LOG_DAY_START) / span) * totalH - 60);
-  });
-}
-
 // ── saved logs tab ──
 let logViewPerson = null;   // whose archive we're looking at
 let logViewDate = null;     // which log is expanded
@@ -6235,14 +6413,16 @@ let logViewDate = null;     // which log is expanded
 function onLogPersonChange() {
   const sel = document.getElementById('log-person');
   logViewPerson = sel ? sel.value : null;
-  logViewDate = null;
+  logViewDate = estDateKey();    // land on today for whoever we switched to
   renderSavedLogs();
 }
 
 function renderSavedLogs() {
   const sel = document.getElementById('log-person');
   if (!sel) return;
-  if (!logViewPerson) logViewPerson = myPersonId() || (state.people[0] && state.people[0].id) || '';
+  if (!logViewPerson) logViewPerson = myPersonId() || (visiblePeople()[0] && visiblePeople()[0].id) || '';
+  // open on today unless the user has picked another day
+  if (!logViewDate) logViewDate = estDateKey();
   sel.innerHTML = visiblePeople().map(p =>
     `<option value="${p.id}">${escHtml(p.name)}${p.id === myPersonId() ? ' (you)' : ''}</option>`).join('');
   if (!state.people.length) sel.innerHTML = `<option value="">No crew yet</option>`;
@@ -6284,23 +6464,27 @@ function renderLogToc() {
   const count = document.getElementById('log-count');
   if (!wrap) return;
   const logs = personLogs(logViewPerson);
+  const today = estDateKey();
   const keys = Object.keys(logs).filter(k => (logs[k].entries || []).length).sort().reverse();
-  if (count) count.textContent = keys.length ? `${keys.length} log${keys.length === 1 ? '' : 's'}` : '';
+  // today always has a row, even when empty, so there's somewhere to start
+  const isMine = logViewPerson === myPersonId();
+  if (isMine && !keys.includes(today)) keys.unshift(today);
+  if (count) count.textContent = keys.length ? `${keys.length} day${keys.length === 1 ? '' : 's'}` : '';
 
   if (!keys.length) {
-    wrap.innerHTML = `<div class="nb-empty">No saved logs yet. Anything logged on the Log tab shows up here.</div>`;
+    wrap.innerHTML = `<div class="nb-empty">No logs yet for this person.</div>`;
     return;
   }
   wrap.innerHTML = keys.map(k => {
-    const L = logs[k];
+    const L = logs[k] || { entries: [] };
     const total = totalLogged(L.entries);
     const chips = L.entries.slice().sort((a,b)=>a.startMin-b.startMin).map(e => {
       const meta = typeMeta(e.type || getActivityTypes()[0].id);
       return `<span class="log-chip" style="background:${meta.color}" title="${escAttr(e.label || meta.label)}"></span>`;
     }).join('');
     return `<div class="log-row ${k === logViewDate ? 'active' : ''}" onclick="openSavedLog('${k}')">
-      <span class="log-row-date">${keyLabel(k, true)}</span>
-      <span class="log-row-total">${L.entries.length} · ${formatMinutes(total)}</span>
+      <span class="log-row-date">${k === today ? '📍 Today · ' : ''}${keyLabel(k, true)}</span>
+      <span class="log-row-total">${L.entries.length ? `${L.entries.length} · ${formatMinutes(total)}` : 'nothing yet'}</span>
       <span class="log-chips">${chips}</span>
       ${L.edited ? `<span class="edited-mark" title="Changed after the day it covers">✏️ edited</span>` : ''}
     </div>`;
@@ -6308,7 +6492,7 @@ function renderLogToc() {
 }
 
 function openSavedLog(key) {
-  logViewDate = (logViewDate === key) ? null : key;
+  logViewDate = key;            // stay open — this pane IS the editor
   renderLogToc();
   renderLogDetail();
   if (logViewDate) {
@@ -6321,9 +6505,10 @@ function renderLogDetail() {
   const wrap = document.getElementById('log-detail');
   if (!wrap) return;
   if (!logViewDate) { wrap.innerHTML = ''; return; }
-  const L = getLog(logViewPerson, logViewDate, false);
-  if (!L) { wrap.innerHTML = ''; return; }
   const mine = logViewPerson === myPersonId();
+  // create today's (or any of my days') log on demand so it's always editable
+  const L = getLog(logViewPerson, logViewDate, mine) || { date: logViewDate, entries: [] };
+  if (!L) { wrap.innerHTML = ''; return; }
   const total = totalLogged(L.entries);
   wrap.innerHTML = `
     <hr class="nb-divider">
@@ -6335,9 +6520,10 @@ function renderLogDetail() {
           ${L.edited ? ` · <span style="color:var(--sunset-deep);font-weight:800;">edited ${new Date(L.editedAt).toLocaleDateString()}</span>` : ''}
         </div>
       </div>
-      ${mine ? `<button class="btn-secondary" onclick="openEntryModal('log','${logViewDate}',null)" style="font-size:12px;">＋ Add to this day</button>` : ''}
+      ${mine ? `<button class="btn-primary" onclick="openEntryModal('log','${logViewDate}',null)" style="font-size:13px;">＋ Log an activity</button>` : ''}
     </div>
     ${mine ? '' : `<div class="tl-total" style="margin-bottom:8px;">Viewing someone else's log — read only.</div>`}
+    ${mine && !L.entries.length ? `<div class="tl-empty">Nothing logged for this day yet. Add the first block and the next one picks up where it ended.</div>` : ''}
     ${renderTimeline(L.entries, { mode: 'log', dateKey: logViewDate, editable: mine, showNow: false })}
   `;
   scrollTimelineIntoView(wrap, L.entries);
@@ -6482,13 +6668,9 @@ function deleteEntryFromModal() {
 }
 
 function afterEntryChange(mode) {
-  if (mode === 'plan') { renderPlan2(); flashSaved(); }
-  else {
-    renderLogToday();
-    if (nbTab === 'saved') renderSavedLogs();
-    const ls = document.getElementById('nb-log-saved');
-    if (ls) { ls.classList.add('show'); clearTimeout(ls._t); ls._t = setTimeout(() => ls.classList.remove('show'), 1200); }
-  }
+  renderSavedLogs();
+  const ls = document.getElementById('nb-log-saved');
+  if (ls) { ls.classList.add('show'); clearTimeout(ls._t); ls._t = setTimeout(() => ls.classList.remove('show'), 1200); }
   renderLogPie();
 }
 
