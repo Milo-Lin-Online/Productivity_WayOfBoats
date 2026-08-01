@@ -4780,10 +4780,10 @@ function renderLeaderboard() {
       const monthChecks = wcMonthChecks(p.id);
       const streakPts = monthChecks / 10;
       const stars = p.stars || 0;
-      // FORMULA: (fish*3) + (10 * done/total) + (month check-ins/10) + (total tasks/5) + (stars/2)
+      // NEW FORMULA
       // plus any manual admin adjustment (pointsAdjust, can be negative)
       const adjust = p.pointsAdjust || 0;
-      const points = Math.round((fish * 3) + (10 * ratio) + streakPts + (total / 5) + (stars / 2)) + adjust;
+      const points = Math.round((fish * 2) + ((done/5) + (10 * ratio)) + streakPts + (total / 15) + (stars / 2)) + adjust;
       return { ...p, done, total, fish, focusMinutes, streak, monthChecks, streakPts, stars, adjust, points };
     })
     .sort((a, b) => b.points - a.points || b.done - a.done);
