@@ -3,6 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Stop phones serving a stale copy of the app from cache. The version below is
+     also used by the in-app update check. Bump APP_VERSION on every deploy. -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>⚓ WAY OF BOATS — The Immortal Typhoon</title>
 <!-- FAVICON — swap this data URI for your own image later (e.g. <link rel="icon" href="myfish.png">) -->
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%9F%3C/text%3E%3C/svg%3E">
@@ -1570,6 +1575,22 @@
   #pomo-panel.pomo-sized #pomo-todo-list { max-height: none; flex: 1 1 auto; min-height: 48px; }
   #pomo-panel.pomo-sized .pomo-catch { flex-shrink: 0; }
 
+  /* ── update banner ── */
+  #update-banner {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 300;
+    background: var(--sunset); color: white;
+    font-size: 13px; font-weight: 800;
+    padding: 10px 14px;
+    display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+  }
+  #update-banner button {
+    font-family: inherit; font-size: 12px; font-weight: 800;
+    border: 2px solid white; background: white; color: var(--sunset-deep);
+    border-radius: 20px; padding: 5px 14px; cursor: pointer;
+  }
+  #update-banner button.ghost { background: transparent; color: white; }
+
   /* ── task search ── */
   .task-search-wrap { position: relative; display: flex; align-items: center; }
   .task-search-ico {
@@ -1852,6 +1873,10 @@
       <button class="nav-btn" onclick="openSyncModal()">
         <span class="emoji">☁️</span> <span>Live Sync</span>
       </button>
+      <button class="nav-btn" onclick="forceUpdate()" title="Reload the newest version and clear this device's cache">
+        <span class="emoji">⟳</span> <span>Force update</span>
+      </button>
+      <div id="app-version" style="font-size:9px; font-weight:700; text-align:center; color:var(--ink-light); opacity:0.7; margin-top:4px;"></div>
       <div id="sync-status" style="font-size:10px; font-weight:800; text-align:center; padding:6px; border-radius:10px; margin-top:6px; background:rgba(0,0,0,0.05); color:var(--ink-light);">
         ⚪ Local only
       </div>
@@ -2369,6 +2394,13 @@
   </div>
 </div>
 
+<!-- UPDATE BANNER — appears when the server has a newer build than this tab -->
+<div id="update-banner" style="display:none">
+  <span id="update-msg">A newer version of the app is available.</span>
+  <button onclick="forceUpdate()">⟳ Update now</button>
+  <button class="ghost" onclick="document.getElementById('update-banner').style.display='none'">Later</button>
+</div>
+
 <!-- IN-APP CONFIRM (native confirm() can be silently suppressed by the browser
      via "prevent this page from creating additional dialogs", which makes
      destructive actions look broken) -->
@@ -2559,6 +2591,7 @@ let state = {
   sortTime: '',
   sortDue: '',
   taskSearch: '',
+  scoreEpoch: 0,
   selectedTemplate: 'weekly',
   templates: null, // populated below if null
   wsName: 'WAY OF BOATS',
@@ -2595,13 +2628,114 @@ let applyingRemote = false; // guard so remote writes don't echo back
 let pushTimer = null;
 
 // Collections stored one-row-per-element (keyed by their .id).
+// Bump this string on every deploy — the update checker compares it against the
+// copy sitting on the server to tell a phone its cached build is out of date.
+const APP_VERSION = '2026.08.01-1';
+
 const ITEM_COLLECTIONS = ['people', 'tasks', 'meetings', 'events', 'posts', 'messages'];
 // Singletons stored as a single row each.
-const SINGLETONS = ['templates', 'activityTypes', 'wcCategories', 'personTemplates', 'wsName', 'wsSub'];
+const SINGLETONS = ['templates', 'activityTypes', 'wcCategories', 'personTemplates', 'wsName', 'wsSub', 'scoreEpoch'];
 
 // A snapshot of what we last saw, so save() can push only what changed.
 let lastSnapshot = {};
 function snapshotOf(obj) { return JSON.stringify(obj); }
+
+// ══════════════════════════════════════════════
+// APP UPDATES  (phones can't hard-refresh)
+// ══════════════════════════════════════════════
+// A phone will happily keep serving a cached copy of this file forever. There's
+// no reload-ignoring-cache gesture on mobile Safari, so instead we (a) ask the
+// server for our own file with cache:'no-store', (b) compare the APP_VERSION
+// baked into it against the one running, and (c) offer a one-tap reload that
+// clears every cache we can reach and busts the URL with a fresh query string.
+async function checkForUpdate(announce) {
+  try {
+    const url = location.pathname + '?_cb=' + Date.now();
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) return false;
+    const txt = await res.text();
+    const m = txt.match(/APP_VERSION\s*=\s*'([^']+)'/);
+    if (!m) return false;
+    if (m[1] !== APP_VERSION) {
+      const msg = document.getElementById('update-msg');
+      if (msg) msg.textContent = `New version available (${m[1]}) — you're running ${APP_VERSION}.`;
+      const banner = document.getElementById('update-banner');
+      if (banner) banner.style.display = 'flex';
+      return true;
+    }
+    if (announce) showToast('✅ You already have the newest version (' + APP_VERSION + ')');
+    return false;
+  } catch (e) { return false; }
+}
+
+// Wipe every cache this device might be holding, then reload from a URL the
+// cache has never seen.
+async function forceUpdate() {
+  showToast('Fetching the newest version…');
+  try {
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister()));
+    }
+  } catch (e) {}
+  try {
+    if (window.caches && caches.keys) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+  } catch (e) {}
+  // Note: app DATA in localStorage is deliberately left alone — this clears the
+  // cached program, not the crew's work.
+  const base = location.origin + location.pathname;
+  setTimeout(() => { location.replace(base + '?v=' + Date.now()); }, 250);
+}
+
+function renderAppVersion() {
+  const el = document.getElementById('app-version');
+  if (el) el.textContent = 'v' + APP_VERSION;
+}
+
+// ══════════════════════════════════════════════
+// SYNC SAFETY: never let a stale device overwrite the room
+// ══════════════════════════════════════════════
+// Nothing is pushed until we've pulled the room once. Without this, a phone
+// waking up with a month-old cache would fire its whole stale state at the
+// server on the first save() — which is exactly how deleted tasks and cleared
+// fish came back to life.
+let syncReady = false;
+let correctiveTimer = null;
+
+// Fields the admin owns. A person row stamped with an older epoch than the
+// room's current one is stale, and its scores are ignored.
+const SCORE_FIELDS = ['fish', 'stars', 'pomoMinutes', 'pomoSessions', 'wc', 'pointsAdjust', 'scoreEpoch'];
+function currentEpoch() { return state.scoreEpoch || 0; }
+function rowEpoch(d) { return (d && d.scoreEpoch) || 0; }
+function isStaleScoreRow(d) { return rowEpoch(d) < currentEpoch(); }
+function mergeKeepingLocalScores(localP, incoming) {
+  const merged = { ...incoming };
+  if (localP) SCORE_FIELDS.forEach(f => { merged[f] = localP[f]; });
+  return merged;
+}
+// Admin actions stamp a new epoch so every other device knows the old numbers
+// are void, even if it reconnects days later.
+function bumpScoreEpoch(people) {
+  state.scoreEpoch = Date.now();
+  (people || visiblePeople()).forEach(p => { p.scoreEpoch = state.scoreEpoch; });
+}
+
+// Item ids are timestamps, so we can tell genuinely-new offline work apart from
+// zombies that a stale cache is holding on to.
+function itemCreatedAt(el) {
+  const digits = String((el && el.id) != null ? el.id : '').replace(/[^0-9]/g, '');
+  const n = parseInt(digits.slice(0, 13), 10);
+  return (n > 1420070400000 && n < 4102444800000) ? n : 0;   // 2015 … 2100
+}
+function lastSyncAt() { return parseInt(localStorage.getItem('boats_last_sync') || '0', 10) || 0; }
+
+function scheduleCorrectivePush() {
+  clearTimeout(correctiveTimer);
+  correctiveTimer = setTimeout(() => { pushChangedItems(); }, 600);
+}
 
 function save() {
   // always keep a local copy (full state)
@@ -2628,6 +2762,7 @@ function buildItemMap() {
 // Push only the rows whose JSON changed since last push (per-item last-write-wins).
 async function pushChangedItems() {
   if (!sb || !sbConfig) return;
+  if (!syncReady) return;        // we haven't seen the room yet — say nothing
   const now = Date.now();
   const map = buildItemMap();
   const rows = [];
@@ -2649,6 +2784,7 @@ async function pushChangedItems() {
     if (deletions.length) {
       await sb.from('boats_items').delete().eq('room', sbConfig.room).in('item_key', deletions);
     }
+    if (rows.length || deletions.length) saveSyncedKeys();
   } catch (e) { console.error('push failed', e); }
 }
 
@@ -2696,8 +2832,10 @@ function setSyncStatus(text, color) {
 }
 
 // Apply a single incoming row (from realtime or initial pull) into state.
+let staleRowRejected = false;
 function applyItemRow(item_key, data, isDelete) {
   applyingRemote = true;
+  staleRowRejected = false;
   const [kind, ...rest] = item_key.split(':');
   const idPart = rest.join(':');
   if (kind === 'single') {
@@ -2709,9 +2847,23 @@ function applyItemRow(item_key, data, isDelete) {
     if (isDelete) {
       if (idx > -1) arr.splice(idx, 1);
     } else if (idx > -1) {
-      arr[idx] = data;
+      // An incoming person row stamped before the last admin reset is a ghost
+      // from someone's stale cache. Take its harmless fields (name, colour,
+      // notebook) but keep OUR scores — admin's numbers win.
+      if (kind === 'people' && isStaleScoreRow(data)) {
+        arr[idx] = mergeKeepingLocalScores(arr[idx], data);
+        staleRowRejected = true;
+      } else {
+        arr[idx] = data;
+      }
     } else {
-      arr.push(data);
+      if (kind === 'people' && isStaleScoreRow(data)) {
+        // a person the room already retired, arriving from an old device
+        arr.push(mergeKeepingLocalScores(null, data));
+        staleRowRejected = true;
+      } else {
+        arr.push(data);
+      }
     }
   }
   // keep our snapshot in sync so we don't echo this back
@@ -2719,6 +2871,9 @@ function applyItemRow(item_key, data, isDelete) {
   else lastSnapshot[item_key] = snapshotOf(data);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   applyingRemote = false;
+  // We kept our own values over theirs, so the row in the database is still
+  // wrong — push the corrected version back so the room heals itself.
+  if (staleRowRejected) { staleRowRejected = false; scheduleCorrectivePush(); }
 }
 
 // Re-render after remote changes, without yanking focus while typing.
@@ -2745,11 +2900,23 @@ document.addEventListener('focusout', () => {
 async function pullAllItems() {
   if (!sb || !sbConfig) return;
   try {
-    const { data, error } = await sb.from('boats_items').select('item_key,data').eq('room', sbConfig.room);
+    const { data, error } = await sb.from('boats_items').select('item_key,data,updated_at').eq('room', sbConfig.room);
     if (error) throw error;
     if (data && data.length) {
+      const remoteKeys = new Set(data.map(r => r.item_key));
+      const newestRemote = data.reduce((m, r) => Math.max(m, r.updated_at || 0), 0);
       data.forEach(row => applyItemRow(row.item_key, row.data, false));
+      const dropped = pruneZombies(remoteKeys, newestRemote);   // the room is the source of truth
+      seedSnapshot(remoteKeys);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      syncReady = true;
+      localStorage.setItem('boats_last_sync', String(Date.now()));
       renderAll();
+      if (dropped) showToast(`🧹 Cleared ${dropped} stale item(s) from this device's cache`);
+      // Anything we kept that the room doesn't have is genuine local work that
+      // was never uploaded — send it up now that we're allowed to push.
+      pushChangedItems();
+      return;
     } else {
       // try migrating from the old single-document table
       let migrated = false;
@@ -2757,11 +2924,72 @@ async function pullAllItems() {
         const old = await sb.from('boats_state').select('data').eq('room', sbConfig.room).maybeSingle();
         if (old.data && old.data.data) { mergeLegacyBlob(old.data.data); migrated = true; }
       } catch(e) { /* old table may not exist; fine */ }
-      // seed the room from our current local state (migrated or not)
-      lastSnapshot = {}; // force full push
+      // Empty room: we're the first here, so seed it from local state.
+      lastSnapshot = {};      // force a full push
+      syncReady = true;
       await pushChangedItems();
+      localStorage.setItem('boats_last_sync', String(Date.now()));
     }
-  } catch (e) { console.error('pull failed', e); }
+  } catch (e) {
+    console.error('pull failed', e);
+    // Couldn't read the room — stay silent rather than risk pushing stale data.
+    syncReady = false;
+    setSyncStatus('🔴 Pull failed — not syncing', 'var(--sail-red)');
+  }
+}
+
+// Which item keys THIS device has already uploaded. If a key is in here but is
+// missing from the room, it was deleted by someone else — so we must not bring
+// it back. If it isn't in here, we've never pushed it, so it's genuine local
+// work and gets kept.
+const SYNCED_KEYS_KEY = 'boats_synced_keys';
+function loadSyncedKeys() {
+  try {
+    const arr = JSON.parse(localStorage.getItem(SYNCED_KEYS_KEY) || 'null');
+    return Array.isArray(arr) ? new Set(arr) : null;   // null = this device predates the record
+  } catch (e) { return null; }
+}
+function saveSyncedKeys() {
+  try { localStorage.setItem(SYNCED_KEYS_KEY, JSON.stringify(Object.keys(lastSnapshot))); } catch (e) {}
+}
+
+// Drop anything this device is holding that the room no longer has.
+function pruneZombies(remoteKeys, newestRemote) {
+  const known = loadSyncedKeys();
+  let removed = 0;
+  ITEM_COLLECTIONS.forEach(coll => {
+    if (!Array.isArray(state[coll])) return;
+    state[coll] = state[coll].filter(el => {
+      if (!el || el.id == null) return false;
+      const key = coll + ':' + el.id;
+      if (remoteKeys.has(key)) return true;             // still in the room — keep
+      if (known) {
+        // we have a proper record: keep only what we've never uploaded
+        if (!known.has(key)) return true;
+      } else {
+        // First run under the new sync. The old code pushed the whole state on
+        // every save, so anything older than the room's last write was already
+        // uploaded — and its absence means it was deleted. Only keep items made
+        // after the room's most recent activity.
+        const created = itemCreatedAt(el);
+        if (created && created > (newestRemote || 0)) return true;
+      }
+      removed++;
+      return false;
+    });
+  });
+  return removed;
+}
+
+// Record what the server has, so save() only pushes real changes. Keys the room
+// doesn't have are deliberately left out so genuine local work still uploads.
+function seedSnapshot(remoteKeys) {
+  lastSnapshot = {};
+  const map = buildItemMap();
+  for (const k in map) {
+    if (!remoteKeys || remoteKeys.has(k)) lastSnapshot[k] = snapshotOf(map[k]);
+  }
+  saveSyncedKeys();
 }
 
 // Merge a legacy single-blob into current state (used once during migration).
@@ -2802,6 +3030,7 @@ async function startSync() {
   try {
     sb = window.supabase.createClient(sbConfig.url, sbConfig.key);
     lastSnapshot = {};
+    syncReady = false;          // hold all pushes until the room has been read
     await pullAllItems();
 
     if (sbChannel) { try { await sb.removeChannel(sbChannel); } catch(e){} }
@@ -2852,6 +3081,7 @@ async function disconnectSync() {
   if (sbChannel && sb) { try { await sb.removeChannel(sbChannel); } catch(e){} }
   sb = null; sbChannel = null; sbConfig = null;
   lastSnapshot = {};
+  syncReady = false;
   localStorage.removeItem('boats_sync_cfg');
   setSyncStatus('⚪ Local only');
   closeModal('sync-modal');
@@ -3839,6 +4069,8 @@ function adminDoClearDone(doomed) {
     }
   });
   if (typeof pomoTaskIds !== 'undefined') pomoTaskIds = pomoTaskIds.filter(id => !ids.has(id));
+  // record the deletion time so a stale device can't resurrect these tasks
+  state.scoreEpoch = Date.now();
   save();
   refreshTaskSurfaces();
   renderAdmin();
@@ -3938,6 +4170,7 @@ function adminSetFish(pid, val) {
   while (p.fish.length < n) {
     p.fish.push({ emoji: '🐟', name: 'Granted by admin', minutes: 0, at: Date.now() + (seq++), fromAdmin: true });
   }
+  bumpScoreEpoch([p]);
   save();
   adminAfterChange(`${p.name}: fish set to ${n}`);
 }
@@ -3947,6 +4180,7 @@ function adminSetStars(pid, val) {
   const p = personById(pid);
   if (!p) return;
   p.stars = clampInt(val, 0, 9999);
+  bumpScoreEpoch([p]);
   save();
   adminAfterChange(`${p.name}: stars set to ${p.stars}`);
 }
@@ -3957,6 +4191,7 @@ function adminSetFocus(pid, val) {
   if (!p) return;
   p.pomoMinutes = clampInt(val, 0, 999999);
   if (pid === myPersonId()) { try { localStorage.removeItem('boats_focus_mins'); } catch(e) {} }
+  bumpScoreEpoch([p]);
   save();
   adminAfterChange(`${p.name}: focus time set to ${formatMinutes(p.pomoMinutes)}`);
 }
@@ -3992,6 +4227,7 @@ function adminClear(pid, what) {
   const label = { fish:'fish', streaks:'streaks and check-ins', stars:'stars', focus:'focus time', logs:'day logs' }[what] || what;
   askConfirm(`Clear ${p.name}'s ${label}?`, () => {
     adminWipe(p, what);
+    bumpScoreEpoch([p]);
     save();
     adminAfterChange(`Cleared ${label} for ${p.name}`);
   }, 'Clear it');
@@ -4003,6 +4239,7 @@ function adminSetAdjust(pid, val) {
   if (!p) return;
   const n = parseInt(val, 10);
   p.pointsAdjust = isNaN(n) ? 0 : n;
+  bumpScoreEpoch([p]);
   save();
   adminAfterChange(`${p.name}: points adjustment set to ${p.pointsAdjust > 0 ? '+' : ''}${p.pointsAdjust}`);
 }
@@ -4016,6 +4253,7 @@ function adminResetAll(what) {
   askConfirm(`Reset ${labels[what] || what} for all ${people.length} crew member(s)?`, () => {
     const kinds = what === 'everything' ? ['fish','streaks','stars','focus','adjust'] : [what];
     people.forEach(p => kinds.forEach(k => adminWipe(p, k)));
+    bumpScoreEpoch(people);
     save();
     adminAfterChange(`Reset ${labels[what] || what}`);
   }, 'Reset them');
@@ -7259,6 +7497,20 @@ renderBoard();
 // initialize content calendar view toggle + task-board reminders
 if (state.calView === 'week') setCalView('week'); else setCalView('month');
 renderPostReminders();
+
+renderAppVersion();
+
+// Check for a newer build: on load, when the tab is reopened (how phones
+// usually come back), and hourly for tabs left open all day.
+setTimeout(() => checkForUpdate(false), 2500);
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) {
+    checkForUpdate(false);
+    // a phone waking up may also have missed sync traffic — re-read the room
+    if (sb && sbConfig) pullAllItems();
+  }
+});
+setInterval(() => checkForUpdate(false), 60 * 60 * 1000);
 
 // Prompt for name on first visit
 if (!state.myName) {
