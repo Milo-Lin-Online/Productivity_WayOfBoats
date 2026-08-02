@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <!-- Stop phones serving a stale copy of the app from cache. The version below is
      also used by the in-app update check. Bump APP_VERSION on every deploy. -->
-<meta name="app-version" content="2026.08.02-2">
+<meta name="app-version" content="2026.08.02-3">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -2154,7 +2154,7 @@
             drag an edge to resize, click it to edit.
           </div>
 
-          <div class="nb-sub"><div class="nb-sub-label">This past week</div></div>
+          <div class="nb-sub"><div class="nb-sub-label">Your week</div><span style="font-size:11px; font-weight:700; color:var(--ink-light);">last 7 days, plus tomorrow to plan into</span></div>
           <div class="wk" id="log-week"></div>
 
           <hr class="nb-divider">
@@ -6512,8 +6512,14 @@ function getLog(pid, dateKey, create) {
 // Changing a day that has already passed counts as an edit; adding to today
 // while today is still happening is just logging.
 function markLogEdited(L) {
-  if (L && L.date !== estDateKey()) { L.edited = true; L.editedAt = Date.now(); }
+  // Only a day that has already happened can be "edited". Logging today as it
+  // goes, or planning tomorrow ahead of time, is just normal use.
+  if (L && L.date < estDateKey()) { L.edited = true; L.editedAt = Date.now(); }
 }
+
+// Tomorrow is editable so the same timeline can be used to plan ahead.
+function tomorrowKey() { return keyPlusDays(estDateKey(), 1); }
+function isFutureDay(key) { return key > estDateKey(); }
 function planDays() {
   const d = getPlanning();
   if (!d.days || typeof d.days !== 'object' || Array.isArray(d.days)) d.days = {};
@@ -6623,6 +6629,7 @@ function scrollTimelineIntoView(wrap, entries) {
   const totalH = (span / 60) * LOG_HOUR_H;
   let anchor;
   if (entries && entries.length) anchor = Math.min(...entries.map(e => e.startMin));
+  else if (typeof logViewDate === 'string' && isFutureDay(logViewDate)) anchor = 480;  // 8am — "now" is meaningless for a day that hasn't happened
   else { const n = new Date(); anchor = n.getHours() * 60 + n.getMinutes(); if (anchor < LOG_DAY_START) anchor += 1440; }
   const top = ((anchor - LOG_DAY_START) / span) * totalH;
   sc.scrollTop = Math.max(0, top - 60);
@@ -6660,9 +6667,13 @@ function renderLogWeek() {
   const wrap = document.getElementById('log-week');
   if (!wrap) return;
   const today = estDateKey();
+  const isMine = logViewPerson === myPersonId();
   const span = LOG_DAY_END - LOG_DAY_START;
-  wrap.innerHTML = [6,5,4,3,2,1,0].map(back => {
-    const key = keyPlusDays(today, -back);
+  // auto-fit so the extra (8th) column doesn't overflow the 7-wide grid, and
+  // still wraps sensibly on a phone
+  wrap.style.gridTemplateColumns = 'repeat(auto-fit, minmax(56px, 1fr))';
+  wrap.innerHTML = [-6,-5,-4,-3,-2,-1,0,1].map(off => {
+    const key = keyPlusDays(today, off);
     const L = getLog(logViewPerson, key, false);
     const entries = (L && L.entries) || [];
     const blocks = entries.map(e => {
@@ -6672,11 +6683,18 @@ function renderLogWeek() {
       return `<div class="wk-block" style="top:${top.toFixed(2)}%;height:${h.toFixed(2)}%;background:${meta.color}"></div>`;
     }).join('');
     const has = entries.length > 0;
-    return `<div class="wk-day ${has ? '' : 'empty'} ${key === today ? 'is-today' : ''}"
-        ${has ? `onclick="openSavedLog('${key}')"` : ''} title="${escAttr(keyLabel(key, true))}">
-      <div class="wk-head">${keyLabel(key).replace(' ', '<br>')}</div>
+    const future = isFutureDay(key);
+    // today and tomorrow stay clickable even when empty, so there's always a
+    // way in to log or to plan
+    const openable = has || (isMine && (key === today || key === tomorrowKey()));
+    const futureStyle = future ? 'border-style:dashed;' : '';
+    return `<div class="wk-day ${openable ? '' : 'empty'} ${key === today ? 'is-today' : ''}"
+        style="${futureStyle}"
+        ${openable ? `onclick="openSavedLog('${key}')"` : ''}
+        title="${escAttr(keyLabel(key, true) + (future ? ' — plan ahead' : ''))}">
+      <div class="wk-head">${future ? '🗓️ plan' : keyLabel(key).replace(' ', '<br>')}</div>
       <div class="wk-strip">${blocks}</div>
-      <div class="wk-foot">${has ? formatMinutes(totalLogged(entries)) : '—'}</div>
+      <div class="wk-foot">${has ? formatMinutes(totalLogged(entries)) : (future ? 'tomorrow' : '—')}</div>
     </div>`;
   }).join('');
 }
@@ -6687,10 +6705,15 @@ function renderLogToc() {
   if (!wrap) return;
   const logs = personLogs(logViewPerson);
   const today = estDateKey();
+  const tomorrow = tomorrowKey();
   const keys = Object.keys(logs).filter(k => (logs[k].entries || []).length).sort().reverse();
-  // today always has a row, even when empty, so there's somewhere to start
+  // today and tomorrow always get a row, even when empty: one to log into, one
+  // to plan into. Sorting descending puts tomorrow first, then today, then past.
   const isMine = logViewPerson === myPersonId();
-  if (isMine && !keys.includes(today)) keys.unshift(today);
+  if (isMine) {
+    [today, tomorrow].forEach(k => { if (!keys.includes(k)) keys.push(k); });
+    keys.sort().reverse();
+  }
   if (count) count.textContent = keys.length ? `${keys.length} day${keys.length === 1 ? '' : 's'}` : '';
 
   if (!keys.length) {
@@ -6704,9 +6727,12 @@ function renderLogToc() {
       const meta = typeMeta(e.type || getActivityTypes()[0].id);
       return `<span class="log-chip" style="background:${meta.color}" title="${escAttr(e.label || meta.label)}"></span>`;
     }).join('');
-    return `<div class="log-row ${k === logViewDate ? 'active' : ''}" onclick="openSavedLog('${k}')">
-      <span class="log-row-date">${k === today ? '📍 Today · ' : ''}${keyLabel(k, true)}</span>
-      <span class="log-row-total">${L.entries.length ? `${L.entries.length} · ${formatMinutes(total)}` : 'nothing yet'}</span>
+    const isTomorrow = k === tomorrow;
+    const tag = isTomorrow ? '🗓️ Tomorrow · ' : (k === today ? '📍 Today · ' : '');
+    return `<div class="log-row ${k === logViewDate ? 'active' : ''}"
+        style="${isTomorrow ? 'border-style:dashed;' : ''}" onclick="openSavedLog('${k}')">
+      <span class="log-row-date">${tag}${keyLabel(k, true)}</span>
+      <span class="log-row-total">${L.entries.length ? `${L.entries.length} · ${formatMinutes(total)}` : (isTomorrow ? 'nothing planned' : 'nothing yet')}</span>
       <span class="log-chips">${chips}</span>
       ${L.edited ? `<span class="edited-mark" title="Changed after the day it covers">✏️ edited</span>` : ''}
     </div>`;
@@ -6745,21 +6771,29 @@ function renderLogDetail() {
   const prev = wrap.querySelector('.tl-scroll');
   const keptScroll = (sameDay && prev) ? prev.scrollTop : null;
 
+  // A future day is the same timeline used forwards: you're planning, not
+  // recording, so the wording changes but the mechanics don't.
+  const future = isFutureDay(logViewDate);
+  const noun = future ? 'block' : 'activity';
+  const nounPl = future ? 'blocks' : 'activities';
+
   wrap.innerHTML = `
     <hr class="nb-divider">
     <div class="tl-head">
       <div>
-        <div class="tl-date">${keyLabel(logViewDate, true)}</div>
+        <div class="tl-date">${future ? '🗓️ ' : ''}${keyLabel(logViewDate, true)}${future ? ' — planning ahead' : ''}</div>
         <div class="tl-total">
-          ${L.entries.length} ${L.entries.length === 1 ? 'activity' : 'activities'} · ${formatMinutes(total)}
+          ${L.entries.length} ${future ? 'planned ' : ''}${L.entries.length === 1 ? noun : nounPl} · ${formatMinutes(total)}
           ${L.edited ? ` · <span style="color:var(--sunset-deep);font-weight:800;">edited ${new Date(L.editedAt).toLocaleDateString()}</span>` : ''}
         </div>
       </div>
-      ${mine ? `<button class="btn-primary" onclick="openEntryModal('log','${logViewDate}',null)" style="font-size:13px;">＋ Log an activity</button>` : ''}
+      ${mine ? `<button class="btn-primary" onclick="openEntryModal('log','${logViewDate}',null)" style="font-size:13px;">＋ ${future ? 'Plan a block' : 'Log an activity'}</button>` : ''}
     </div>
     ${mine ? '' : `<div class="tl-total" style="margin-bottom:8px;">Viewing someone else's log — read only.</div>`}
-    ${mine && !L.entries.length ? `<div class="tl-empty">Nothing logged for this day yet. Add the first block and the next one picks up where it ended.</div>` : ''}
-    ${renderTimeline(L.entries, { mode: 'log', dateKey: logViewDate, editable: mine, showNow: false })}
+    ${mine && !L.entries.length ? `<div class="tl-empty">${future
+        ? 'Nothing planned for tomorrow yet. Block out the first thing and the next one picks up where it ended.'
+        : 'Nothing logged for this day yet. Add the first block and the next one picks up where it ended.'}</div>` : ''}
+    ${renderTimeline(L.entries, { mode: 'log', dateKey: logViewDate, editable: mine, showNow: !future })}
   `;
   logDetailShowing = showingKey;
   if (keptScroll != null) {
@@ -6826,6 +6860,7 @@ function openEntryModal(mode, dateKey, entryId, preset) {
 }
 
 function defaultStartFor(dateKey) {
+  if (isFutureDay(dateKey)) return 480;   // planning: start the day at 8am
   if (dateKey === estDateKey()) {
     const n = new Date();
     let cm = n.getHours() * 60 + n.getMinutes();
