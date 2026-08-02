@@ -293,15 +293,28 @@ function openSavedLog(key) {
   }
 }
 
+// Which day/person the detail pane is currently showing. A re-render for the
+// SAME day should leave the reader exactly where they were; only a genuine
+// change of day earns an auto-scroll.
+let logDetailShowing = null;
+
 function renderLogDetail() {
   const wrap = document.getElementById('log-detail');
   if (!wrap) return;
-  if (!logViewDate) { wrap.innerHTML = ''; return; }
+  if (!logViewDate) { wrap.innerHTML = ''; logDetailShowing = null; return; }
   const mine = logViewPerson === myPersonId();
   // create today's (or any of my days') log on demand so it's always editable
   const L = getLog(logViewPerson, logViewDate, mine) || { date: logViewDate, entries: [] };
   if (!L) { wrap.innerHTML = ''; return; }
   const total = totalLogged(L.entries);
+
+  // innerHTML throws the old .tl-scroll away, taking its scroll position with
+  // it. Remember where the reader was so we can put them back.
+  const showingKey = logViewPerson + '|' + logViewDate;
+  const sameDay = (logDetailShowing === showingKey);
+  const prev = wrap.querySelector('.tl-scroll');
+  const keptScroll = (sameDay && prev) ? prev.scrollTop : null;
+
   wrap.innerHTML = `
     <hr class="nb-divider">
     <div class="tl-head">
@@ -318,7 +331,16 @@ function renderLogDetail() {
     ${mine && !L.entries.length ? `<div class="tl-empty">Nothing logged for this day yet. Add the first block and the next one picks up where it ended.</div>` : ''}
     ${renderTimeline(L.entries, { mode: 'log', dateKey: logViewDate, editable: mine, showNow: false })}
   `;
-  scrollTimelineIntoView(wrap, L.entries);
+  logDetailShowing = showingKey;
+  if (keptScroll != null) {
+    // same day, just re-rendered (a sync echo, a new block, a task added
+    // elsewhere) — restore the exact position instead of jumping to 2am
+    const sc = wrap.querySelector('.tl-scroll');
+    if (sc) sc.scrollTop = keptScroll;
+  } else {
+    // genuinely opening a different day — anchor on its first activity
+    scrollTimelineIntoView(wrap, L.entries);
+  }
 }
 
 // ── the add / edit activity modal ──

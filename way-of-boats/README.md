@@ -1,16 +1,29 @@
 # WAY OF BOATS — file map
 
-The app used to be one 7,700-line `index.html`. It's now split so you can open
-the file that matches what you're changing.
-
-**Deploy the whole folder.** Opening `index.html` on its own will show a red
-error bar — it needs `css/` and `js/` beside it.
+The app is **edited as modules** and **deployed as one file**.
 
 ```
-index.html        markup only + the module loader at the bottom
-css/styles.css    all styling (design tokens live in :root at the top)
-js/               nineteen modules, loaded in numbered order
+way-of-boats/          <- edit in here
+  index.html             markup + a module loader
+  css/styles.css         all styling
+  js/*.js                nineteen modules, numbered = load order
+  build.py               bundles the above into a single file
+
+index.html             <- upload THIS (built by build.py)
 ```
+
+## The loop
+
+1. Edit a module in `way-of-boats/`
+2. `cd way-of-boats && python3 build.py`
+3. Upload the `index.html` it writes one level up
+
+That single file has the CSS and all nineteen modules inlined, so it works on
+its own exactly like the original did — nothing else needs uploading.
+
+You can also open `way-of-boats/index.html` directly while developing to skip
+the build step, as long as you serve the folder (`python3 -m http.server`).
+Opening it from `file://` works too.
 
 | file | what's in it |
 |---|---|
@@ -43,11 +56,9 @@ js/               nineteen modules, loaded in numbered order
 
 ## Releasing a new version
 
-Bump **one** string — `<meta name="app-version">` in `index.html`.
-
-The loader appends `?v=<that version>` to every script and stylesheet, so a
-single bump cache-busts the entire app. The in-app update checker reads the same
-meta tag off the server, which is how phones learn there's a newer build.
+Bump **one** string — `<meta name="app-version">` in `way-of-boats/index.html` —
+then run `build.py`. The in-app update checker reads that meta tag off the
+server, which is how phones learn there's a newer build waiting.
 
 ## Why classic scripts, not ES modules
 

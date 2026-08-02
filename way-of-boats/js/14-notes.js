@@ -111,7 +111,12 @@ function renderPlanning() {
 
   renderPlanningLinks();
   renderLogPie();
-  renderSavedLogs();
+  // Only rebuild the log when it's actually on screen. renderAll() fires on
+  // every sync echo, and rebuilding a hidden pane just churned the DOM (and
+  // used to reset the reader's scroll position).
+  const section = document.getElementById('section-planning');
+  const visible = section && section.classList.contains('active');
+  if (visible && nbTab === 'logs') renderSavedLogs();
 }
 
 // The picker of board tasks available to pin, + the pinned list itself.
