@@ -28,7 +28,7 @@ function setWcCategories(personId, cats) {
 // The day rolls over at 1:00 AM Boston time (not midnight) — so anything done
 // between 12:00–12:59 AM still counts toward the previous day, giving night owls
 // a little extra time. We do this by shifting the clock back 1 hour before taking the date.
-const STREAK_ROLLOVER_HOUR = 1; // change this number to move the rollover time
+const STREAK_ROLLOVER_HOUR = 4; // change this number to move the rollover time
 function estDateKey(d = new Date()) {
   const shifted = new Date(d.getTime() - STREAK_ROLLOVER_HOUR * 3600000);
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(shifted);
