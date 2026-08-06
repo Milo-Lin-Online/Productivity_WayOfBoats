@@ -24,8 +24,10 @@ version = re.search(r'name="app-version" content="([^"]+)"', src).group(1)
 
 # 2. inline the stylesheet
 css = (HERE / 'css' / 'styles.css').read_text(encoding='utf-8')
-src = re.sub(r'\n?\s*<link rel="stylesheet" href="css/styles\.css[^>]*>',
-             '\n<style>\n' + css + '</style>', src, count=1)
+# the stylesheet is injected by a small script in <head>; swap that whole block
+# for the inlined CSS when bundling
+src = re.sub(r'\n\s*<!-- The stylesheet is versioned.*?</script>',
+             '\n<style>\n' + css + '</style>', src, count=1, flags=re.S)
 
 # 3. replace the module loader with the modules themselves, in order
 modules = sorted((HERE / 'js').glob('*.js'))

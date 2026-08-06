@@ -1,0 +1,16 @@
+# Netlify / Cloudflare Pages
+#
+# index.html is the one file that cannot be cache-busted by URL — it IS the URL.
+# So it must be revalidated on every load. js/ and css/ carry a ?v= query that
+# changes with the app version, but we revalidate them too so that editing a
+# file without bumping the version can't strand anyone on stale code.
+#
+# "no-cache" does NOT mean "don't cache" — it means "check with me first".
+# The browser still keeps the file and the server answers 304 when unchanged,
+# so this costs almost nothing.
+
+/*
+  Cache-Control: no-cache, must-revalidate
+
+/index.html
+  Cache-Control: no-cache, must-revalidate

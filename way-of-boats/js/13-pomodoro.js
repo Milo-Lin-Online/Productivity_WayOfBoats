@@ -26,7 +26,7 @@ const GACHA_SMALL = [
   { id: 'goldfish',  emoji: '🐠', name: 'Goldfish' },
   { id: 'clownfish', emoji: '🎏', name: 'Clownfish' },
   { id: 'shrimp',    emoji: '🦐', name: 'Cleaner Shrimp' },
-  { id: 'jelly',     emoji: '🪼', name: 'Moon Jelly' },
+  { id: 'shrimp2',   emoji: '🍤', name: 'A Different Shrimp' },
   { id: 'snail',     emoji: '🐚', name: 'Sea Snail' },
 ];
 
@@ -38,6 +38,7 @@ const GACHA_BIG = [
   { id: 'crab',    emoji: '🦀', name: 'Dungeness Crab' },
   { id: 'octopus', emoji: '🐙', name: 'Octopus' },
   { id: 'squid',   emoji: '🦑', name: 'Giant Squid' },
+  { id: 'jelly',   emoji: '🪼', name: 'Jellyfish' },
 ];
 
 // The rare one inside the big-fish pool: 10% of big pulls, worth 3 like any big fish.
@@ -94,12 +95,23 @@ function rollGacha(mins) {
   return out;
 }
 
-// What a caught item is worth. Anything from before the gacha existed has no
-// `kind` and keeps its old value of 2, so nobody's score moves retroactively.
+// Point value per rarity. Change a number here and everything follows — the
+// leaderboard, the reveal card, and the admin rules card all read from it.
+const FISH_POINTS = { small: 2, big: 3, special: 2, sock: 0 };
+
+/**
+ * What a caught item is worth.
+ *
+ * Fish caught BEFORE the gacha existed carry no `kind` — old pomodoro catches,
+ * World Cup consistency fish, admin-granted fish. They all fall through to the
+ * small-fish value, so every fish already in the game counts exactly as a small
+ * fish does. Nothing needed migrating, and if you ever change what a small fish
+ * is worth, the old ones move with it.
+ */
 function fishValue(f) {
   if (!f) return 0;
-  if (f.kind === 'big') return 3;
-  return 2;
+  if (f.kind && FISH_POINTS[f.kind] != null) return FISH_POINTS[f.kind];
+  return FISH_POINTS.small;
 }
 
 function pityThreshold(p) {

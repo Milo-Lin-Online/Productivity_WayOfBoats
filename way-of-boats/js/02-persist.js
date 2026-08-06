@@ -41,7 +41,11 @@ function snapshotOf(obj) { return JSON.stringify(obj); }
 // clears every cache we can reach and busts the URL with a fresh query string.
 async function checkForUpdate(announce) {
   try {
-    const url = location.pathname + '?_cb=' + Date.now();
+    // Strip any existing query/hash rather than using location.pathname —
+    // on a GitHub project site (/user.github.io/repo) pathname can lose the
+    // trailing slash and the fetch 404s or redirects.
+    const base = location.href.split('#')[0].split('?')[0];
+    const url = base + (base.includes('?') ? '&' : '?') + '_cb=' + Date.now();
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) return false;
     const txt = await res.text();
@@ -49,9 +53,29 @@ async function checkForUpdate(announce) {
     const m = txt.match(/name="app-version"\s+content="([^"]+)"/);
     if (!m) return false;
     if (m[1] !== APP_VERSION) {
-      const msg = document.getElementById('update-msg');
-      if (msg) msg.textContent = `New version available (${m[1]}) — you're running ${APP_VERSION}.`;
+      // Try to just... fix it. Reload straight into the new build rather than
+      // waiting for someone to notice a banner.
+      //
+      // The guard matters: if the host is still handing out the old file, the
+      // reload won't change anything, and without this we'd loop forever. We
+      // only auto-reload ONCE per version per tab; the second time we admit
+      // defeat and show the banner with an explanation.
+      let tried = null;
+      try { tried = sessionStorage.getItem('boats_autoupdate'); } catch (e) {}
       const banner = document.getElementById('update-banner');
+      const msg = document.getElementById('update-msg');
+
+      if (tried !== m[1]) {
+        try { sessionStorage.setItem('boats_autoupdate', m[1]); } catch (e) {}
+        showToast('⟳ New version (' + m[1] + ') found — updating…');
+        setTimeout(forceUpdate, 700);
+        return true;
+      }
+
+      if (msg) {
+        msg.textContent = `Version ${m[1]} is on the server but this device keeps loading ${APP_VERSION}. ` +
+                          `Your host is caching index.html — tap Update, or see cache-headers in the folder.`;
+      }
       if (banner) banner.style.display = 'flex';
       return true;
     }
@@ -78,7 +102,7 @@ async function forceUpdate() {
   } catch (e) {}
   // Note: app DATA in localStorage is deliberately left alone — this clears the
   // cached program, not the crew's work.
-  const base = location.origin + location.pathname;
+  const base = location.href.split('#')[0].split('?')[0];
   setTimeout(() => { location.replace(base + '?v=' + Date.now()); }, 250);
 }
 
