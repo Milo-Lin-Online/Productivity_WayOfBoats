@@ -327,6 +327,7 @@ function startPausePomo() {
   const toggle = document.getElementById('pomo-toggle');
   if (pomoRunning) {
     // pause: freeze remaining from the wall clock
+    releaseTimerLock();
     pomoRunning = false;
     pomoRemaining = Math.max(0, Math.round((pomoEndTime - Date.now()) / 1000));
     pomoEndTime = null;
@@ -335,6 +336,11 @@ function startPausePomo() {
     document.getElementById('pomodoro').classList.remove('pomo-running');
     toggle.classList.remove('casting');
   } else {
+    // Only one timer per person at a time. If another tab or device is already
+    // running one, ask for it to be closed rather than silently double-counting.
+    const other = foreignTimerLock();
+    if (other) { showTimerConflict(other); return; }
+    claimTimerLock(true);
     pomoGoal = document.getElementById('pomo-goal').value.trim();
     document.getElementById('pomo-goal-display').textContent = pomoGoal ? '🎯 ' + pomoGoal : '';
     pomoRunning = true;
@@ -347,36 +353,45 @@ function startPausePomo() {
     pomoInterval = setInterval(pomoTick, 250); // finer tick; real time comes from the clock
   }
 }
+function showTimerConflict(lock) {
+  const m = document.getElementById('timer-conflict');
+  if (!m) { showToast('A timer is already running on another device.'); return; }
+  const when = lock && lock.at ? new Date(lock.at).toLocaleTimeString() : '';
+  const el = document.getElementById('tc-detail');
+  if (el) el.textContent = `Last seen ${when}${lock && lock.minutes ? ` · a ${lock.minutes} minute timer` : ''}.`;
+  const err = document.getElementById('tc-error');
+  if (err) err.style.display = 'none';
+  m.style.display = 'flex';
+}
+
+// "I closed it" — re-check, and start if the other side really is gone.
+function retryAfterTimerConflict() {
+  const other = foreignTimerLock();
+  const err = document.getElementById('tc-error');
+  if (other) {
+    if (err) {
+      err.style.display = 'block';
+      err.textContent = 'Still running over there. Close that tab or stop its timer, then try again.';
+    }
+    return;
+  }
+  closeModal('timer-conflict');
+  startPausePomo();
+}
+
 function stopPomoTick() { if (pomoInterval) { clearInterval(pomoInterval); pomoInterval = null; } }
 function pomoTick() {
   if (!pomoRunning || pomoEndTime == null) return;
+  beatTimerLock();   // tell other tabs/devices this timer is alive
   pomoRemaining = Math.max(0, Math.round((pomoEndTime - Date.now()) / 1000));
   if (pomoRemaining <= 0) {
     // time's up.
     const tasks = pomoSessionTasks();
     const hadTasks = tasks.length > 0;
     const allDone = hadTasks && tasks.every(t => t.done);
-    if (hadTasks && !allDone) {
-      // unfinished tasks → the "all tasks" bonus is off. But a ≥45-min session
-      // still earns its completion fish. Under 45 with unfinished tasks → nothing.
-      if (pomoMinutes >= POMO_FISH_MIN_MINUTES) {
-        finishPomoSession(false);           // completion fish only
-      } else {
-        stopPomoTick();
-        pomoRunning = false;
-        pomoEndTime = null;
-        pomoRemaining = 0;
-        bankPomoTime();   // no fish here, but the minutes focused still count
-        document.getElementById('pomo-toggle').classList.remove('casting');
-        document.getElementById('pomodoro').classList.remove('pomo-running');
-        document.getElementById('pomo-startbtn').textContent = '🎣 Cast';
-        showToast("⏳ Time's up — tasks unfinished, no catch this time.");
-        renderPomo();
-      }
-    } else {
-      // no tasks, or every task finished exactly at time-up → bonus applies if all done
-      finishPomoSession(allDone);
-    }
+    // Every completed session earns a roll now — a short one just has long odds.
+    // The all-tasks bonus still only applies when every session task is done.
+    finishPomoSession(allDone);
     return;
   }
   renderPomo();
@@ -389,68 +404,197 @@ function pomoTick() {
 //   So finishing all tasks in a ≥45-min session = 2 fish; under 45 min = just the bonus.
 const POMO_FISH_MIN_MINUTES = 45;
 function finishPomoSession(earlyBonus) {
-  bankPomoTime();   // log the minutes focused BEFORE the timer is reset below
+  // capture the minutes ACTUALLY focused before bankPomoTime resets the clock
+  const elapsedMin = Math.max(0, Math.round(((pomoMinutes * 60) - pomoRemaining) / 60));
+  bankPomoTime();
   stopPomoTick();
   pomoRunning = false;
   pomoEndTime = null;
+  releaseTimerLock();
   document.getElementById('pomo-toggle').classList.remove('casting');
   document.getElementById('pomodoro').classList.remove('pomo-running');
   document.getElementById('pomo-startbtn').textContent = '🎣 Cast';
 
-  const earnedCompletion = pomoMinutes >= POMO_FISH_MIN_MINUTES;
-  const earnedBonus = !!earlyBonus;
-
-  if (earnedCompletion) catchFish(false);   // full-length focus fish
-  if (earnedBonus) catchFish(true);         // all-tasks-done bonus fish
-
-  // messaging
-  if (earnedCompletion && earnedBonus) {
-    showToast('🏆 Focus done + all tasks finished — 2 fish! 🎣🎣');
-  } else if (earnedBonus) {
-    showToast('🏆 All tasks done — bonus fish! 🎣');
-  } else if (earnedCompletion) {
-    // completion toast already shown inside catchFish(false)
-  } else {
-    showToast('🎣 Focus complete! (Sessions under ' + POMO_FISH_MIN_MINUTES + ' min don\'t catch a fish)');
+  // Which drop table applies. A session that ran its full length uses the timer
+  // it was set to. One that finished early uses the time actually spent, bumped
+  // one tier up — so finishing fast is rewarded, but setting a long timer and
+  // bailing early doesn't buy you the best odds.
+  let rollMinutes = pomoMinutes;
+  let bumped = false;
+  if (earlyBonus && elapsedMin < pomoMinutes) {
+    const t0 = gachaTier(elapsedMin);
+    const t1 = Math.min(t0 + 1, 4);
+    rollMinutes = [20, 44, 50, 95, 120][t1];
+    bumped = true;
   }
 
+  const items = rollGacha(rollMinutes);
+  if (earlyBonus) items.push({ ...gachaSmall(), bonus: true });   // all-tasks-done bonus, unchanged
+
+  queueCatch({
+    id: Date.now() + Math.floor(Math.random() * 999),
+    at: Date.now(),
+    minutes: elapsedMin || pomoMinutes,
+    tier: gachaTier(rollMinutes),
+    tierLabel: GACHA_TIER_LABEL[gachaTier(rollMinutes)],
+    bumped,
+    goal: pomoGoal,
+    items
+  });
+
   // ⚠️ EXPLOIT FIX — clear finished tasks out of the session when a timer ends,
-  // so a user can't keep the same "already done" tasks and re-earn the bonus fish
+  // so a user can't keep the same "already done" tasks and re-earn the bonus
   // every session. To change/remove this behavior, edit the line below.
   pomoTaskIds = pomoTaskIds.filter(id => {
     const t = state.tasks.find(x => x.id === id);
-    return t && !t.done;   // keep only tasks that are still NOT done
+    return t && !t.done;
   });
   renderPomoTodos();
 
   pomoRemaining = pomoMinutes * 60;
-  pomoBankedSecs = 0;        // fresh session from here on
+  pomoBankedSecs = 0;
   renderPomo();
 }
 
-function catchFish(isBonus) {
-  playSound('ding');
-  const fish = FISH_SPECIES[Math.floor(Math.random() * FISH_SPECIES.length)];
-  const list = myFishList();
-  list.push({ emoji: fish.emoji, name: fish.name + (isBonus ? ' (bonus!)' : ''), goal: pomoGoal, minutes: pomoMinutes, at: Date.now(), bonus: !!isBonus });
-  saveMyFish(list);
+// ═══════════════════════════════════════════════════════════════
+//  THE CATCH — a line you pull, not a prize handed over
+//  The roll happens when the session ends and is stored, so opening later can
+//  never be re-rolled for a better result.
+// ═══════════════════════════════════════════════════════════════
+const AUTO_OPEN_KEY = 'boats_pomo_autoopen';
+function autoOpenCatches() { return localStorage.getItem(AUTO_OPEN_KEY) === '1'; }
+function setAutoOpenCatches(on) {
+  try { localStorage.setItem(AUTO_OPEN_KEY, on ? '1' : '0'); } catch (e) {}
+  showToast(on ? '🎣 Catches will open themselves from now on' : '🎣 Catches will wait on the line for you');
+  renderPomo();
+}
 
-  const pop = document.getElementById('fish-caught');
-  document.getElementById('fc-fish-emoji').textContent = fish.emoji;
-  document.getElementById('fc-fish-name').textContent = (isBonus ? 'Bonus! ' : 'Caught a ') + fish.name + '!';
-  pop.style.display = 'block';
-  setTimeout(() => { pop.style.display = 'none'; }, 3000);
+function pendingCatches() {
+  const id = myPersonId();
+  if (!id) return [];
+  const p = personById(id);
+  if (!p) return [];
+  if (!Array.isArray(p.pendingCatches)) p.pendingCatches = [];
+  return p.pendingCatches;
+}
 
-  if (!isBonus) showToast(pomoGoal ? `🎣 Reeled in your goal: ${pomoGoal}` : '🎣 Nice catch! Focus complete');
+function queueCatch(entry) {
+  const id = myPersonId();
+  if (!id) {
+    showToast('Set your name to a crew member to keep your catch! 🪪');
+    return;
+  }
+  pendingCatches().push(entry);
+  save();
+  renderPomo();
+  if (autoOpenCatches()) {
+    setTimeout(() => openCatch(entry.id), 400);
+  } else {
+    playSound('ding');
+    showToast('🎣 Something is on the line — tap it to reel it in');
+  }
+}
 
+// Reel one in: play the reveal, then bank whatever it holds.
+let revealTimer = null;
+function openCatch(catchId) {
+  const list = pendingCatches();
+  const idx = list.findIndex(c => c.id === catchId);
+  if (idx < 0) return;
+  const entry = list[idx];
+  list.splice(idx, 1);
+
+  const p = personById(myPersonId());
+  if (!p) return;
+  if (!Array.isArray(p.fish)) p.fish = [];
+
+  const awarded = [];
+  if (entry.items.length === 0) {
+    // dry roll — a sock, and a step closer to pity
+    p.socks = (p.socks || 0) + 1;
+    awarded.push({ emoji: '🧦', name: 'Sock', kind: 'sock', sock: true });
+    const need = pityThreshold(p);
+    if (p.socks >= need) {
+      p.socks = 0;
+      const pity = { ...PITY_PUFFER, kind: 'special', minutes: 0, at: Date.now(), pity: true };
+      p.fish.push(pity);
+      awarded.push({ ...pity, pityMessage: true });
+    }
+  } else {
+    entry.items.forEach((it, i) => {
+      const caught = { ...it, minutes: i === 0 ? (entry.minutes || 0) : 0, at: Date.now() + i };
+      p.fish.push(caught);
+      awarded.push(caught);
+    });
+  }
+
+  save();
+  showCatchReveal(entry, awarded);
   renderPomo();
   renderLeaderboard();
 }
+
+function openAllCatches() {
+  const ids = pendingCatches().map(c => c.id);
+  if (!ids.length) return;
+  ids.forEach((id, i) => setTimeout(() => openCatch(id), i * 260));
+}
+
+function showCatchReveal(entry, awarded) {
+  const modal = document.getElementById('catch-modal');
+  if (!modal) return;
+  const stage = document.getElementById('catch-stage');
+  const title = document.getElementById('catch-title');
+  const sub = document.getElementById('catch-sub');
+  const body = document.getElementById('catch-result');
+
+  title.textContent = '🎣 Reeling it in…';
+  sub.textContent = entry.tierLabel + (entry.bumped ? ' (finished early — bumped up a tier)' : '');
+  body.innerHTML = '';
+  stage.className = 'catch-stage casting';
+  modal.style.display = 'flex';
+
+  clearTimeout(revealTimer);
+  revealTimer = setTimeout(() => {
+    stage.className = 'catch-stage landed';
+    const sock = awarded.find(a => a.sock);
+    const pity = awarded.find(a => a.pityMessage);
+    const real = awarded.filter(a => !a.sock && !a.pityMessage);
+
+    if (pity) {
+      title.textContent = 'Pity, granted';
+      sub.textContent = 'Jesus, 6+ rolls and nothing? I pity you but keep it up.';
+    } else if (sock) {
+      const p = personById(myPersonId());
+      const left = Math.max(0, pityThreshold(p) - (p.socks || 0));
+      title.textContent = 'A sock.';
+      sub.textContent = left + ' more dry pull' + (left === 1 ? '' : 's') + ' and the sea owes you one.';
+    } else {
+      title.textContent = real.length > 1 ? 'A double catch!' : 'Nice catch!';
+      sub.textContent = entry.goal ? '🎯 ' + entry.goal : entry.tierLabel;
+    }
+
+    body.innerHTML = awarded.filter(a => !a.pityMessage).concat(pity ? [pity] : []).map((a, i) => `
+      <div class="catch-item ${a.kind || ''}" style="animation-delay:${i * 130}ms">
+        <div class="catch-emoji">${a.emoji}</div>
+        <div class="catch-name">${escHtml(a.name)}${a.bonus ? ' (bonus!)' : ''}</div>
+        <div class="catch-pts">${a.sock ? 'no points' : '+' + fishValue(a) + ' pts'}</div>
+      </div>`).join('');
+  }, 1100);
+}
+
+function closeCatchReveal() {
+  clearTimeout(revealTimer);
+  const m = document.getElementById('catch-modal');
+  if (m) m.style.display = 'none';
+}
+
 function resetPomo() {
   bankPomoTime();            // credit whatever was focused before the reset
   stopPomoTick();
   pomoRunning = false;
   pomoEndTime = null;
+  releaseTimerLock();
   pomoRemaining = pomoMinutes * 60;
   pomoBankedSecs = 0;
   document.getElementById('pomo-startbtn').textContent = '🎣 Cast';
@@ -470,8 +614,37 @@ function renderPomo() {
   const tank = document.getElementById('pomo-fish-tank');
   if (tank) {
     const list = myFishList();
-    tank.innerHTML = list.length ? list.map(f => `<span title="${escAttr(f.name + (f.goal ? ' · ' + f.goal : ''))}">${f.emoji}</span>`).join('') : '🌊';
+    const p = myPersonId() ? personById(myPersonId()) : null;
+    const socks = (p && p.socks) || 0;
+    const sockHtml = socks ? `<span title="${socks} sock${socks===1?'':'s'} — ${Math.max(0, pityThreshold(p) - socks)} more dry pulls to pity">${'🧦'.repeat(Math.min(socks, 8))}</span>` : '';
+    tank.innerHTML = (list.length || socks)
+      ? list.map(f => `<span title="${escAttr(f.name + (f.goal ? ' · ' + f.goal : ''))}">${f.emoji}</span>`).join('') + sockHtml
+      : '🌊';
   }
+
+  // anything waiting on the line
+  const lineWrap = document.getElementById('pomo-line');
+  if (lineWrap) {
+    const pend = pendingCatches();
+    if (!pend.length) {
+      lineWrap.innerHTML = '';
+      lineWrap.style.display = 'none';
+    } else {
+      lineWrap.style.display = 'block';
+      lineWrap.innerHTML = `
+        <div class="pl-label">${pend.length} catch${pend.length === 1 ? '' : 'es'} on the line</div>
+        <div class="pl-lines">
+          ${pend.map(c => `
+            <button class="pl-line" onclick="openCatch(${c.id})" title="${escAttr(c.tierLabel + (c.bumped ? ' · bumped a tier' : ''))}">
+              <span class="pl-string"></span><span class="pl-hook">🪝</span>
+            </button>`).join('')}
+        </div>
+        ${pend.length > 1 ? `<button class="pl-all" onclick="openAllCatches()">Reel in all</button>` : ''}`;
+    }
+  }
+
+  const auto = document.getElementById('pomo-autoopen');
+  if (auto) auto.checked = autoOpenCatches();
 }
 // When returning to the tab, immediately re-sync the display.
 document.addEventListener('visibilitychange', () => {

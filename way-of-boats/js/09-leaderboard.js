@@ -10,6 +10,10 @@
 // ══════════════════════════════════════════════
 // LEADERBOARD
 // ══════════════════════════════════════════════
+// 5 or more stickers earns the Sticker Queen badge, worth a flat bonus.
+const STICKER_QUEEN_MIN = 5;
+const STICKER_QUEEN_BONUS = 10;
+
 function renderLeaderboard() {
   const panel = document.getElementById('leaderboard-panel');
   const counts = getTaskCountsByPerson();
@@ -38,8 +42,17 @@ function renderLeaderboard() {
       // NEW FORMULA
       // plus any manual admin adjustment (pointsAdjust, can be negative)
       const adjust = p.pointsAdjust || 0;
-      const points = Math.round((fish * 2) + ((done/5) + (10 * ratio)) + streakPts + (total / 15) + (stars / 2)) + adjust;
-      return { ...p, done, total, fish, focusMinutes, streak, monthChecks, streakPts, stars, adjust, points };
+      // Fish are no longer interchangeable: big fish are worth 3, everything
+      // else 2, socks 0 (they aren't kept in this array at all). Anything caught
+      // before the gacha has no `kind` and still counts as 2.
+      const fishPts = fishArr.reduce((s, f) => s + fishValue(f), 0);
+      // 5+ stickers earns the Sticker Queen badge and a flat bonus
+      const stickerCount = (p.stickers || []).length;
+      const isQueen = stickerCount >= STICKER_QUEEN_MIN;
+      const queenBonus = isQueen ? STICKER_QUEEN_BONUS : 0;
+      const points = Math.round(fishPts + ((done/5) + (10 * ratio)) + streakPts + (total / 15) + (stars / 2)) + adjust + queenBonus;
+      return { ...p, done, total, fish, fishPts, focusMinutes, streak, monthChecks, streakPts,
+               stars, adjust, points, stickerCount, isQueen, queenBonus, socks: p.socks || 0 };
     })
     .sort((a, b) => b.points - a.points || b.done - a.done);
 
@@ -68,6 +81,7 @@ function renderLeaderboard() {
             <span style="display:block;font-size:10px;font-weight:700;color:var(--ink-light)">✅ ${p.done}/${p.total} · 🎣 ${p.fish} · 🔥 ${p.streak} · 📅 ${p.monthChecks} this month (+${p.streakPts.toFixed(1)})${p.adjust ? ` · <b style="color:var(--sunset-deep)">${p.adjust > 0 ? '+' : ''}${p.adjust} adj</b>` : ''}</span>
           </span>
           <div class="lb-bar-wrap"><div class="lb-bar" style="width:${barW}%;background:${p.color}"></div></div>
+          ${p.isQueen ? `<span class="queen-badge" title="Sticker Queen — ${p.stickerCount} stickers, +${STICKER_QUEEN_BONUS} pts">👑</span>` : ''}
           <span class="lb-score">${p.points}<span> pts</span></span>
         </div>`;
       }).join('')}
@@ -137,6 +151,18 @@ function openPlayerProfile(pid) {
       <div class="profile-stat"><b>${stars}</b><span>on-time ⭐</span></div>
       <div class="profile-stat"><b>${formatMinutes(focusMins)}</b><span>focus time</span></div>
     </div>
+    ${(p.stickers || []).length >= STICKER_QUEEN_MIN ? `
+    <div class="queen-banner"><span class="queen-badge big">👑</span>
+      <div><b>Sticker Queen</b><span class="qb-sub">${(p.stickers || []).length} stickers · +${STICKER_QUEEN_BONUS} points</span></div>
+    </div>` : ''}
+    ${(p.socks || 0) || (p.pendingCatches || []).length ? `
+    <div style="margin:10px 0 4px;">
+      <div style="font-size:11px;font-weight:800;color:var(--ocean-deep);margin-bottom:4px;">🎣 On the line &amp; in the drawer</div>
+      <div class="prof-buys">
+        ${(p.pendingCatches || []).length ? `<div class="prof-buy"><div class="em">🪝</div><div class="nm">${p.pendingCatches.length} unopened</div></div>` : ''}
+        ${(p.socks || 0) ? `<div class="prof-buy" title="${Math.max(0, pityThreshold(p) - p.socks)} more dry pulls until pity"><div class="em">🧦</div><div class="nm">${p.socks} sock${p.socks === 1 ? '' : 's'}</div></div>` : ''}
+      </div>
+    </div>` : ''}
     ${(p.purchases && p.purchases.length) || p.streakFixers ? `
     <div style="margin:10px 0 4px;">
       <div style="font-size:11px;font-weight:800;color:var(--ocean-deep);margin-bottom:4px;">🛍️ Purchased</div>

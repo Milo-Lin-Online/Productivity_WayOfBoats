@@ -37,11 +37,45 @@ function refreshAdminVisibility() {
 }
 
 // ── admin panel ──
+// The drop tables, rendered from the SAME constants the roller uses — so this
+// card can never drift out of date with the actual odds. Admin section only.
+function renderAdminGachaRules() {
+  const box = document.getElementById('admin-gacha-rules');
+  if (!box || !isAdmin()) return;
+  const rows = [
+    ['0 - 20 min',   '—',              `<b>${(PUFFER_ODDS*100).toFixed(2)}%</b> ${POLITE_PUFFER.emoji} ${POLITE_PUFFER.name}`, 'Sock'],
+    ['21 - 44 min',  '—',              '<b>10%</b> one small', 'Sock'],
+    ['45 - 50 min',  '—',              '<b>85%</b> one small', 'Sock'],
+    ['51 - 95 min',  'one small fish', '<b>30%</b> → coin-flip: big or another small', '—'],
+    ['96+ min',      'one small fish', '<b>65%</b> one big fish', '—'],
+  ];
+  box.innerHTML = `
+    <table class="gacha-tbl">
+      <tr><th>Timer</th><th>Guaranteed</th><th>Chance roll</th><th>Dry</th></tr>
+      ${rows.map(r => `<tr><td><b>${r[0]}</b></td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join('')}
+    </table>
+    <div class="gacha-note">
+      <b>Small (2 pts):</b> ${GACHA_SMALL.map(f => f.emoji + ' ' + escHtml(f.name)).join(' · ')}<br>
+      <b>Big (3 pts):</b> ${GACHA_BIG.map(f => f.emoji + ' ' + escHtml(f.name)).join(' · ')}
+      · <b>${LUCKY_LOBSTER.emoji} ${LUCKY_LOBSTER.name}</b> takes ${(LUCKY_LOBSTER_SHARE*100)|0}% of big pulls<br>
+      <b>Specials (2 pts):</b> ${POLITE_PUFFER.emoji} ${POLITE_PUFFER.name} (rolled) ·
+      ${PITY_PUFFER.emoji} ${PITY_PUFFER.name} (pity only)<br>
+      <b>Sock:</b> 0 pts, cosmetic, not spendable in the shop.
+    </div>
+    <div class="gacha-note">
+      <b>Pity:</b> threshold = ${PITY_BASE} + ${PITY_PER_LOBSTER} × (Lucky Lobsters owned).
+      On reaching it the player gets a ${PITY_PUFFER.name} and their socks reset to zero.<br>
+      <b>Early finish:</b> the roll uses the minutes actually spent, bumped one tier up.<br>
+      <b>Sticker Queen:</b> ${STICKER_QUEEN_MIN}+ stickers owned → badge and +${STICKER_QUEEN_BONUS} points.
+    </div>`;
+}
+
 function renderAdmin() {
   if (!isAdmin()) return;
   renderAdminMeetings();
   renderAdminPlayers();
   renderAdminStore();
+  renderAdminGachaRules();
 }
 
 function renderAdminMeetings() {
