@@ -1,29 +1,28 @@
 # WAY OF BOATS — file map
 
-The app is **edited as modules** and **deployed as one file**.
+Upload **the whole folder**. `index.html` references `css/styles.css` and
+`js/*.js`, so the folder is the app — that's what makes edits easy to find.
 
 ```
-way-of-boats/          <- edit in here
-  index.html             markup + a module loader
-  css/styles.css         all styling
-  js/*.js                nineteen modules, numbered = load order
-  build.py               bundles the above into a single file
-
-index.html             <- upload THIS (built by build.py)
+index.html        markup + the module loader
+css/styles.css    all styling
+js/*.js           nineteen modules, numbered = load order
+_headers          cache rules (Netlify / Cloudflare Pages)
+vercel.json       cache rules (Vercel)
+.htaccess         cache rules (Apache / cPanel)
+build.py          OPTIONAL — squashes everything into one file
+CACHING.md        read this if updates don't appear
 ```
 
-## The loop
+## Releasing
 
-1. Edit a module in `way-of-boats/`
-2. `cd way-of-boats && python3 build.py`
-3. Upload the `index.html` it writes one level up
+1. Edit a file in `js/` or `css/`
+2. **Bump `<meta name="app-version">` in `index.html`** — this is the only
+   step you must not skip; it cache-busts every script and stylesheet
+3. Upload the folder
 
-That single file has the CSS and all nineteen modules inlined, so it works on
-its own exactly like the original did — nothing else needs uploading.
-
-You can also open `way-of-boats/index.html` directly while developing to skip
-the build step, as long as you serve the folder (`python3 -m http.server`).
-Opening it from `file://` works too.
+`build.py` still exists if you ever need a single self-contained file (it writes
+`../index.html`), but you don't need it for normal use.
 
 | file | what's in it |
 |---|---|
