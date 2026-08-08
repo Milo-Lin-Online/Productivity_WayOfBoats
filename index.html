@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <!-- Stop phones serving a stale copy of the app from cache. The version below is
      also used by the in-app update check. Bump APP_VERSION on every deploy. -->
-<meta name="app-version" content="2026.08.06-1">
+<meta name="app-version" content="2026.08.07-1">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -192,6 +192,9 @@
       </button>
       <button class="nav-btn" onclick="showSection('planning')" id="nav-planning">
         <span class="emoji">📓</span> <span>Planning</span>
+      </button>
+      <button class="nav-btn" onclick="showSection('timeline')" id="nav-timeline">
+        <span class="emoji">🕰️</span> <span>Timeline</span>
       </button>
       <button class="nav-btn" onclick="showSection('admin')" id="nav-admin" style="display:none">
         <span class="emoji">🛠️</span> <span>Admin</span>
@@ -508,6 +511,51 @@
       </div>
     </div>
 
+    <!-- TIMELINE SECTION -->
+    <div id="section-timeline" class="page-section">
+      <div class="page-header">
+        <div class="page-title">🕰️ Time<span>line</span></div>
+        <span style="font-size:13px; font-weight:700; color:#E8F1F8;" id="tl-range">nothing plotted yet</span>
+      </div>
+
+      <div class="nb-tabs">
+        <button class="nb-tab active" id="tl-tab-timeline" onclick="showTlMode('timeline')">🕰️ All timelines</button>
+        <button class="nb-tab" id="tl-tab-shelf" onclick="showTlMode('shelf')">📚 Project bookshelf</button>
+      </div>
+
+      <div class="paper-card" style="border-radius:4px 20px 20px 20px;">
+        <!-- ── ALL TIMELINES ── -->
+        <div class="tl-pane active" id="tl-pane-timeline">
+          <div class="tl-toolbar">
+            <select class="assignee-select" id="tl-project-filter" onchange="onTlFilterChange()"></select>
+            <div class="tl-zoom">
+              <button class="btn-secondary" onclick="zoomTl(1/1.6)" title="Zoom out">−</button>
+              <span id="tl-zoom-label">weeks</span>
+              <button class="btn-secondary" onclick="zoomTl(1.6)" title="Zoom in">＋</button>
+            </div>
+            <button class="btn-primary" onclick="openPointModal(null)" style="font-size:13px;">📍 Add a point</button>
+          </div>
+          <div class="tl-hint">Drag to travel · ⌘/Ctrl + scroll to zoom where you point · ← → to hop between points · click the line to add one</div>
+          <div class="tl-canvas" id="tl-canvas" onwheel="tlWheel(event)" onpointerdown="tlPanDown(event)"></div>
+          <div id="tl-empty" class="tl-empty-note" style="display:none">
+            Nothing on the timeline yet. Add a book on the shelf, then drop a point on it.
+          </div>
+        </div>
+
+        <!-- ── BOOKSHELF ── -->
+        <div class="tl-pane" id="tl-pane-shelf">
+          <div class="shelf-head">
+            <div class="nb-sub-label">📚 Every project you're carrying</div>
+            <span style="font-size:11px;font-weight:700;color:var(--ink-light);">click a spine to open it</span>
+          </div>
+          <div class="shelf">
+            <div class="shelf-books" id="tl-shelf"></div>
+            <div class="shelf-plank"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- ADMIN SECTION (only reachable when your name is adminmilo) -->
     <div id="section-admin" class="page-section">
       <div class="page-header">
@@ -801,6 +849,150 @@
   </div>
 </div>
 
+<!-- ADD / EDIT A TIMELINE POINT -->
+<div class="modal-overlay" id="point-modal" style="display:none" onclick="if(event.target===this) closeModal('point-modal')">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-title" id="pt-modal-title">📍 Add a point</div>
+    <div class="form-group">
+      <label class="form-label">What happens here?</label>
+      <input class="form-input" id="pt-title" placeholder="e.g. First draft delivered" maxlength="70">
+    </div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <div class="form-group" style="flex:1; min-width:130px;">
+        <label class="form-label">Starts</label>
+        <input class="form-input" id="pt-date" type="date">
+      </div>
+      <div class="form-group" style="flex:1; min-width:130px;">
+        <label class="form-label">Due by <span style="font-weight:600;color:var(--ink-light)">(optional)</span></label>
+        <input class="form-input" id="pt-end" type="date">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Project book</label>
+      <select class="form-input" id="pt-project"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Activity category</label>
+      <select class="form-input" id="pt-type"></select>
+    </div>
+    <label class="pt-check">
+      <input type="checkbox" id="pt-maketask" checked>
+      <span>Make a task for this <small id="pt-task-note"></small></span>
+    </label>
+    <div class="modal-footer" style="justify-content:space-between;">
+      <button class="btn-secondary" id="pt-delete" onclick="deletePointFromModal()" style="display:none;color:var(--sail-red)">🗑 Delete</button>
+      <div style="display:flex;gap:8px;margin-left:auto">
+        <button class="btn-secondary" onclick="closeModal('point-modal')">Cancel</button>
+        <button class="btn-primary" onclick="savePointFromModal()">Save ✨</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD / EDIT A PROJECT BOOK -->
+<div class="modal-overlay" id="book-editor" style="display:none" onclick="if(event.target===this) closeModal('book-editor')">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-title" id="bk-modal-title">📚 Add a book</div>
+    <div class="form-group">
+      <label class="form-label">Project name</label>
+      <input class="form-input" id="bk-name" placeholder="e.g. Launch reel" maxlength="40">
+    </div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <div class="form-group" style="flex:0 0 96px;">
+        <label class="form-label">Cover</label>
+        <select class="form-input" id="bk-emoji"></select>
+      </div>
+      <div class="form-group" style="flex:0 0 96px;">
+        <label class="form-label">Color</label>
+        <input class="form-input bk-color-input" id="bk-color" type="color" value="#3B9BD4">
+      </div>
+      <div class="form-group" style="flex:1; min-width:130px;">
+        <label class="form-label">Complete by</label>
+        <input class="form-input" id="bk-due" type="date">
+      </div>
+    </div>
+    <div class="modal-footer" style="justify-content:space-between;">
+      <button class="btn-secondary" id="bk-delete" onclick="deleteBookFromModal()" style="display:none;color:var(--sail-red)">🗑 Delete</button>
+      <div style="display:flex;gap:8px;margin-left:auto">
+        <button class="btn-secondary" onclick="closeModal('book-editor')">Cancel</button>
+        <button class="btn-primary" onclick="saveBookFromModal()">Save ✨</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AN OPEN BOOK -->
+<div class="modal-overlay" id="book-modal" style="display:none" onclick="if(event.target===this) closeBook()">
+  <div class="desk">
+    <!-- props rest ON THE DESK, not on the page: the compass tucks behind the
+         book's top-right corner, the ink bottle sits beside it entirely -->
+    <div class="ob-compass" aria-hidden="true">
+      <svg viewBox="0 0 120 120">
+        <circle cx="60" cy="60" r="55" class="cp-ring"/>
+        <circle cx="60" cy="60" r="44" class="cp-ring thin"/>
+        <circle cx="60" cy="60" r="7" class="cp-hub"/>
+        <g class="cp-rose">
+          <path d="M60 6 L67 53 L60 60 L53 53 Z" class="cp-n"/>
+          <path d="M60 114 L53 67 L60 60 L67 67 Z" class="cp-s"/>
+          <path d="M6 60 L53 53 L60 60 L53 67 Z" class="cp-s"/>
+          <path d="M114 60 L67 67 L60 60 L67 53 Z" class="cp-s"/>
+          <path d="M22 22 L56 56 L48 48 Z" class="cp-d"/>
+          <path d="M98 98 L64 64 L72 72 Z" class="cp-d"/>
+          <path d="M98 22 L64 56 L72 48 Z" class="cp-d"/>
+          <path d="M22 98 L56 64 L48 72 Z" class="cp-d"/>
+        </g>
+        <text x="60" y="26" class="cp-lbl">N</text>
+        <text x="60" y="102" class="cp-lbl">S</text>
+        <text x="18" y="65" class="cp-lbl">W</text>
+        <text x="102" y="65" class="cp-lbl">E</text>
+      </svg>
+    </div>
+    <div class="ob-ink" aria-hidden="true">
+      <svg viewBox="0 0 100 100">
+        <ellipse cx="46" cy="88" rx="30" ry="7" class="ik-shadow"/>
+        <path d="M28 52 h36 a4 4 0 0 1 4 4 v24 a8 8 0 0 1 -8 8 h-28 a8 8 0 0 1 -8 -8 v-24 a4 4 0 0 1 4 -4 z" class="ik-body"/>
+        <path d="M30 68 h32 v12 a8 8 0 0 1 -8 8 h-16 a8 8 0 0 1 -8 -8 z" class="ik-fill"/>
+        <rect x="38" y="42" width="16" height="12" rx="3" class="ik-neck"/>
+        <rect x="34" y="34" width="24" height="10" rx="4" class="ik-cork"/>
+        <path d="M64 46 C78 30 86 20 92 12 C86 24 80 38 70 52 Z" class="ik-quill"/>
+        <path d="M70 52 L62 60" class="ik-nib"/>
+      </svg>
+    </div>
+
+    <div class="open-book">
+    <div class="ob-head">
+      <div class="modal-title" id="book-modal-title" style="margin:0"></div>
+      <div class="ob-nav">
+        <button onclick="flipBook(-1)" title="Previous page">◀</button>
+        <span id="book-page-label">Notes &amp; status</span>
+        <button onclick="flipBook(1)" title="Next page">▶</button>
+        <button onclick="closeBook()" title="Close" class="ob-x">✕</button>
+      </div>
+    </div>
+    <div class="ob-body" id="book-body"></div>
+    <div class="ob-spine"></div>
+    </div>
+  </div>
+</div>
+
+<!-- STATUS EDITOR -->
+<div class="modal-overlay" id="status-editor" style="display:none" onclick="if(event.target===this) closeModal('status-editor')">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-title">🎨 Project statuses</div>
+    <div style="font-size:12px;font-weight:700;color:var(--ink-light);line-height:1.5;margin-bottom:12px">
+      Rename them, recolour them, add your own. These are shared across every project and every task.
+    </div>
+    <div id="se-list" class="se-list"></div>
+    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+      <button class="btn-secondary" onclick="addStatus()" style="font-size:12px">＋ Add status</button>
+      <button class="btn-secondary" onclick="resetStatuses()" style="font-size:12px">↺ Back to defaults</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-primary" onclick="closeModal('status-editor')">Done</button>
+    </div>
+  </div>
+</div>
+
 <!-- IN-APP CONFIRM (native confirm() can be silently suppressed by the browser
      via "prevent this page from creating additional dialogs", which makes
      destructive actions look broken) -->
@@ -939,6 +1131,7 @@
     '16-timeline-drag',
     '17-focus-bank',
     '18-calendar',
+    '18b-timeline',
     '19-boot'
   ];
   modules.forEach(function (name) {

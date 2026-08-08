@@ -146,6 +146,32 @@ function showPomoTip(el) {
 }
 function hidePomoTip() { if (pomoTipEl) pomoTipEl.style.display = 'none'; }
 
+// ══════════════════════════════════════════════
+//  THE TAB COUNTDOWN
+//  A running timer writes itself into document.title, so the countdown is
+//  readable from the tab strip in any browser, desktop or phone — no API
+//  support needed, nothing to install.
+// ══════════════════════════════════════════════
+const BASE_TITLE = document.title;   // captured before we ever touch it
+
+function tabClock(secs) {
+  const m = Math.floor(Math.max(0, secs) / 60), s = Math.max(0, secs) % 60;
+  return m + ':' + String(s).padStart(2, '0');
+}
+
+function updateTabTitle() {
+  let title = BASE_TITLE;
+  if (pomoRunning && pomoRemaining > 0) {
+    title = `${tabClock(pomoRemaining)} · ${pomoGoal ? pomoGoal : 'focusing'}`;
+  } else if (pendingCatches().length) {
+    // keep nagging from the tab strip until the catch is reeled in
+    title = `🎣 something's on the line`;
+  } else if (!pomoRunning && pomoRemaining > 0 && pomoRemaining < pomoMinutes * 60) {
+    title = `⏸ ${tabClock(pomoRemaining)} · paused`;
+  }
+  if (document.title !== title) document.title = title;
+}
+
 // ── resizable panel ──
 const POMO_SIZE_KEY = 'boats_pomo_size';
 const POMO_MIN_W = 200, POMO_MIN_H = 260;
@@ -329,6 +355,7 @@ function startPausePomo() {
     // pause: freeze remaining from the wall clock
     releaseTimerLock();
     pomoRunning = false;
+    setTimeout(updateTabTitle, 0);   // after this handler settles the state
     pomoRemaining = Math.max(0, Math.round((pomoEndTime - Date.now()) / 1000));
     pomoEndTime = null;
     stopPomoTick();
@@ -384,6 +411,7 @@ function pomoTick() {
   if (!pomoRunning || pomoEndTime == null) return;
   beatTimerLock();   // tell other tabs/devices this timer is alive
   pomoRemaining = Math.max(0, Math.round((pomoEndTime - Date.now()) / 1000));
+  updateTabTitle();
   if (pomoRemaining <= 0) {
     // time's up.
     const tasks = pomoSessionTasks();
@@ -454,6 +482,7 @@ function finishPomoSession(earlyBonus) {
   pomoRemaining = pomoMinutes * 60;
   pomoBankedSecs = 0;
   renderPomo();
+  updateTabTitle();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -598,6 +627,7 @@ function resetPomo() {
   pomoRemaining = pomoMinutes * 60;
   pomoBankedSecs = 0;
   document.getElementById('pomo-startbtn').textContent = '🎣 Cast';
+  updateTabTitle();
   document.getElementById('pomodoro').classList.remove('pomo-running');
   document.getElementById('pomo-toggle').classList.remove('casting');
   renderPomo();
@@ -645,6 +675,8 @@ function renderPomo() {
 
   const auto = document.getElementById('pomo-autoopen');
   if (auto) auto.checked = autoOpenCatches();
+
+  updateTabTitle();
 }
 // When returning to the tab, immediately re-sync the display.
 document.addEventListener('visibilitychange', () => {
