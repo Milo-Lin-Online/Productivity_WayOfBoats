@@ -90,6 +90,49 @@ function projects() {
   return state.projects;
 }
 function projectById(id) { return projects().find(p => String(p.id) === String(id)) || null; }
+
+// ══════════════════════════════════════════════
+//  WHOSE BOOK IS IT
+//  A project belongs to one person. You only ever see your own shelf, so two
+//  people using the same room don't end up staring at each other's work.
+// ══════════════════════════════════════════════
+let showArchived = false;
+
+function ownsProject(p) {
+  const me = myPersonId();
+  if (!me) return true;                 // no name set yet — don't hide everything
+  if (!p.ownerId) return true;          // legacy, un-claimed (see claimOwnerlessProjects)
+  return String(p.ownerId) === String(me);
+}
+
+/** My shelf: mine, and archived ones only when I've asked to see them. */
+function visibleProjects() {
+  return projects().filter(p => ownsProject(p) && (showArchived || !p.archived));
+}
+/** Everything of mine including archived — for counts and the filter dropdown. */
+function myProjects() { return projects().filter(ownsProject); }
+function archivedCount() { return myProjects().filter(p => p.archived).length; }
+
+/**
+ * Projects made before books had owners have no ownerId. Rather than hide them
+ * or leave them shared forever, the first person to open the Timeline claims
+ * them — and the owner picker in the book editor makes that reversible if it
+ * grabs something it shouldn't.
+ */
+function claimOwnerlessProjects() {
+  const me = myPersonId();
+  if (!me) return;
+  const orphans = projects().filter(p => !p.ownerId);
+  if (!orphans.length) return;
+  orphans.forEach(p => { p.ownerId = me; });
+  save();
+  showToast(`📚 ${orphans.length} project${orphans.length === 1 ? '' : 's'} added to your shelf`);
+}
+
+function toggleArchivedView() {
+  showArchived = !showArchived;
+  renderBookshelf();
+}
 function tlPoints() {
   if (!Array.isArray(state.tlPoints)) state.tlPoints = [];
   return state.tlPoints;
@@ -140,6 +183,7 @@ function showTlMode(mode) {
 }
 
 function renderTimelineSection() {
+  claimOwnerlessProjects();
   if (tlMode === 'shelf') renderBookshelf();
   else renderTlBoard();
   renderTlProjectFilter();
@@ -148,8 +192,9 @@ function renderTimelineSection() {
 function renderTlProjectFilter() {
   const sel = document.getElementById('tl-project-filter');
   if (!sel) return;
-  sel.innerHTML = `<option value="">All projects</option>` +
-    projects().map(p => `<option value="${p.id}">${escHtml(p.name || 'Untitled')}</option>`).join('');
+  sel.innerHTML = `<option value="">All my projects</option>` +
+    myProjects().filter(p => !p.archived).map(p =>
+      `<option value="${p.id}">${escHtml(p.name || 'Untitled')}</option>`).join('');
   sel.value = tlFilterProject;
 }
 function onTlFilterChange() {
@@ -165,7 +210,10 @@ function onTlFilterChange() {
 //  container's horizontal scroll.
 // ══════════════════════════════════════════════
 function tlVisiblePoints() {
-  const all = tlPoints();
+  // a point is only visible if its book is — that keeps other people's work,
+  // and your own archived work, off the main timeline
+  const mine = new Set(projects().filter(p => ownsProject(p) && !p.archived).map(p => String(p.id)));
+  const all = tlPoints().filter(p => mine.has(String(p.projectId)));
   const list = tlFilterProject
     ? all.filter(p => String(p.projectId) === String(tlFilterProject))
     : all;
@@ -505,12 +553,14 @@ function deletePointFromModal() {
 function renderBookshelf() {
   const shelf = document.getElementById('tl-shelf');
   if (!shelf) return;
-  const list = projects();
+  const list = visibleProjects();
   shelf.innerHTML = list.map(p => {
     const prog = projectProgress(p);
     const col = p.color || '#3B9BD4';
-    return `<button class="book" style="--book:${col}" onclick="openBook('${p.id}')"
-        title="${escAttr(p.name + ' · ' + prog.pct + '% done')}">
+    return `<button class="book ${p.archived ? 'is-archived' : ''}" style="--book:${col}" onclick="openBook('${p.id}')"
+        title="${escAttr(p.name + ' · ' + prog.pct + '% done' + (p.archived ? ' · archived' : ''))}">
+      ${p.archived ? '<span class="book-arch">archived</span>' : ''}
+      <span class="book-cog" onclick="event.stopPropagation(); openBookEditor('${p.id}')" title="Edit, archive or delete">⋯</span>
       <span class="book-emoji">${escHtml(p.emoji || '📘')}</span>
       <span class="book-title">${escHtml(p.name || 'Untitled')}</span>
       <span class="book-status" style="background:${statusOf(p.status).color};color:#fff">${escHtml(statusOf(p.status).label)}</span>
@@ -519,6 +569,16 @@ function renderBookshelf() {
   }).join('') + `<button class="book book-add" onclick="openBookEditor(null)" title="Start a new project">
       <span class="book-emoji">➕</span><span class="book-title">Add a book</span>
     </button>`;
+
+  const bar = document.getElementById('shelf-archive-bar');
+  if (bar) {
+    const n = archivedCount();
+    bar.innerHTML = n
+      ? `<button class="arch-toggle ${showArchived ? 'on' : ''}" onclick="toggleArchivedView()">
+           📦 ${showArchived ? 'Hide' : 'Show'} archived (${n})
+         </button>`
+      : '';
+  }
 }
 
 // ── create / rename a project ──
@@ -537,6 +597,21 @@ function openBookEditor(id) {
   const csel = document.getElementById('bk-color');
   csel.value = p ? (p.color || BOOK_COLORS[0]) : BOOK_COLORS[projects().length % BOOK_COLORS.length];
 
+  // who the book belongs to — lets you hand one over, or undo a bad auto-claim
+  const osel = document.getElementById('bk-owner');
+  if (osel) {
+    const crew = (typeof visiblePeople === 'function' ? visiblePeople() : state.people) || [];
+    osel.innerHTML = crew.map(c =>
+      `<option value="${c.id}">${escHtml(c.name)}${c.id === myPersonId() ? ' (you)' : ''}</option>`).join('')
+      || `<option value="">Nobody yet</option>`;
+    osel.value = (p && p.ownerId) || myPersonId() || (crew[0] && crew[0].id) || '';
+  }
+
+  const arch = document.getElementById('bk-archive');
+  if (arch) {
+    arch.style.display = p ? 'inline-flex' : 'none';
+    arch.textContent = (p && p.archived) ? '📤 Unarchive' : '📦 Archive';
+  }
   document.getElementById('bk-delete').style.display = p ? 'inline-flex' : 'none';
   document.getElementById('book-editor').style.display = 'flex';
   setTimeout(() => document.getElementById('bk-name').focus(), 60);
@@ -556,24 +631,80 @@ function saveBookFromModal() {
   p.emoji = document.getElementById('bk-emoji').value;
   p.color = document.getElementById('bk-color').value;
   p.dueDate = document.getElementById('bk-due').value || '';
+  const osel = document.getElementById('bk-owner');
+  if (osel && osel.value) p.ownerId = osel.value;
+  else if (!p.ownerId) p.ownerId = myPersonId() || '';
   save();
   closeModal('book-editor');
   renderTimelineSection();
   showToast(`📚 ${editingProjectId ? 'Updated' : 'Added'} "${name}"`);
 }
 
-function deleteBookFromModal() {
-  if (!editingProjectId) return;
-  const p = projectById(editingProjectId);
+/**
+ * Archive or unarchive. Callable from the shelf, the editor, or the open book —
+ * whichever the person happens to be looking at.
+ */
+function archiveProject(id) {
+  const p = projectById(id);
   if (!p) return;
-  askConfirm(`Delete "${p.name}"? Its timeline points go too. Tasks stay on the board.`, () => {
-    state.projects = projects().filter(x => String(x.id) !== String(p.id));
-    state.tlPoints = tlPoints().filter(x => String(x.projectId) !== String(p.id));
+  p.archived = !p.archived;
+  save();
+  closeModal('book-editor');
+  if (bookOpenId === id) closeBook();
+  renderTimelineSection();
+  showToast(p.archived
+    ? `📦 "${p.name}" archived — off the shelf and off the timeline, nothing deleted`
+    : `📤 "${p.name}" is back on the shelf`);
+}
+
+/**
+ * Delete a project outright: the book, its timeline points, AND its tasks.
+ * Anything referencing those tasks (notebook pins, the current pomodoro
+ * session) is cleaned up so nothing dangles.
+ */
+function deleteProject(id) {
+  const p = projectById(id);
+  if (!p) return;
+  const pts = pointsForProject(id).length;
+  const tasks = projectTasks(p);
+  const bits = [];
+  if (pts) bits.push(`${pts} timeline point${pts === 1 ? '' : 's'}`);
+  if (tasks.length) bits.push(`${tasks.length} task${tasks.length === 1 ? '' : 's'}`);
+  const cost = bits.length ? bits.join(' and ') + ' go with it. ' : '';
+
+  askConfirm(`Delete "${p.name}" and everything in it? ${cost}Archiving keeps it all instead.`, () => {
+    const taskIds = new Set(tasks.map(t => t.id));
+    state.tasks = state.tasks.filter(t => !taskIds.has(t.id));
+
+    // unpin the doomed tasks from anywhere that points at them
+    (state.people || []).forEach(person => {
+      if (person.planning && Array.isArray(person.planning.links)) {
+        person.planning.links = person.planning.links.filter(x => !taskIds.has(x));
+      }
+    });
+    if (typeof pomoTaskIds !== 'undefined') pomoTaskIds = pomoTaskIds.filter(x => !taskIds.has(x));
+
+    state.projects = projects().filter(x => String(x.id) !== String(id));
+    state.tlPoints = tlPoints().filter(x => String(x.projectId) !== String(id));
+
     save();
     closeModal('book-editor');
+    if (bookOpenId === id) closeBook();
     renderTimelineSection();
-  }, 'Delete it');
+    if (typeof refreshTaskSurfaces === 'function') refreshTaskSurfaces();
+    showToast(`🗑 "${p.name}" deleted${tasks.length ? ` along with ${tasks.length} task${tasks.length === 1 ? '' : 's'}` : ''}`);
+  }, 'Delete everything');
 }
+
+// the editor's buttons just point at the id it's editing
+function toggleArchiveBook() { if (editingProjectId) archiveProject(editingProjectId); }
+
+function deleteBookFromModal() { if (editingProjectId) deleteProject(editingProjectId); }
+
+// straight from the open book, so you never have to hunt for the editor
+function editOpenBook()    { const id = bookOpenId; closeBook(); openBookEditor(id); }
+function archiveOpenBook() { if (bookOpenId) archiveProject(bookOpenId); }
+function deleteOpenBook()  { if (bookOpenId) deleteProject(bookOpenId); }
 
 // ── the open book ──
 function openBook(id) {
@@ -598,7 +729,11 @@ function renderOpenBook() {
   if (!p || !host) return;
   const col = p.color || '#3B9BD4';
   document.getElementById('book-modal-title').innerHTML =
-    `${escHtml(p.emoji || '📘')} ${escHtml(p.name)}`;
+    `${escHtml(p.emoji || '📘')} ${escHtml(p.name)}` +
+    (p.archived ? ` <span class="ob-arch-tag">archived</span>` : '');
+  const arch = document.getElementById('ob-archive');
+  if (arch) arch.textContent = p.archived ? '📤' : '📦';
+  if (arch) arch.title = p.archived ? 'Unarchive this project' : 'Archive this project';
   document.getElementById('book-page-label').textContent = bookPage === 0 ? 'Notes & status' : 'Project timeline';
 
   if (bookPage === 1) {
