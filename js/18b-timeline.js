@@ -85,6 +85,59 @@ function tlLabel(key, withYear) {
 }
 
 // ── storage ──
+// Darken a hex colour — used so a book's border is its own colour, deeper,
+// rather than a hard black outline.
+function shade(hex, amt) {
+  let h = String(hex || '#3B9BD4').replace('#', '');
+  if (h.length === 3) h = h.split('').map(c => c + c).join('');
+  const n = parseInt(h, 16);
+  if (isNaN(n)) return '#2A6F99';
+  const f = amt < 0 ? 1 + amt : 1 - amt;
+  const c = v => Math.max(0, Math.min(255, Math.round(v * f)));
+  const r = c((n >> 16) & 255), g = c((n >> 8) & 255), b = c(n & 255);
+  return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
+}
+
+/** Days from today to a date. Negative means it's already passed. */
+function daysUntil(key) {
+  if (!key) return null;
+  return tlDaysBetween(tlToday(), key);
+}
+/** Human countdown for a project's complete-by date. */
+function dueCountdown(key) {
+  const d = daysUntil(key);
+  if (d === null) return { text: 'no deadline set', cls: 'none', d: null };
+  if (d < 0)  return { text: `${Math.abs(d)} day${Math.abs(d) === 1 ? '' : 's'} overdue`, cls: 'over', d };
+  if (d === 0) return { text: 'due today', cls: 'today', d };
+  if (d === 1) return { text: '1 day left', cls: 'soon', d };
+  return { text: `${d} days left`, cls: d <= 7 ? 'soon' : 'ok', d };
+}
+
+/**
+ * A quick paper rustle when a book opens. Built from filtered noise with two
+ * envelope bumps so it reads as pages shuffling rather than a single hiss.
+ */
+function playPageShuffle() {
+  try {
+    const ctx = (typeof getCtx === 'function') ? getCtx() : null;
+    if (!ctx) return;
+    const dur = 0.28;
+    const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+      const x = i / data.length;
+      const env = Math.exp(-7 * x) + 0.8 * Math.exp(-55 * Math.abs(x - 0.38));
+      data[i] = (Math.random() * 2 - 1) * env * 0.3;
+    }
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass';
+    bp.frequency.value = 2400; bp.Q.value = 0.8;
+    const g = ctx.createGain(); g.gain.value = 0.45;
+    src.connect(bp); bp.connect(g); g.connect(ctx.destination);
+    src.start();
+  } catch (e) {}
+}
+
 function projects() {
   if (!Array.isArray(state.projects)) state.projects = [];
   return state.projects;
@@ -557,8 +610,10 @@ function renderBookshelf() {
   shelf.innerHTML = list.map(p => {
     const prog = projectProgress(p);
     const col = p.color || '#3B9BD4';
-    return `<button class="book ${p.archived ? 'is-archived' : ''}" style="--book:${col}" onclick="openBook('${p.id}')"
-        title="${escAttr(p.name + ' · ' + prog.pct + '% done' + (p.archived ? ' · archived' : ''))}">
+    const cd = dueCountdown(p.dueDate);
+    return `<button class="book ${p.archived ? 'is-archived' : ''}" style="--book:${col};--book-dark:${shade(col, -0.42)}" onclick="openBook('${p.id}')"
+        title="${escAttr(p.name + ' · ' + prog.pct + '% done · ' + cd.text + (p.archived ? ' · archived' : ''))}">
+      ${p.dueDate ? `<span class="book-days ${cd.cls}">${escHtml(cd.d !== null && cd.d >= 0 ? cd.d + 'd' : Math.abs(cd.d) + 'd!')}</span>` : ''}
       ${p.archived ? '<span class="book-arch">archived</span>' : ''}
       <span class="book-cog" onclick="event.stopPropagation(); openBookEditor('${p.id}')" title="Edit, archive or delete">⋯</span>
       <span class="book-emoji">${escHtml(p.emoji || '📘')}</span>
@@ -710,6 +765,7 @@ function deleteOpenBook()  { if (bookOpenId) deleteProject(bookOpenId); }
 function openBook(id) {
   bookOpenId = id;
   bookPage = 0;
+  playPageShuffle();
   document.getElementById('book-modal').style.display = 'flex';
   renderOpenBook();
 }
@@ -719,7 +775,9 @@ function closeBook() {
   if (m) m.style.display = 'none';
 }
 function flipBook(dir) {
-  bookPage = Math.max(0, Math.min(1, bookPage + dir));
+  const next = Math.max(0, Math.min(1, bookPage + dir));
+  if (next !== bookPage) playPageShuffle();
+  bookPage = next;
   renderOpenBook();
 }
 
@@ -731,6 +789,14 @@ function renderOpenBook() {
   document.getElementById('book-modal-title').innerHTML =
     `${escHtml(p.emoji || '📘')} ${escHtml(p.name)}` +
     (p.archived ? ` <span class="ob-arch-tag">archived</span>` : '');
+  const cd = dueCountdown(p.dueDate);
+  const cdEl = document.getElementById('ob-countdown');
+  if (cdEl) {
+    cdEl.className = 'ob-countdown ' + cd.cls;
+    cdEl.innerHTML = p.dueDate
+      ? `<b>${escHtml(cd.text)}</b><span>until ${escHtml(tlLabel(p.dueDate, true))}</span>`
+      : `<b>No deadline</b><span>set one in ✎ edit</span>`;
+  }
   const arch = document.getElementById('ob-archive');
   if (arch) arch.textContent = p.archived ? '📤' : '📦';
   if (arch) arch.title = p.archived ? 'Unarchive this project' : 'Archive this project';
@@ -761,13 +827,39 @@ function renderOpenBook() {
         <span style="font-size:10px;font-weight:700;color:#8A6A46">(${all.length})</span></div>
       ${all.length ? `<div class="bk-tasks">${all.map(t => {
         const st = statusOf(t.projStatus);
+        const subs = t.subtasks || [];
+        const subTotal = subs.reduce((s, x) => s + (x.mins || 0), 0);
+        const mins = subs.length ? subTotal : (t.mins || 0);
+        const naming = (editingTaskId === t.id);
         return `<div class="bk-task ${t.done ? 'is-done' : ''}">
-          <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleTask(${t.id}); renderOpenBook();">
-          <span class="bk-task-text">${escHtml(strip(t.text))}</span>
-          <select class="bk-task-status" style="background:${st.color}"
-            onchange="setTaskProjStatus(${t.id}, this.value)"
-            onclick="event.stopPropagation()">${statusOptions(t.projStatus)}</select>
-          <span class="bk-task-due">${t.due ? escHtml(tlLabel(t.due)) : '—'}</span>
+          <div class="bk-task-main">
+            <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleTask(${t.id}); renderOpenBook();">
+            ${naming
+              ? `<input class="bk-task-edit" id="bk-rename" value="${escAttr(strip(t.text))}"
+                   onkeydown="if(event.key==='Enter'){this.blur()} if(event.key==='Escape'){editingTaskId=null;setTimeout(renderOpenBook,0)}"
+                   onblur="commitTaskRename(${t.id}, this.value)">`
+              : `<span class="bk-task-text" onclick="startTaskRename(${t.id})"
+                   title="Click to rename">${escHtml(strip(t.text))}</span>`}
+            <select class="bk-task-status" style="background:${st.color}"
+              onchange="setTaskProjStatus(${t.id}, this.value)">${statusOptions(t.projStatus)}</select>
+            <span class="bk-task-due">${t.due ? escHtml(tlLabel(t.due)) : '—'}</span>
+          </div>
+          <div class="bk-task-meta">
+            <span class="bk-mins" title="${subs.length ? 'sum of its subtasks' : 'time estimate'}">
+              ⏱ ${formatMinutes(mins)}${subs.length ? ' (subtasks)' : ''}</span>
+            ${!subs.length ? `<select class="bk-mins-sel" onchange="setBookTaskMins(${t.id}, this.value)">
+              ${[5,10,15,20,30,45,60,90,120,180,240].map(m =>
+                `<option value="${m}" ${mins === m ? 'selected' : ''}>${formatMinutes(m)}</option>`).join('')}
+            </select>` : ''}
+            <button class="bk-sub-add" onclick="addBookSubtask(${t.id})" title="Add a subtask">＋ sub</button>
+          </div>
+          ${subs.length ? `<div class="bk-subs">${subs.map((s, si) => `
+            <label class="bk-sub ${s.done ? 'done' : ''}">
+              <input type="checkbox" ${s.done ? 'checked' : ''} onchange="toggleSubtask(${t.id}, ${si}); renderOpenBook();">
+              <span>${escHtml(s.text || 'subtask')}</span>
+              <span class="bk-sub-mins">${formatMinutes(s.mins || 0)}</span>
+              <button onclick="removeBookSubtask(${t.id}, ${si})" title="Remove">×</button>
+            </label>`).join('')}</div>` : ''}
         </div>`;
       }).join('')}</div>`
         : `<div class="bk-empty">Nothing here yet. Add a task below, or drop a point on the timeline.</div>`}
@@ -798,6 +890,13 @@ function renderOpenBook() {
       </div>
 
       <div class="bk-row">
+        <label class="bk-field">Activity for the whole book
+          <select class="form-input" id="bk-activity" onchange="setBookActivity(this.value)">
+            ${getActivityTypes().map(at => `<option value="${at.id}" ${((p.activityType || '') === at.id) ? 'selected' : ''}>${escHtml(at.label)}</option>`).join('')}
+          </select>
+        </label>
+      </div>
+      <div class="bk-row">
         <label class="bk-field">Status
           <span class="bk-status-edit" onclick="openStatusEditor()" title="Rename or recolour these">✎ edit</span>
           <select class="form-input bk-status-sel" id="bk-status" onchange="setBookStatus(this.value)"
@@ -814,7 +913,15 @@ function renderOpenBook() {
       <div class="bk-add-task">
         <input class="form-input" id="bk-new-task" placeholder="Another thing to do…" maxlength="70"
           onkeydown="if(event.key==='Enter') addProjectTask()">
-        <button class="btn-primary" onclick="addProjectTask()" style="font-size:12px;">＋ Add task</button>
+        <div class="bk-add-dates">
+          <label>Starts<input class="form-input" id="bk-new-start" type="date" value="${tlToday()}"></label>
+          <label>Due by<input class="form-input" id="bk-new-due" type="date" value="${escAttr(p.dueDate || '')}"></label>
+          <label>Takes<select class="form-input" id="bk-new-mins">
+            ${[5,10,15,20,30,45,60,90,120,180,240].map(m => `<option value="${m}" ${m === 30 ? 'selected' : ''}>${formatMinutes(m)}</option>`).join('')}
+          </select></label>
+          <button class="btn-primary" onclick="addProjectTask()">＋ Add task</button>
+        </div>
+        <div class="bk-add-hint">Lands on the task board and drops a marker on the timeline.</div>
       </div>
     </div>
   </div>`;
@@ -877,26 +984,51 @@ function addProjectTask() {
   if (!p || !input) return;
   const raw = input.value.trim();
   if (!raw) { showToast('Type what needs doing first ✍️'); return; }
+
+  const startEl = document.getElementById('bk-new-start');
+  const dueEl = document.getElementById('bk-new-due');
+  const start = (startEl && startEl.value) || tlToday();
+  let due = (dueEl && dueEl.value) || '';
+  if (due && due < start) { showToast('The due date has to come after the start ⏳'); return; }
+
+  // The task is due on the due date if there is one, otherwise on the start —
+  // same rule the timeline uses, so the marker and the task always agree.
+  const dueKey = due || start;
+
   const task = {
     id: Date.now() + Math.floor(Math.random() * 999),
     text: `${p.name}: ${raw}`,
     assigneeId: myPersonId() || (state.people[0] && state.people[0].id) || '',
     priority: 'medium',
-    type: getActivityTypes()[0].id,
-    mins: 30,
-    due: p.dueDate || '',
+    type: p.activityType || getActivityTypes()[0].id,
+    mins: parseInt((document.getElementById('bk-new-mins') || {}).value, 10) || 30,
+    due: dueKey,
     done: false,
     source: 'project',
     subtasks: [],
     collapsed: false
   };
   state.tasks.push(task);
+
+  // ...and a matching timeline point, so adding work from the book puts it on
+  // the timeline without a second trip
+  tlPoints().push({
+    id: 'tp' + Date.now() + Math.floor(Math.random() * 999),
+    createdAt: Date.now(),
+    title: raw,
+    date: start,
+    endDate: due || '',
+    projectId: p.id,
+    type: task.type,
+    taskId: task.id
+  });
+
   save();
   input.value = '';
   renderOpenBook();
   renderBookshelf();
   if (typeof refreshTaskSurfaces === 'function') refreshTaskSurfaces();
-  showToast(`✅ Added "${task.text}"`);
+  showToast(`✅ "${task.text}" — due ${tlLabel(dueKey)}, and it's on the timeline`);
 }
 
 // Clicking the bare line inside a book's timeline adds a point to THAT project.
@@ -913,6 +1045,82 @@ function bookAxisClick(e, projectId) {
   tlFilterProject = projectId;
   showTlMode('timeline');
   openPointModal(null, key);
+}
+
+// Which activity the whole project counts as. Setting it re-tags every task
+// under the book, so the pie chart and the calendar agree with the project.
+function setBookActivity(typeId) {
+  const p = projectById(bookOpenId);
+  if (!p) return;
+  p.activityType = typeId;
+  const tasks = projectTasks(p);
+  tasks.forEach(t => { t.type = typeId; });
+  // timeline points for this book follow too
+  pointsForProject(p.id).forEach(pt => { pt.type = typeId; });
+  save();
+  renderOpenBook();
+  renderTlBoard();
+  if (typeof refreshTaskSurfaces === 'function') refreshTaskSurfaces();
+  showToast(`🎨 ${tasks.length} task${tasks.length === 1 ? '' : 's'} set to ${typeMeta(typeId).label}`);
+}
+
+// ── editing a task straight from the book ──
+let editingTaskId = null;
+function startTaskRename(id) {
+  editingTaskId = id;
+  renderOpenBook();
+  setTimeout(() => {
+    const el = document.getElementById('bk-rename');
+    if (el) { el.focus(); el.select(); }
+  }, 30);
+}
+function commitTaskRename(id, value) {
+  // Escape already cancelled this edit — the blur that follows is just noise
+  if (editingTaskId !== id) return;
+  const p = projectById(bookOpenId);
+  const t = state.tasks.find(x => x.id === id);
+  editingTaskId = null;
+  // Re-rendering from inside a blur handler tears out the element that's
+  // blurring and the browser throws, so hand it to the next tick instead.
+  const redraw = () => setTimeout(renderOpenBook, 0);
+  if (!p || !t) { redraw(); return; }
+  const clean = (value || '').trim();
+  if (clean) {
+    // keep the "Project: " prefix so the task stays attached to this book
+    t.text = `${p.name}: ${clean}`;
+    // and keep any linked timeline point's label in step
+    const pt = tlPoints().find(x => x.taskId === id);
+    if (pt) pt.title = clean;
+    save();
+    if (typeof refreshTaskSurfaces === 'function') refreshTaskSurfaces();
+  }
+  redraw();
+}
+function setBookTaskMins(id, v) {
+  const t = state.tasks.find(x => x.id === id);
+  if (!t) return;
+  t.mins = parseInt(v, 10) || 0;
+  save();
+  renderOpenBook();
+  if (typeof refreshTaskSurfaces === 'function') refreshTaskSurfaces();
+}
+function addBookSubtask(id) {
+  const t = state.tasks.find(x => x.id === id);
+  if (!t) return;
+  if (!Array.isArray(t.subtasks)) t.subtasks = [];
+  t.subtasks.push({ text: 'New step', done: false, mins: 15 });
+  save();
+  renderOpenBook();
+  if (typeof refreshTaskSurfaces === 'function') refreshTaskSurfaces();
+  showToast('Subtask added — edit it on the task board');
+}
+function removeBookSubtask(id, si) {
+  const t = state.tasks.find(x => x.id === id);
+  if (!t || !t.subtasks) return;
+  t.subtasks.splice(si, 1);
+  save();
+  renderOpenBook();
+  if (typeof refreshTaskSurfaces === 'function') refreshTaskSurfaces();
 }
 
 function setTaskProjStatus(taskId, statusId) {

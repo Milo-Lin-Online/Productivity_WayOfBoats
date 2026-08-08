@@ -70,12 +70,62 @@ function renderAdminGachaRules() {
     </div>`;
 }
 
+// Frozen standings are a record, but records can be wrong — let the admin
+// correct who was actually ahead for any given meeting.
+function renderAdminWinners() {
+  const box = document.getElementById('admin-winners');
+  const sel = document.getElementById('admin-winner-meeting');
+  if (!box || !sel || !isAdmin()) return;
+  const ms = state.meetings || [];
+  sel.innerHTML = ms.length
+    ? ms.map(m => `<option value="${m.id}">${escHtml(m.title || 'Untitled')} · ${escHtml(m.date || '')}</option>`).join('')
+    : `<option value="">No meetings yet</option>`;
+  const m = ms.find(x => String(x.id) === String(sel.value)) || ms[0];
+  if (!m) { box.innerHTML = '<div class="nb-empty">No meetings to edit.</div>'; return; }
+  sel.value = m.id;
+  if (!m.standings) m.standings = {};
+  const rows = visiblePeople().map(p => {
+    const st = m.standings[p.id] || {};
+    return `<div class="win-row">
+      <span class="admin-dot" style="background:${p.color || 'var(--ocean)'}"></span>
+      <b>${escHtml(p.name)}</b>
+      <label>rank <input type="number" min="1" max="99" value="${st.rank || ''}"
+        onchange="adminSetStanding(${m.id}, '${p.id}', 'rank', this.value)"></label>
+      <label>pts <input type="number" value="${st.pts != null ? st.pts : ''}"
+        onchange="adminSetStanding(${m.id}, '${p.id}', 'pts', this.value)"></label>
+    </div>`;
+  }).join('');
+  box.innerHTML = rows + `<div style="margin-top:8px"><button class="btn-secondary" onclick="adminResnapshot(${m.id})" style="font-size:12px">↻ Recalculate from today's scores</button></div>`;
+}
+function adminSetStanding(mid, pid, field, value) {
+  if (!isAdmin()) return;
+  const m = state.meetings.find(x => String(x.id) === String(mid));
+  if (!m) return;
+  if (!m.standings) m.standings = {};
+  if (!m.standings[pid]) m.standings[pid] = {};
+  const n = parseInt(value, 10);
+  if (isNaN(n)) delete m.standings[pid][field];
+  else m.standings[pid][field] = n;
+  save();
+  renderMeetings();
+}
+function adminResnapshot(mid) {
+  if (!isAdmin()) return;
+  const m = state.meetings.find(x => String(x.id) === String(mid));
+  if (!m) return;
+  askConfirm(`Overwrite "${m.title}" standings with today's scores?`, () => {
+    m.standings = snapshotStandings();
+    save(); renderAdminWinners(); renderMeetings();
+  }, 'Recalculate');
+}
+
 function renderAdmin() {
   if (!isAdmin()) return;
   renderAdminMeetings();
   renderAdminPlayers();
   renderAdminStore();
   renderAdminGachaRules();
+  renderAdminWinners();
 }
 
 function renderAdminMeetings() {
@@ -542,17 +592,37 @@ function applyBatch() {
   const pr = document.getElementById('batch-priority').value;
   const ty = document.getElementById('batch-type').value;
   const pe = document.getElementById('batch-person').value;
+  const mn = document.getElementById('batch-mins').value;      // time estimate
+  const du = document.getElementById('batch-due').value;       // due date
+
+  // A task with subtasks takes its time from the sum of them, so setting the
+  // parent's estimate would be ignored — say so instead of failing quietly.
+  let skippedForSubtasks = 0;
+  const changes = [];
+  if (pr) changes.push('priority');
+  if (ty) changes.push('activity');
+  if (pe) changes.push('assignee');
+  if (mn) changes.push('time');
+  if (du) changes.push('due date');
+  if (!changes.length) { showToast('Pick something to set first'); return; }
+
   state.tasks.forEach(t => {
-    if (batchSelected.has(t.id)) {
-      if (pr) t.priority = pr;
-      if (ty) t.type = ty;
-      if (pe) t.assigneeId = pe;
+    if (!batchSelected.has(t.id)) return;
+    if (pr) t.priority = pr;
+    if (ty) t.type = ty;
+    if (pe) t.assigneeId = pe;
+    if (du) t.due = du === 'clear' ? '' : du;
+    if (mn) {
+      if ((t.subtasks || []).length) skippedForSubtasks++;
+      else t.mins = parseInt(mn, 10) || 0;
     }
   });
   save();
   renderTasks();
   renderLeaderboard();
-  showToast(`Updated ${batchSelected.size} task(s) ✏️`);
+  try { renderCalendar(); } catch (e) {}
+  showToast(`Set ${changes.join(', ')} on ${batchSelected.size} task(s) ✏️` +
+    (skippedForSubtasks ? ` · ${skippedForSubtasks} kept their subtask total` : ''));
 }
 
 // ── task search ──

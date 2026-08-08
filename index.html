@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <!-- Stop phones serving a stale copy of the app from cache. The version below is
      also used by the in-app update check. Bump APP_VERSION on every deploy. -->
-<meta name="app-version" content="2026.08.08-2">
+<meta name="app-version" content="2026.08.10-1">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -1942,7 +1942,7 @@
 }
 .book {
   position: relative; width: 92px; min-height: 132px;
-  border: 3px solid var(--ink); border-radius: 4px 10px 10px 4px;
+  border: 3px solid var(--book-dark, #2A6F99); border-radius: 4px 10px 10px 4px;
   background: var(--book, #3B9BD4);
   display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
   gap: 4px; padding: 10px 7px 16px; cursor: pointer;
@@ -2287,6 +2287,182 @@
   border-radius: 7px; padding: 2px 7px; margin-left: 7px;
 }
 @media (max-width: 620px) { .ob-actions { order: 3; margin-left: 0; } }
+
+/* ── dated add-task row inside the book ── */
+.bk-add-task { flex-direction: column; align-items: stretch; gap: 6px; }
+.bk-add-dates { display: flex; gap: 7px; align-items: flex-end; flex-wrap: wrap; }
+.bk-add-dates label {
+  display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 104px;
+  font-size: 9.5px; font-weight: 800; color: #6B4423;
+}
+.bk-add-dates .form-input { font-size: 11.5px; padding: 4px 6px; width: 100%; }
+.bk-add-dates .btn-primary { font-size: 12px; padding: 6px 13px; white-space: nowrap; }
+.bk-add-hint { font-size: 10px; font-weight: 700; color: #8A6A46; }
+
+/* batch bar date input */
+#batch-due { font-family: inherit; }
+
+/* ── countdown to the project deadline ── */
+.book-days {
+  position: absolute; top: 4px; left: 5px; z-index: 3;
+  font-size: 8.5px; font-weight: 800; letter-spacing: .02em;
+  padding: 2px 5px; border-radius: 7px;
+  background: rgba(255,255,255,.92); color: var(--ink);
+  box-shadow: 0 1px 3px rgba(0,0,0,.28);
+}
+.book-days.soon  { background: var(--butter-light); color: var(--sunset-deep); }
+.book-days.today { background: var(--sunset); color: #fff; }
+.book-days.over  { background: var(--sail-red); color: #fff; }
+.ob-countdown {
+  display: flex; flex-direction: column; line-height: 1.15;
+  padding: 4px 11px; border-radius: 10px; margin-left: 14px;
+  background: rgba(168,123,74,.14); border: 1.5px solid rgba(168,123,74,.4);
+}
+.ob-countdown b { font-size: 12.5px; font-weight: 800; color: #6B4423; }
+.ob-countdown span { font-size: 9.5px; font-weight: 700; color: #8A6A46; }
+.ob-countdown.soon  { background: var(--butter-light); border-color: #E9C46A; }
+.ob-countdown.soon b { color: var(--sunset-deep); }
+.ob-countdown.today { background: var(--sunset); border-color: var(--sunset-deep); }
+.ob-countdown.today b, .ob-countdown.today span { color: #fff; }
+.ob-countdown.over  { background: var(--strawberry-pale); border-color: var(--sail-red); }
+.ob-countdown.over b { color: var(--sail-red); }
+
+/* ── richer task rows inside the book ── */
+.bk-task { flex-direction: column; align-items: stretch; gap: 4px; }
+.bk-task-main { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.bk-task-text { cursor: text; border-bottom: 1px dashed transparent; }
+.bk-task-text:hover { border-bottom-color: rgba(138,94,51,.5); }
+.bk-task-edit {
+  flex: 1; min-width: 110px; font-family: inherit; font-size: 12px; font-weight: 700;
+  border: 2px solid var(--ocean); border-radius: 7px; padding: 3px 6px;
+  color: var(--ink); background: #fff; outline: none;
+}
+.bk-task-meta { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; padding-left: 24px; }
+.bk-mins { font-size: 10px; font-weight: 800; color: #8A6A46; }
+.bk-mins-sel {
+  font-family: inherit; font-size: 9.5px; font-weight: 800; color: #6B4423;
+  border: 1.5px solid rgba(168,123,74,.45); border-radius: 8px;
+  padding: 1px 4px; background: rgba(255,253,246,.8); cursor: pointer;
+}
+.bk-sub-add {
+  font-family: inherit; font-size: 9.5px; font-weight: 800; cursor: pointer;
+  border: 1.5px dashed rgba(168,123,74,.55); background: transparent;
+  color: #8A6A46; border-radius: 8px; padding: 1px 7px;
+}
+.bk-sub-add:hover { background: rgba(168,123,74,.12); }
+.bk-subs { display: flex; flex-direction: column; gap: 3px; padding-left: 24px; }
+.bk-sub {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 700; color: var(--ink);
+  background: rgba(255,253,246,.6); border-radius: 7px; padding: 2px 6px;
+}
+.bk-sub.done span { text-decoration: line-through; opacity: .6; }
+.bk-sub > span:first-of-type { flex: 1; }
+.bk-sub-mins { font-size: 9.5px; font-weight: 800; color: #8A6A46; }
+.bk-sub button { border: none; background: transparent; color: #8A6A46; cursor: pointer; font-weight: 800; }
+.bk-sub button:hover { color: var(--sail-red); }
+@media (max-width: 620px) { .ob-countdown { margin-left: 0; order: 2; } }
+
+/* ═══════════════════════════════════════════════════════════════
+   MEETING COLUMNS — rank, stickers, pickers, week pie, purchases
+   ═══════════════════════════════════════════════════════════════ */
+.person-col-header { flex-wrap: wrap; gap: 5px; }
+.pc-name { display: flex; align-items: center; gap: 5px; flex: 1; min-width: 0; }
+.pc-rank {
+  font-size: 11px; font-weight: 800; flex-shrink: 0;
+  background: rgba(255,255,255,.75); border-radius: 8px; padding: 1px 5px;
+}
+.pc-stickers { display: flex; gap: 2px; flex-shrink: 0; }
+.pc-stickers .sticker-badge { font-size: 13px; }
+.col-drop-btn {
+  border: none; background: transparent; cursor: pointer;
+  color: var(--ink-light); font-size: 13px; font-weight: 800;
+  line-height: 1; padding: 1px 4px; border-radius: 6px; opacity: .45;
+}
+.col-drop-btn:hover { opacity: 1; color: var(--sail-red); background: rgba(232,83,106,.12); }
+
+.absent-strip {
+  display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
+  font-size: 11px; font-weight: 800; color: var(--ink-light);
+  background: rgba(0,0,0,.04); border-radius: 10px;
+  padding: 6px 10px; margin-bottom: 10px;
+}
+.absent-chip {
+  font-family: inherit; font-size: 10.5px; font-weight: 800; cursor: pointer;
+  border: 1.5px dashed var(--ink-light); background: var(--warm-white);
+  color: var(--ink); border-radius: 12px; padding: 2px 9px;
+}
+.absent-chip:hover { border-style: solid; border-color: var(--matcha); color: var(--matcha); }
+
+.one-thing {
+  border: 2px solid; border-radius: 10px; padding: 6px 8px; margin-bottom: 8px;
+  background: rgba(255,255,255,.55);
+}
+.thing-pick {
+  float: right; font-family: inherit; font-size: 9px; font-weight: 800;
+  border: 1.5px solid currentColor; background: transparent; color: inherit;
+  border-radius: 10px; padding: 0 7px; cursor: pointer; opacity: .8;
+}
+.thing-pick:hover { opacity: 1; background: rgba(255,255,255,.6); }
+
+.due-week {
+  background: rgba(255,255,255,.55); border-radius: 9px;
+  padding: 5px 7px; margin-bottom: 6px;
+}
+.due-week-h {
+  font-size: 9px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--ink-light); margin-bottom: 3px;
+}
+.due-week-row {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 700; color: var(--ink); padding: 1px 0; cursor: pointer;
+}
+.due-week-row span { flex: 1; }
+.due-week-row b { font-size: 9.5px; font-weight: 800; color: var(--ink-light); }
+.due-week-row.done span { text-decoration: line-through; opacity: .55; }
+.due-week-row input { accent-color: var(--ocean); }
+
+.wk-pie-box {
+  border: 2px solid; border-radius: 10px; padding: 6px 8px; margin: 8px 0 6px;
+  background: rgba(255,255,255,.55);
+}
+.wk-pie { display: flex; align-items: center; gap: 9px; }
+.wk-pie-legend { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.wkp-row { display: flex; align-items: center; gap: 4px; font-size: 9.5px; font-weight: 700; color: var(--ink); }
+.wkp-row i { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+.wkp-total { font-size: 9px; font-weight: 800; color: var(--ink-light); margin-top: 2px; }
+.wk-pie-empty { font-size: 10px; font-weight: 700; color: var(--ink-light); font-style: italic; }
+
+.pc-buys {
+  display: flex; gap: 4px; flex-wrap: wrap; margin-top: 7px;
+  padding-top: 6px; border-top: 1.5px dashed rgba(0,0,0,.12);
+}
+.pc-buy {
+  font-size: 15px; line-height: 1;
+  background: rgba(255,255,255,.7); border-radius: 7px; padding: 2px 4px;
+}
+.pc-buy img { width: 18px; height: 18px; object-fit: cover; border-radius: 4px; display: block; }
+
+/* task picker */
+.tp-list { display: flex; flex-direction: column; gap: 5px; max-height: 320px; overflow-y: auto; }
+.tp-row {
+  display: flex; align-items: center; gap: 8px; cursor: pointer;
+  border: 2px solid var(--ocean-pale); border-radius: 10px; padding: 7px 9px;
+  background: var(--warm-white); font-size: 12.5px; font-weight: 700;
+}
+.tp-row:hover { border-color: var(--ocean); }
+.tp-row input { accent-color: var(--ocean); }
+.tp-text { flex: 1; }
+.tp-meta { font-size: 10px; font-weight: 800; color: var(--ink-light); white-space: nowrap; }
+.tp-empty { font-size: 12.5px; font-weight: 600; color: var(--ink-light); font-style: italic; padding: 8px 2px; }
+
+/* admin winners */
+.win-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 5px 0; font-size: 12.5px; }
+.win-row label { font-size: 10px; font-weight: 800; color: var(--ocean-deep); display: flex; align-items: center; gap: 4px; }
+.win-row input {
+  width: 58px; font-family: inherit; font-size: 12px; font-weight: 800; text-align: center;
+  border: 2px solid var(--ocean-pale); border-radius: 7px; padding: 3px 4px; color: var(--ink);
+}
 </style>
 </head>
 <body>
@@ -2579,6 +2755,18 @@
           <select class="assignee-select" id="batch-priority"><option value="">Priority…</option><option value="high">🔴 High</option><option value="medium">🟡 Medium</option><option value="low">🟢 Low</option></select>
           <select class="assignee-select" id="batch-type"><option value="">Activity…</option></select>
           <select class="assignee-select" id="batch-person"><option value="">Assignee…</option></select>
+          <select class="assignee-select" id="batch-mins" title="Time estimate">
+            <option value="">Time…</option>
+            <option value="5">5 min</option><option value="10">10 min</option>
+            <option value="15">15 min</option><option value="20">20 min</option>
+            <option value="30">30 min</option><option value="45">45 min</option>
+            <option value="60">1 hr</option><option value="90">1 hr 30</option>
+            <option value="120">2 hr</option><option value="180">3 hr</option>
+            <option value="240">4 hr</option><option value="480">8 hr</option>
+          </select>
+          <label style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:800;color:var(--ocean-deep)">
+            Due <input class="assignee-select" id="batch-due" type="date" style="padding:4px 6px">
+          </label>
           <button class="btn-primary" onclick="applyBatch()">Apply</button>
           <button class="filter-chip" onclick="selectAllTasks()">Select all shown</button>
           <button class="filter-chip" onclick="clearBatch()">Clear</button>
@@ -2883,6 +3071,17 @@
           Players never see these numbers. This card only exists inside the admin section.
         </div>
         <div id="admin-gacha-rules"></div>
+      </div>
+
+      <div class="paper-card">
+        <div class="nb-sub">
+          <div class="nb-sub-label">🏅 Meeting winners</div>
+          <select class="assignee-select" id="admin-winner-meeting" onchange="renderAdminWinners()"></select>
+        </div>
+        <div style="font-size:12px; font-weight:700; color:var(--ink-light); margin-bottom:10px;">
+          Standings are frozen when a meeting is created. Correct them here if they're wrong.
+        </div>
+        <div id="admin-winners"></div>
       </div>
 
       <div class="paper-card">
@@ -3237,6 +3436,7 @@
     <div class="open-book">
     <div class="ob-head">
       <div class="modal-title" id="book-modal-title" style="margin:0"></div>
+      <div class="ob-countdown" id="ob-countdown"></div>
       <div class="ob-actions">
         <button onclick="editOpenBook()" title="Edit this project">✎</button>
         <button id="ob-archive" onclick="archiveOpenBook()" title="Archive this project">📦</button>
@@ -3269,6 +3469,19 @@
     </div>
     <div class="modal-footer">
       <button class="btn-primary" onclick="closeModal('status-editor')">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- PICK TASKS FOR 1 THING / 3 THINGS -->
+<div class="modal-overlay" id="task-picker" style="display:none" onclick="if(event.target===this) closeModal('task-picker')">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-title" id="tp-title">Pick tasks</div>
+    <div id="tp-sub" style="font-size:12px;font-weight:700;color:var(--ink-light);line-height:1.5;margin-bottom:12px"></div>
+    <div id="tp-list" class="tp-list"></div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('task-picker')">Cancel</button>
+      <button class="btn-primary" onclick="applyTaskPicker()">Use these ✨</button>
     </div>
   </div>
 </div>
@@ -4164,6 +4377,108 @@ function selectTemplate(id) {
   renderTemplateGrid();
 }
 
+// ══════════════════════════════════════════════
+//  MEETING HELPERS
+// ══════════════════════════════════════════════
+
+/** Standings frozen at the moment a meeting was created. */
+function snapshotStandings() {
+  const ranked = visiblePeople().map(p => {
+    const fishArr = p.fish || [];
+    const fishPts = fishArr.reduce((s, f) => s + (typeof fishValue === 'function' ? fishValue(f) : 2), 0);
+    const mine = state.tasks.filter(t => t.assigneeId === p.id);
+    const done = mine.filter(t => t.done).length;
+    const ratio = mine.length ? done / mine.length : 0;
+    const streakPts = (typeof wcStreakPoints === 'function') ? wcStreakPoints(p.id) : 0;
+    const queen = ((p.stickers || []).length >= 5) ? 10 : 0;
+    const pts = Math.round(fishPts + (done / 5) + (10 * ratio) + streakPts + (mine.length / 15) + ((p.stars || 0) / 2))
+              + (p.pointsAdjust || 0) + queen;
+    return { id: p.id, pts };
+  }).sort((a, b) => b.pts - a.pts);
+  const out = {};
+  ranked.forEach((r, i) => { out[r.id] = { rank: i + 1, pts: r.pts }; });
+  return out;
+}
+function standingFor(m, pid) { return (m.standings && m.standings[pid]) || null; }
+function rankMedal(r) { return r === 1 ? '🥇' : r === 2 ? '🥈' : r === 3 ? '🥉' : '#' + r; }
+
+/** Did this person attend? Absentees are dropped per-meeting, not deleted. */
+function meetingAttendees(m) {
+  const gone = new Set((m.absent || []).map(String));
+  return visiblePeople().filter(p => !gone.has(String(p.id)));
+}
+function dropFromMeeting(mid, pid) {
+  const m = state.meetings.find(x => x.id === mid);
+  const p = personById(pid);
+  if (!m || !p) return;
+  askConfirm(`Mark ${p.name} as not attending? Their column is removed from this meeting only — nothing else is deleted.`, () => {
+    if (!Array.isArray(m.absent)) m.absent = [];
+    if (!m.absent.includes(pid)) m.absent.push(pid);
+    save(); renderMeetings();
+  }, 'Remove them');
+}
+function restoreToMeeting(mid, pid) {
+  const m = state.meetings.find(x => x.id === mid);
+  if (!m) return;
+  m.absent = (m.absent || []).filter(x => String(x) !== String(pid));
+  save(); renderMeetings();
+}
+
+/** Their tasks falling due within a week of this meeting. */
+function tasksDueThisWeek(m, pid) {
+  const base = m.date || (typeof estDateKey === 'function' ? estDateKey() : '');
+  if (!base) return [];
+  const [y, mo, d] = base.split('-').map(Number);
+  const end = new Date(y, mo - 1, d + 7);
+  const endKey = `${end.getFullYear()}-${String(end.getMonth()+1).padStart(2,'0')}-${String(end.getDate()).padStart(2,'0')}`;
+  return state.tasks
+    .filter(t => t.assigneeId === pid && t.due && t.due >= base && t.due <= endKey)
+    .sort((a, b) => (a.due || '').localeCompare(b.due || ''));
+}
+
+/** A small pie of what this person logged in the last 7 days. */
+function weekPieFor(pid, color) {
+  if (typeof personLogs !== 'function') return '';
+  const logs = personLogs(pid) || {};
+  const today = (typeof estDateKey === 'function') ? estDateKey() : '';
+  if (!today) return '';
+  const [y, mo, d] = today.split('-').map(Number);
+  const from = new Date(y, mo - 1, d - 6);
+  const fromKey = `${from.getFullYear()}-${String(from.getMonth()+1).padStart(2,'0')}-${String(from.getDate()).padStart(2,'0')}`;
+  const by = {};
+  Object.keys(logs).forEach(k => {
+    if (k < fromKey || k > today) return;
+    (logs[k].entries || []).forEach(e => {
+      const id = e.type || getActivityTypes()[0].id;
+      by[id] = (by[id] || 0) + Math.max(0, e.endMin - e.startMin);
+    });
+  });
+  const rows = Object.entries(by).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+  const total = rows.reduce((s, [, v]) => s + v, 0);
+  if (!total) {
+    return `<div class="wk-pie-empty">nothing logged in the last 7 days</div>`;
+  }
+  const R = 26, C = 28;
+  let ang = -Math.PI / 2, paths = '';
+  rows.forEach(([id, v]) => {
+    const frac = v / total, a2 = ang + frac * Math.PI * 2;
+    const col = typeMeta(id).color || color;
+    if (frac >= 0.999) paths += `<circle cx="${C}" cy="${C}" r="${R}" fill="${col}"/>`;
+    else {
+      const x1 = C + R*Math.cos(ang), y1 = C + R*Math.sin(ang);
+      const x2 = C + R*Math.cos(a2),  y2 = C + R*Math.sin(a2);
+      paths += `<path d="M${C},${C} L${x1.toFixed(1)},${y1.toFixed(1)} A${R},${R} 0 ${frac>0.5?1:0} 1 ${x2.toFixed(1)},${y2.toFixed(1)} Z" fill="${col}" stroke="#FFFDF6" stroke-width="1.4"/>`;
+    }
+    ang = a2;
+  });
+  const legend = rows.slice(0, 4).map(([id, v]) =>
+    `<span class="wkp-row"><i style="background:${typeMeta(id).color}"></i>${escHtml(typeMeta(id).label)} <b>${formatMinutes(v)}</b></span>`).join('');
+  return `<div class="wk-pie">
+    <svg width="56" height="56" viewBox="0 0 56 56">${paths}</svg>
+    <div class="wk-pie-legend">${legend}<span class="wkp-total">${formatMinutes(total)} logged</span></div>
+  </div>`;
+}
+
 function createMeeting() {
   const title = document.getElementById('nm-title').value.trim() || 'Team Meeting';
   // auto-default the date to today if the user didn't pick one
@@ -4181,7 +4496,12 @@ function createMeeting() {
     prompt: tmpl?.prompt || '',
     notes,
     checks: {},
-    things: {}
+    things: {},
+    oneThing: {},
+    absent: [],
+    // leaderboard positions frozen at this moment, so a past meeting always
+    // shows who was ahead on the day rather than who is ahead now
+    standings: snapshotStandings()
   };
   state.meetings.unshift(meeting);
   save();
@@ -4279,7 +4599,7 @@ function renderMeetingCards(meetings) {
     if (state.people.length === 0) {
       peopleCols = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-emoji">⚓</div><p>No crew yet!</p><small>Add people in "Edit People" and they'll appear here as columns.</small></div>`;
     } else {
-      peopleCols = visiblePeople().map(p => {
+      peopleCols = meetingAttendees(m).map(p => {
         const hsl = hexToHsl(p.color);
         const bg = `hsl(${hsl[0]},${hsl[1]}%,${Math.min(96, hsl[2] + 22)}%)`;
         const border = p.color;
@@ -4292,6 +4612,8 @@ function renderMeetingCards(meetings) {
         const mtTotal = myMeetingTasks.length;
         const mtPct = mtTotal > 0 ? Math.round((mtDone / mtTotal) * 100) : 0;
 
+        const st = standingFor(m, p.id);
+        const dueSoon = tasksDueThisWeek(m, p.id);
         const checks = (m.checks && m.checks[p.id]) || [];
         const checksHtml = checks.map((chk, ci) => `
           <div class="pcheck-row">
@@ -4314,10 +4636,24 @@ function renderMeetingCards(meetings) {
 
         return `<div class="person-col" style="background:${bg}; border-color:${border}; border-width:2px; border-style:solid;">
           <div class="person-col-header" style="color:${border}; border-color:${border}">
-            <span>${escHtml(p.name)}</span>
+            <span class="pc-name">
+              ${st ? `<span class="pc-rank" title="Position when this meeting was created — ${st.pts} pts">${rankMedal(st.rank)}</span>` : ''}
+              ${escHtml(p.name)}
+            </span>
+            ${(typeof stickerStrip === 'function') ? `<span class="pc-stickers">${stickerStrip(p)}</span>` : ''}
             <button class="col-expand-btn" style="color:${border}" title="Expand ${escAttr(p.name)}'s tasks" onclick="openPersonExpand(${m.id}, '${p.id}')">⤢</button>
+            <button class="col-drop-btn" title="${escAttr(p.name + " didn't attend")}" onclick="dropFromMeeting(${m.id}, '${p.id}')">✕</button>
           </div>
           ${tmpl && tmpl.prompt ? `<div style="font-size:11px; font-weight:700; color:var(--ink-light); margin-bottom:5px; font-style:italic">${escHtml(tmpl.prompt)}</div>` : ''}
+          <div class="one-thing" style="border-color:${border}">
+            <div class="things-header" style="color:${border}">⚡ 1 THING — quickest win
+              <button class="thing-pick" style="color:${border}" onclick="openTaskPicker(${m.id}, '${p.id}', 'one')">pick</button>
+            </div>
+            <input class="thing-text" value="${escAttr((m.oneThing && m.oneThing[p.id]) || '')}"
+              placeholder="the fastest thing you could finish now…"
+              onchange="editOneThing(${m.id}, '${p.id}', this.value)">
+          </div>
+
           <textarea class="person-notes-area"
             placeholder="Notes for ${escAttr(p.name)}…  (type /checkbox)"
             oninput="handleSlashInput(event, ${m.id}, '${p.id}')"
@@ -4326,14 +4662,29 @@ function renderMeetingCards(meetings) {
           >${escHtml(m.notes[p.id] || '')}</textarea>
 
           <div class="things-box" style="border-color:${border}">
-            <div class="things-header" style="color:${border}">⭐ 3 THINGS</div>
+            <div class="things-header" style="color:${border}">⭐ 3 THINGS
+              <button class="thing-pick" style="color:${border}" onclick="openTaskPicker(${m.id}, '${p.id}', 'three')">pick</button>
+            </div>
             ${thingsHtml}
             ${things.length < 6 ? `<button class="thing-add" style="color:${border}" onclick="addThing(${m.id}, '${p.id}')">＋ add a thing</button>` : ''}
           </div>
 
           <div class="checks-label" style="color:${border}">✅ Tasks (sync to board)</div>
+          ${dueSoon.length ? `<div class="due-week">
+            <div class="due-week-h">from the board · due within a week</div>
+            ${dueSoon.map(tk => `<label class="due-week-row ${tk.done ? 'done' : ''}">
+              <input type="checkbox" ${tk.done ? 'checked' : ''} onchange="toggleTask(${tk.id}); renderMeetings();">
+              <span>${escHtml(tk.text)}</span>
+              <b>${escHtml(new Date(tk.due + 'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}))}</b>
+            </label>`).join('')}
+          </div>` : ''}
           <div class="person-checks" id="checks-${m.id}-${p.id}">${checksHtml}</div>
           <button class="thing-add" style="color:${border}" onclick="addPCheck(${m.id}, '${p.id}')">＋ add checkbox</button>
+
+          <div class="wk-pie-box" style="border-color:${border}">
+            <div class="things-header" style="color:${border}">📊 THIS PAST WEEK</div>
+            ${weekPieFor(p.id, border)}
+          </div>
 
           <div class="meeting-stats">
             <div class="meeting-donut">${completenessDonut(mtDone, mtTotal, border)}</div>
@@ -4342,6 +4693,11 @@ function renderMeetingCards(meetings) {
               <div style="font-size:11px; color:var(--ink-light);">${mtDone}/${mtTotal} tasks · ⏱️ ${formatMinutes(mtTotalMins)} total</div>
             </div>
           </div>
+
+          ${(p.purchases && p.purchases.length) || p.streakFixers ? `<div class="pc-buys">
+            ${p.streakFixers ? `<span class="pc-buy" title="${p.streakFixers} streak fixer(s)">🩹${p.streakFixers}</span>` : ''}
+            ${(p.purchases || []).map(x => `<span class="pc-buy" title="${escAttr(x.name)}">${x.image ? `<img src="${escAttr(x.image)}" alt="">` : (x.emoji || '🎁')}</span>`).join('')}
+          </div>` : ''}
         </div>`;
       }).join('');
     }
@@ -4368,6 +4724,11 @@ function renderMeetingCards(meetings) {
         </div>
       </div>
       <div class="meeting-note-body">
+        ${(m.absent || []).length ? `<div class="absent-strip">
+          <span>Not attending:</span>
+          ${(m.absent || []).map(id => { const ap = personById(id); return ap
+            ? `<button class="absent-chip" onclick="restoreToMeeting(${m.id}, '${id}')" title="Add ${escAttr(ap.name)} back">${escHtml(ap.name)} ↩</button>` : ''; }).join('')}
+        </div>` : ''}
         <div class="people-grid">${peopleCols}</div>
       </div>
     </div>`;
@@ -4737,6 +5098,74 @@ function showConfirm(message, onYes) {
   overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
 }
 
+// ══════════════════════════════════════════════
+//  PICKERS — pull real tasks into 1 Thing / 3 Things
+// ══════════════════════════════════════════════
+let pickerCtx = { meetingId: null, personId: null, mode: 'three' };
+
+function editOneThing(mid, pid, value) {
+  const m = state.meetings.find(x => x.id === mid);
+  if (!m) return;
+  if (!m.oneThing) m.oneThing = {};
+  m.oneThing[pid] = value;
+  save();
+}
+
+function openTaskPicker(mid, pid, mode) {
+  pickerCtx = { meetingId: mid, personId: pid, mode };
+  const modal = document.getElementById('task-picker');
+  if (!modal) return;
+  const p = personById(pid);
+  document.getElementById('tp-title').textContent =
+    mode === 'one' ? '⚡ Pick the quickest win' : '⭐ Pick the top three';
+  document.getElementById('tp-sub').textContent = mode === 'one'
+    ? `${p ? p.name + "'s" : 'Their'} open tasks that take 35 minutes or less — shortest first.`
+    : `${p ? p.name + "'s" : 'Their'} open high-priority tasks. Choose up to three.`;
+
+  const pool = state.tasks
+    .filter(t => t.assigneeId === pid && !t.done)
+    .filter(t => mode === 'one' ? taskEffectiveMins(t) <= 35 : t.priority === 'high');
+  pool.sort((a, b) => mode === 'one'
+    ? taskEffectiveMins(a) - taskEffectiveMins(b)
+    : (a.due || '9999').localeCompare(b.due || '9999'));
+
+  document.getElementById('tp-list').innerHTML = pool.length ? pool.map(t => `
+    <label class="tp-row">
+      <input type="${mode === 'one' ? 'radio' : 'checkbox'}" name="tp" value="${t.id}">
+      <span class="tp-text">${escHtml(t.text)}</span>
+      <span class="tp-meta">⏱ ${formatMinutes(taskEffectiveMins(t))}${t.due ? ' · ' + escHtml(t.due) : ''}</span>
+    </label>`).join('')
+    : `<div class="tp-empty">${mode === 'one'
+        ? 'Nothing open at 35 minutes or under. Shorten a task, or add a quick one.'
+        : 'No open high-priority tasks. Mark some 🔴 High on the board first.'}</div>`;
+  modal.style.display = 'flex';
+}
+
+function applyTaskPicker() {
+  const { meetingId, personId, mode } = pickerCtx;
+  const m = state.meetings.find(x => x.id === meetingId);
+  if (!m) return;
+  const chosen = [...document.querySelectorAll('#tp-list input:checked')]
+    .map(el => state.tasks.find(t => String(t.id) === el.value)).filter(Boolean);
+  if (!chosen.length) { showToast('Pick at least one'); return; }
+
+  if (mode === 'one') {
+    if (!m.oneThing) m.oneThing = {};
+    m.oneThing[personId] = chosen[0].text;
+  } else {
+    if (!m.things) m.things = {};
+    const cur = m.things[personId] || ['', '', ''];
+    const picks = chosen.slice(0, 3).map(t => t.text);
+    // fill the three slots, keeping anything already typed that wasn't replaced
+    m.things[personId] = [0, 1, 2].map(i => picks[i] || cur[i] || '')
+      .concat(cur.slice(3).filter(Boolean));
+  }
+  save();
+  closeModal('task-picker');
+  renderMeetings();
+  showToast(mode === 'one' ? '⚡ Set as the quickest win' : `⭐ Added ${Math.min(chosen.length, 3)} to 3 Things`);
+}
+
 
 // ═══════════════════════════════════════════════════════════════
 //  WAY OF BOATS — 05-tasks.js
@@ -5015,12 +5444,62 @@ function renderAdminGachaRules() {
     </div>`;
 }
 
+// Frozen standings are a record, but records can be wrong — let the admin
+// correct who was actually ahead for any given meeting.
+function renderAdminWinners() {
+  const box = document.getElementById('admin-winners');
+  const sel = document.getElementById('admin-winner-meeting');
+  if (!box || !sel || !isAdmin()) return;
+  const ms = state.meetings || [];
+  sel.innerHTML = ms.length
+    ? ms.map(m => `<option value="${m.id}">${escHtml(m.title || 'Untitled')} · ${escHtml(m.date || '')}</option>`).join('')
+    : `<option value="">No meetings yet</option>`;
+  const m = ms.find(x => String(x.id) === String(sel.value)) || ms[0];
+  if (!m) { box.innerHTML = '<div class="nb-empty">No meetings to edit.</div>'; return; }
+  sel.value = m.id;
+  if (!m.standings) m.standings = {};
+  const rows = visiblePeople().map(p => {
+    const st = m.standings[p.id] || {};
+    return `<div class="win-row">
+      <span class="admin-dot" style="background:${p.color || 'var(--ocean)'}"></span>
+      <b>${escHtml(p.name)}</b>
+      <label>rank <input type="number" min="1" max="99" value="${st.rank || ''}"
+        onchange="adminSetStanding(${m.id}, '${p.id}', 'rank', this.value)"></label>
+      <label>pts <input type="number" value="${st.pts != null ? st.pts : ''}"
+        onchange="adminSetStanding(${m.id}, '${p.id}', 'pts', this.value)"></label>
+    </div>`;
+  }).join('');
+  box.innerHTML = rows + `<div style="margin-top:8px"><button class="btn-secondary" onclick="adminResnapshot(${m.id})" style="font-size:12px">↻ Recalculate from today's scores</button></div>`;
+}
+function adminSetStanding(mid, pid, field, value) {
+  if (!isAdmin()) return;
+  const m = state.meetings.find(x => String(x.id) === String(mid));
+  if (!m) return;
+  if (!m.standings) m.standings = {};
+  if (!m.standings[pid]) m.standings[pid] = {};
+  const n = parseInt(value, 10);
+  if (isNaN(n)) delete m.standings[pid][field];
+  else m.standings[pid][field] = n;
+  save();
+  renderMeetings();
+}
+function adminResnapshot(mid) {
+  if (!isAdmin()) return;
+  const m = state.meetings.find(x => String(x.id) === String(mid));
+  if (!m) return;
+  askConfirm(`Overwrite "${m.title}" standings with today's scores?`, () => {
+    m.standings = snapshotStandings();
+    save(); renderAdminWinners(); renderMeetings();
+  }, 'Recalculate');
+}
+
 function renderAdmin() {
   if (!isAdmin()) return;
   renderAdminMeetings();
   renderAdminPlayers();
   renderAdminStore();
   renderAdminGachaRules();
+  renderAdminWinners();
 }
 
 function renderAdminMeetings() {
@@ -5487,17 +5966,37 @@ function applyBatch() {
   const pr = document.getElementById('batch-priority').value;
   const ty = document.getElementById('batch-type').value;
   const pe = document.getElementById('batch-person').value;
+  const mn = document.getElementById('batch-mins').value;      // time estimate
+  const du = document.getElementById('batch-due').value;       // due date
+
+  // A task with subtasks takes its time from the sum of them, so setting the
+  // parent's estimate would be ignored — say so instead of failing quietly.
+  let skippedForSubtasks = 0;
+  const changes = [];
+  if (pr) changes.push('priority');
+  if (ty) changes.push('activity');
+  if (pe) changes.push('assignee');
+  if (mn) changes.push('time');
+  if (du) changes.push('due date');
+  if (!changes.length) { showToast('Pick something to set first'); return; }
+
   state.tasks.forEach(t => {
-    if (batchSelected.has(t.id)) {
-      if (pr) t.priority = pr;
-      if (ty) t.type = ty;
-      if (pe) t.assigneeId = pe;
+    if (!batchSelected.has(t.id)) return;
+    if (pr) t.priority = pr;
+    if (ty) t.type = ty;
+    if (pe) t.assigneeId = pe;
+    if (du) t.due = du === 'clear' ? '' : du;
+    if (mn) {
+      if ((t.subtasks || []).length) skippedForSubtasks++;
+      else t.mins = parseInt(mn, 10) || 0;
     }
   });
   save();
   renderTasks();
   renderLeaderboard();
-  showToast(`Updated ${batchSelected.size} task(s) ✏️`);
+  try { renderCalendar(); } catch (e) {}
+  showToast(`Set ${changes.join(', ')} on ${batchSelected.size} task(s) ✏️` +
+    (skippedForSubtasks ? ` · ${skippedForSubtasks} kept their subtask total` : ''));
 }
 
 // ── task search ──
@@ -8728,16 +9227,14 @@ function finishPomoSession(earlyBonus) {
   document.getElementById('pomo-startbtn').textContent = '🎣 Cast';
 
   // Which drop table applies. A session that ran its full length uses the timer
-  // it was set to. One that finished early uses the time actually spent, bumped
-  // one tier up — so finishing fast is rewarded, but setting a long timer and
-  // bailing early doesn't buy you the best odds.
+  // it was set to. One that finished early rolls on the time ACTUALLY spent —
+  // no bump, no credit for the timer you set. Finish a 55-minute timer in 47 and
+  // you get the 45-50 box, plus the guaranteed bonus fish added below.
   let rollMinutes = pomoMinutes;
-  let bumped = false;
+  let earlyRoll = false;
   if (earlyBonus && elapsedMin < pomoMinutes) {
-    const t0 = gachaTier(elapsedMin);
-    const t1 = Math.min(t0 + 1, 4);
-    rollMinutes = [20, 44, 50, 95, 120][t1];
-    bumped = true;
+    rollMinutes = elapsedMin;
+    earlyRoll = true;
   }
 
   const items = rollGacha(rollMinutes);
@@ -8749,7 +9246,7 @@ function finishPomoSession(earlyBonus) {
     minutes: elapsedMin || pomoMinutes,
     tier: gachaTier(rollMinutes),
     tierLabel: GACHA_TIER_LABEL[gachaTier(rollMinutes)],
-    bumped,
+    earlyRoll,
     goal: pomoGoal,
     items
   });
@@ -8862,7 +9359,7 @@ function showCatchReveal(entry, awarded) {
   const body = document.getElementById('catch-result');
 
   title.textContent = '🎣 Reeling it in…';
-  sub.textContent = entry.tierLabel + (entry.bumped ? ' (finished early — bumped up a tier)' : '');
+  sub.textContent = entry.tierLabel + (entry.earlyRoll ? ` (finished early — rolled on the ${entry.minutes} min you actually did)` : '');
   body.innerHTML = '';
   stage.className = 'catch-stage casting';
   modal.style.display = 'flex';
@@ -8949,7 +9446,7 @@ function renderPomo() {
         <div class="pl-label">${pend.length} catch${pend.length === 1 ? '' : 'es'} on the line</div>
         <div class="pl-lines">
           ${pend.map(c => `
-            <button class="pl-line" onclick="openCatch(${c.id})" title="${escAttr(c.tierLabel + (c.bumped ? ' · bumped a tier' : ''))}">
+            <button class="pl-line" onclick="openCatch(${c.id})" title="${escAttr(c.tierLabel + (c.earlyRoll ? ' · rolled on time actually spent' : ''))}">
               <span class="pl-string"></span><span class="pl-hook">🪝</span>
             </button>`).join('')}
         </div>
@@ -9357,6 +9854,59 @@ function tlLabel(key, withYear) {
 }
 
 // ── storage ──
+// Darken a hex colour — used so a book's border is its own colour, deeper,
+// rather than a hard black outline.
+function shade(hex, amt) {
+  let h = String(hex || '#3B9BD4').replace('#', '');
+  if (h.length === 3) h = h.split('').map(c => c + c).join('');
+  const n = parseInt(h, 16);
+  if (isNaN(n)) return '#2A6F99';
+  const f = amt < 0 ? 1 + amt : 1 - amt;
+  const c = v => Math.max(0, Math.min(255, Math.round(v * f)));
+  const r = c((n >> 16) & 255), g = c((n >> 8) & 255), b = c(n & 255);
+  return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
+}
+
+/** Days from today to a date. Negative means it's already passed. */
+function daysUntil(key) {
+  if (!key) return null;
+  return tlDaysBetween(tlToday(), key);
+}
+/** Human countdown for a project's complete-by date. */
+function dueCountdown(key) {
+  const d = daysUntil(key);
+  if (d === null) return { text: 'no deadline set', cls: 'none', d: null };
+  if (d < 0)  return { text: `${Math.abs(d)} day${Math.abs(d) === 1 ? '' : 's'} overdue`, cls: 'over', d };
+  if (d === 0) return { text: 'due today', cls: 'today', d };
+  if (d === 1) return { text: '1 day left', cls: 'soon', d };
+  return { text: `${d} days left`, cls: d <= 7 ? 'soon' : 'ok', d };
+}
+
+/**
+ * A quick paper rustle when a book opens. Built from filtered noise with two
+ * envelope bumps so it reads as pages shuffling rather than a single hiss.
+ */
+function playPageShuffle() {
+  try {
+    const ctx = (typeof getCtx === 'function') ? getCtx() : null;
+    if (!ctx) return;
+    const dur = 0.28;
+    const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+      const x = i / data.length;
+      const env = Math.exp(-7 * x) + 0.8 * Math.exp(-55 * Math.abs(x - 0.38));
+      data[i] = (Math.random() * 2 - 1) * env * 0.3;
+    }
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass';
+    bp.frequency.value = 2400; bp.Q.value = 0.8;
+    const g = ctx.createGain(); g.gain.value = 0.45;
+    src.connect(bp); bp.connect(g); g.connect(ctx.destination);
+    src.start();
+  } catch (e) {}
+}
+
 function projects() {
   if (!Array.isArray(state.projects)) state.projects = [];
   return state.projects;
@@ -9829,8 +10379,10 @@ function renderBookshelf() {
   shelf.innerHTML = list.map(p => {
     const prog = projectProgress(p);
     const col = p.color || '#3B9BD4';
-    return `<button class="book ${p.archived ? 'is-archived' : ''}" style="--book:${col}" onclick="openBook('${p.id}')"
-        title="${escAttr(p.name + ' · ' + prog.pct + '% done' + (p.archived ? ' · archived' : ''))}">
+    const cd = dueCountdown(p.dueDate);
+    return `<button class="book ${p.archived ? 'is-archived' : ''}" style="--book:${col};--book-dark:${shade(col, -0.42)}" onclick="openBook('${p.id}')"
+        title="${escAttr(p.name + ' · ' + prog.pct + '% done · ' + cd.text + (p.archived ? ' · archived' : ''))}">
+      ${p.dueDate ? `<span class="book-days ${cd.cls}">${escHtml(cd.d !== null && cd.d >= 0 ? cd.d + 'd' : Math.abs(cd.d) + 'd!')}</span>` : ''}
       ${p.archived ? '<span class="book-arch">archived</span>' : ''}
       <span class="book-cog" onclick="event.stopPropagation(); openBookEditor('${p.id}')" title="Edit, archive or delete">⋯</span>
       <span class="book-emoji">${escHtml(p.emoji || '📘')}</span>
@@ -9982,6 +10534,7 @@ function deleteOpenBook()  { if (bookOpenId) deleteProject(bookOpenId); }
 function openBook(id) {
   bookOpenId = id;
   bookPage = 0;
+  playPageShuffle();
   document.getElementById('book-modal').style.display = 'flex';
   renderOpenBook();
 }
@@ -9991,7 +10544,9 @@ function closeBook() {
   if (m) m.style.display = 'none';
 }
 function flipBook(dir) {
-  bookPage = Math.max(0, Math.min(1, bookPage + dir));
+  const next = Math.max(0, Math.min(1, bookPage + dir));
+  if (next !== bookPage) playPageShuffle();
+  bookPage = next;
   renderOpenBook();
 }
 
@@ -10003,6 +10558,14 @@ function renderOpenBook() {
   document.getElementById('book-modal-title').innerHTML =
     `${escHtml(p.emoji || '📘')} ${escHtml(p.name)}` +
     (p.archived ? ` <span class="ob-arch-tag">archived</span>` : '');
+  const cd = dueCountdown(p.dueDate);
+  const cdEl = document.getElementById('ob-countdown');
+  if (cdEl) {
+    cdEl.className = 'ob-countdown ' + cd.cls;
+    cdEl.innerHTML = p.dueDate
+      ? `<b>${escHtml(cd.text)}</b><span>until ${escHtml(tlLabel(p.dueDate, true))}</span>`
+      : `<b>No deadline</b><span>set one in ✎ edit</span>`;
+  }
   const arch = document.getElementById('ob-archive');
   if (arch) arch.textContent = p.archived ? '📤' : '📦';
   if (arch) arch.title = p.archived ? 'Unarchive this project' : 'Archive this project';
@@ -10033,13 +10596,39 @@ function renderOpenBook() {
         <span style="font-size:10px;font-weight:700;color:#8A6A46">(${all.length})</span></div>
       ${all.length ? `<div class="bk-tasks">${all.map(t => {
         const st = statusOf(t.projStatus);
+        const subs = t.subtasks || [];
+        const subTotal = subs.reduce((s, x) => s + (x.mins || 0), 0);
+        const mins = subs.length ? subTotal : (t.mins || 0);
+        const naming = (editingTaskId === t.id);
         return `<div class="bk-task ${t.done ? 'is-done' : ''}">
-          <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleTask(${t.id}); renderOpenBook();">
-          <span class="bk-task-text">${escHtml(strip(t.text))}</span>
-          <select class="bk-task-status" style="background:${st.color}"
-            onchange="setTaskProjStatus(${t.id}, this.value)"
-            onclick="event.stopPropagation()">${statusOptions(t.projStatus)}</select>
-          <span class="bk-task-due">${t.due ? escHtml(tlLabel(t.due)) : '—'}</span>
+          <div class="bk-task-main">
+            <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleTask(${t.id}); renderOpenBook();">
+            ${naming
+              ? `<input class="bk-task-edit" id="bk-rename" value="${escAttr(strip(t.text))}"
+                   onkeydown="if(event.key==='Enter'){this.blur()} if(event.key==='Escape'){editingTaskId=null;setTimeout(renderOpenBook,0)}"
+                   onblur="commitTaskRename(${t.id}, this.value)">`
+              : `<span class="bk-task-text" onclick="startTaskRename(${t.id})"
+                   title="Click to rename">${escHtml(strip(t.text))}</span>`}
+            <select class="bk-task-status" style="background:${st.color}"
+              onchange="setTaskProjStatus(${t.id}, this.value)">${statusOptions(t.projStatus)}</select>
+            <span class="bk-task-due">${t.due ? escHtml(tlLabel(t.due)) : '—'}</span>
+          </div>
+          <div class="bk-task-meta">
+            <span class="bk-mins" title="${subs.length ? 'sum of its subtasks' : 'time estimate'}">
+              ⏱ ${formatMinutes(mins)}${subs.length ? ' (subtasks)' : ''}</span>
+            ${!subs.length ? `<select class="bk-mins-sel" onchange="setBookTaskMins(${t.id}, this.value)">
+              ${[5,10,15,20,30,45,60,90,120,180,240].map(m =>
+                `<option value="${m}" ${mins === m ? 'selected' : ''}>${formatMinutes(m)}</option>`).join('')}
+            </select>` : ''}
+            <button class="bk-sub-add" onclick="addBookSubtask(${t.id})" title="Add a subtask">＋ sub</button>
+          </div>
+          ${subs.length ? `<div class="bk-subs">${subs.map((s, si) => `
+            <label class="bk-sub ${s.done ? 'done' : ''}">
+              <input type="checkbox" ${s.done ? 'checked' : ''} onchange="toggleSubtask(${t.id}, ${si}); renderOpenBook();">
+              <span>${escHtml(s.text || 'subtask')}</span>
+              <span class="bk-sub-mins">${formatMinutes(s.mins || 0)}</span>
+              <button onclick="removeBookSubtask(${t.id}, ${si})" title="Remove">×</button>
+            </label>`).join('')}</div>` : ''}
         </div>`;
       }).join('')}</div>`
         : `<div class="bk-empty">Nothing here yet. Add a task below, or drop a point on the timeline.</div>`}
@@ -10070,6 +10659,13 @@ function renderOpenBook() {
       </div>
 
       <div class="bk-row">
+        <label class="bk-field">Activity for the whole book
+          <select class="form-input" id="bk-activity" onchange="setBookActivity(this.value)">
+            ${getActivityTypes().map(at => `<option value="${at.id}" ${((p.activityType || '') === at.id) ? 'selected' : ''}>${escHtml(at.label)}</option>`).join('')}
+          </select>
+        </label>
+      </div>
+      <div class="bk-row">
         <label class="bk-field">Status
           <span class="bk-status-edit" onclick="openStatusEditor()" title="Rename or recolour these">✎ edit</span>
           <select class="form-input bk-status-sel" id="bk-status" onchange="setBookStatus(this.value)"
@@ -10086,7 +10682,15 @@ function renderOpenBook() {
       <div class="bk-add-task">
         <input class="form-input" id="bk-new-task" placeholder="Another thing to do…" maxlength="70"
           onkeydown="if(event.key==='Enter') addProjectTask()">
-        <button class="btn-primary" onclick="addProjectTask()" style="font-size:12px;">＋ Add task</button>
+        <div class="bk-add-dates">
+          <label>Starts<input class="form-input" id="bk-new-start" type="date" value="${tlToday()}"></label>
+          <label>Due by<input class="form-input" id="bk-new-due" type="date" value="${escAttr(p.dueDate || '')}"></label>
+          <label>Takes<select class="form-input" id="bk-new-mins">
+            ${[5,10,15,20,30,45,60,90,120,180,240].map(m => `<option value="${m}" ${m === 30 ? 'selected' : ''}>${formatMinutes(m)}</option>`).join('')}
+          </select></label>
+          <button class="btn-primary" onclick="addProjectTask()">＋ Add task</button>
+        </div>
+        <div class="bk-add-hint">Lands on the task board and drops a marker on the timeline.</div>
       </div>
     </div>
   </div>`;
@@ -10149,26 +10753,51 @@ function addProjectTask() {
   if (!p || !input) return;
   const raw = input.value.trim();
   if (!raw) { showToast('Type what needs doing first ✍️'); return; }
+
+  const startEl = document.getElementById('bk-new-start');
+  const dueEl = document.getElementById('bk-new-due');
+  const start = (startEl && startEl.value) || tlToday();
+  let due = (dueEl && dueEl.value) || '';
+  if (due && due < start) { showToast('The due date has to come after the start ⏳'); return; }
+
+  // The task is due on the due date if there is one, otherwise on the start —
+  // same rule the timeline uses, so the marker and the task always agree.
+  const dueKey = due || start;
+
   const task = {
     id: Date.now() + Math.floor(Math.random() * 999),
     text: `${p.name}: ${raw}`,
     assigneeId: myPersonId() || (state.people[0] && state.people[0].id) || '',
     priority: 'medium',
-    type: getActivityTypes()[0].id,
-    mins: 30,
-    due: p.dueDate || '',
+    type: p.activityType || getActivityTypes()[0].id,
+    mins: parseInt((document.getElementById('bk-new-mins') || {}).value, 10) || 30,
+    due: dueKey,
     done: false,
     source: 'project',
     subtasks: [],
     collapsed: false
   };
   state.tasks.push(task);
+
+  // ...and a matching timeline point, so adding work from the book puts it on
+  // the timeline without a second trip
+  tlPoints().push({
+    id: 'tp' + Date.now() + Math.floor(Math.random() * 999),
+    createdAt: Date.now(),
+    title: raw,
+    date: start,
+    endDate: due || '',
+    projectId: p.id,
+    type: task.type,
+    taskId: task.id
+  });
+
   save();
   input.value = '';
   renderOpenBook();
   renderBookshelf();
   if (typeof refreshTaskSurfaces === 'function') refreshTaskSurfaces();
-  showToast(`✅ Added "${task.text}"`);
+  showToast(`✅ "${task.text}" — due ${tlLabel(dueKey)}, and it's on the timeline`);
 }
 
 // Clicking the bare line inside a book's timeline adds a point to THAT project.
@@ -10185,6 +10814,82 @@ function bookAxisClick(e, projectId) {
   tlFilterProject = projectId;
   showTlMode('timeline');
   openPointModal(null, key);
+}
+
+// Which activity the whole project counts as. Setting it re-tags every task
+// under the book, so the pie chart and the calendar agree with the project.
+function setBookActivity(typeId) {
+  const p = projectById(bookOpenId);
+  if (!p) return;
+  p.activityType = typeId;
+  const tasks = projectTasks(p);
+  tasks.forEach(t => { t.type = typeId; });
+  // timeline points for this book follow too
+  pointsForProject(p.id).forEach(pt => { pt.type = typeId; });
+  save();
+  renderOpenBook();
+  renderTlBoard();
+  if (typeof refreshTaskSurfaces === 'function') refreshTaskSurfaces();
+  showToast(`🎨 ${tasks.length} task${tasks.length === 1 ? '' : 's'} set to ${typeMeta(typeId).label}`);
+}
+
+// ── editing a task straight from the book ──
+let editingTaskId = null;
+function startTaskRename(id) {
+  editingTaskId = id;
+  renderOpenBook();
+  setTimeout(() => {
+    const el = document.getElementById('bk-rename');
+    if (el) { el.focus(); el.select(); }
+  }, 30);
+}
+function commitTaskRename(id, value) {
+  // Escape already cancelled this edit — the blur that follows is just noise
+  if (editingTaskId !== id) return;
+  const p = projectById(bookOpenId);
+  const t = state.tasks.find(x => x.id === id);
+  editingTaskId = null;
+  // Re-rendering from inside a blur handler tears out the element that's
+  // blurring and the browser throws, so hand it to the next tick instead.
+  const redraw = () => setTimeout(renderOpenBook, 0);
+  if (!p || !t) { redraw(); return; }
+  const clean = (value || '').trim();
+  if (clean) {
+    // keep the "Project: " prefix so the task stays attached to this book
+    t.text = `${p.name}: ${clean}`;
+    // and keep any linked timeline point's label in step
+    const pt = tlPoints().find(x => x.taskId === id);
+    if (pt) pt.title = clean;
+    save();
+    if (typeof refreshTaskSurfaces === 'function') refreshTaskSurfaces();
+  }
+  redraw();
+}
+function setBookTaskMins(id, v) {
+  const t = state.tasks.find(x => x.id === id);
+  if (!t) return;
+  t.mins = parseInt(v, 10) || 0;
+  save();
+  renderOpenBook();
+  if (typeof refreshTaskSurfaces === 'function') refreshTaskSurfaces();
+}
+function addBookSubtask(id) {
+  const t = state.tasks.find(x => x.id === id);
+  if (!t) return;
+  if (!Array.isArray(t.subtasks)) t.subtasks = [];
+  t.subtasks.push({ text: 'New step', done: false, mins: 15 });
+  save();
+  renderOpenBook();
+  if (typeof refreshTaskSurfaces === 'function') refreshTaskSurfaces();
+  showToast('Subtask added — edit it on the task board');
+}
+function removeBookSubtask(id, si) {
+  const t = state.tasks.find(x => x.id === id);
+  if (!t || !t.subtasks) return;
+  t.subtasks.splice(si, 1);
+  save();
+  renderOpenBook();
+  if (typeof refreshTaskSurfaces === 'function') refreshTaskSurfaces();
 }
 
 function setTaskProjStatus(taskId, statusId) {

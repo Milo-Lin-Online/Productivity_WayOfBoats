@@ -444,16 +444,14 @@ function finishPomoSession(earlyBonus) {
   document.getElementById('pomo-startbtn').textContent = '🎣 Cast';
 
   // Which drop table applies. A session that ran its full length uses the timer
-  // it was set to. One that finished early uses the time actually spent, bumped
-  // one tier up — so finishing fast is rewarded, but setting a long timer and
-  // bailing early doesn't buy you the best odds.
+  // it was set to. One that finished early rolls on the time ACTUALLY spent —
+  // no bump, no credit for the timer you set. Finish a 55-minute timer in 47 and
+  // you get the 45-50 box, plus the guaranteed bonus fish added below.
   let rollMinutes = pomoMinutes;
-  let bumped = false;
+  let earlyRoll = false;
   if (earlyBonus && elapsedMin < pomoMinutes) {
-    const t0 = gachaTier(elapsedMin);
-    const t1 = Math.min(t0 + 1, 4);
-    rollMinutes = [20, 44, 50, 95, 120][t1];
-    bumped = true;
+    rollMinutes = elapsedMin;
+    earlyRoll = true;
   }
 
   const items = rollGacha(rollMinutes);
@@ -465,7 +463,7 @@ function finishPomoSession(earlyBonus) {
     minutes: elapsedMin || pomoMinutes,
     tier: gachaTier(rollMinutes),
     tierLabel: GACHA_TIER_LABEL[gachaTier(rollMinutes)],
-    bumped,
+    earlyRoll,
     goal: pomoGoal,
     items
   });
@@ -578,7 +576,7 @@ function showCatchReveal(entry, awarded) {
   const body = document.getElementById('catch-result');
 
   title.textContent = '🎣 Reeling it in…';
-  sub.textContent = entry.tierLabel + (entry.bumped ? ' (finished early — bumped up a tier)' : '');
+  sub.textContent = entry.tierLabel + (entry.earlyRoll ? ` (finished early — rolled on the ${entry.minutes} min you actually did)` : '');
   body.innerHTML = '';
   stage.className = 'catch-stage casting';
   modal.style.display = 'flex';
@@ -665,7 +663,7 @@ function renderPomo() {
         <div class="pl-label">${pend.length} catch${pend.length === 1 ? '' : 'es'} on the line</div>
         <div class="pl-lines">
           ${pend.map(c => `
-            <button class="pl-line" onclick="openCatch(${c.id})" title="${escAttr(c.tierLabel + (c.bumped ? ' · bumped a tier' : ''))}">
+            <button class="pl-line" onclick="openCatch(${c.id})" title="${escAttr(c.tierLabel + (c.earlyRoll ? ' · rolled on time actually spent' : ''))}">
               <span class="pl-string"></span><span class="pl-hook">🪝</span>
             </button>`).join('')}
         </div>

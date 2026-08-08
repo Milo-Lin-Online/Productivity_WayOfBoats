@@ -38,6 +38,108 @@ function selectTemplate(id) {
   renderTemplateGrid();
 }
 
+// ══════════════════════════════════════════════
+//  MEETING HELPERS
+// ══════════════════════════════════════════════
+
+/** Standings frozen at the moment a meeting was created. */
+function snapshotStandings() {
+  const ranked = visiblePeople().map(p => {
+    const fishArr = p.fish || [];
+    const fishPts = fishArr.reduce((s, f) => s + (typeof fishValue === 'function' ? fishValue(f) : 2), 0);
+    const mine = state.tasks.filter(t => t.assigneeId === p.id);
+    const done = mine.filter(t => t.done).length;
+    const ratio = mine.length ? done / mine.length : 0;
+    const streakPts = (typeof wcStreakPoints === 'function') ? wcStreakPoints(p.id) : 0;
+    const queen = ((p.stickers || []).length >= 5) ? 10 : 0;
+    const pts = Math.round(fishPts + (done / 5) + (10 * ratio) + streakPts + (mine.length / 15) + ((p.stars || 0) / 2))
+              + (p.pointsAdjust || 0) + queen;
+    return { id: p.id, pts };
+  }).sort((a, b) => b.pts - a.pts);
+  const out = {};
+  ranked.forEach((r, i) => { out[r.id] = { rank: i + 1, pts: r.pts }; });
+  return out;
+}
+function standingFor(m, pid) { return (m.standings && m.standings[pid]) || null; }
+function rankMedal(r) { return r === 1 ? '🥇' : r === 2 ? '🥈' : r === 3 ? '🥉' : '#' + r; }
+
+/** Did this person attend? Absentees are dropped per-meeting, not deleted. */
+function meetingAttendees(m) {
+  const gone = new Set((m.absent || []).map(String));
+  return visiblePeople().filter(p => !gone.has(String(p.id)));
+}
+function dropFromMeeting(mid, pid) {
+  const m = state.meetings.find(x => x.id === mid);
+  const p = personById(pid);
+  if (!m || !p) return;
+  askConfirm(`Mark ${p.name} as not attending? Their column is removed from this meeting only — nothing else is deleted.`, () => {
+    if (!Array.isArray(m.absent)) m.absent = [];
+    if (!m.absent.includes(pid)) m.absent.push(pid);
+    save(); renderMeetings();
+  }, 'Remove them');
+}
+function restoreToMeeting(mid, pid) {
+  const m = state.meetings.find(x => x.id === mid);
+  if (!m) return;
+  m.absent = (m.absent || []).filter(x => String(x) !== String(pid));
+  save(); renderMeetings();
+}
+
+/** Their tasks falling due within a week of this meeting. */
+function tasksDueThisWeek(m, pid) {
+  const base = m.date || (typeof estDateKey === 'function' ? estDateKey() : '');
+  if (!base) return [];
+  const [y, mo, d] = base.split('-').map(Number);
+  const end = new Date(y, mo - 1, d + 7);
+  const endKey = `${end.getFullYear()}-${String(end.getMonth()+1).padStart(2,'0')}-${String(end.getDate()).padStart(2,'0')}`;
+  return state.tasks
+    .filter(t => t.assigneeId === pid && t.due && t.due >= base && t.due <= endKey)
+    .sort((a, b) => (a.due || '').localeCompare(b.due || ''));
+}
+
+/** A small pie of what this person logged in the last 7 days. */
+function weekPieFor(pid, color) {
+  if (typeof personLogs !== 'function') return '';
+  const logs = personLogs(pid) || {};
+  const today = (typeof estDateKey === 'function') ? estDateKey() : '';
+  if (!today) return '';
+  const [y, mo, d] = today.split('-').map(Number);
+  const from = new Date(y, mo - 1, d - 6);
+  const fromKey = `${from.getFullYear()}-${String(from.getMonth()+1).padStart(2,'0')}-${String(from.getDate()).padStart(2,'0')}`;
+  const by = {};
+  Object.keys(logs).forEach(k => {
+    if (k < fromKey || k > today) return;
+    (logs[k].entries || []).forEach(e => {
+      const id = e.type || getActivityTypes()[0].id;
+      by[id] = (by[id] || 0) + Math.max(0, e.endMin - e.startMin);
+    });
+  });
+  const rows = Object.entries(by).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+  const total = rows.reduce((s, [, v]) => s + v, 0);
+  if (!total) {
+    return `<div class="wk-pie-empty">nothing logged in the last 7 days</div>`;
+  }
+  const R = 26, C = 28;
+  let ang = -Math.PI / 2, paths = '';
+  rows.forEach(([id, v]) => {
+    const frac = v / total, a2 = ang + frac * Math.PI * 2;
+    const col = typeMeta(id).color || color;
+    if (frac >= 0.999) paths += `<circle cx="${C}" cy="${C}" r="${R}" fill="${col}"/>`;
+    else {
+      const x1 = C + R*Math.cos(ang), y1 = C + R*Math.sin(ang);
+      const x2 = C + R*Math.cos(a2),  y2 = C + R*Math.sin(a2);
+      paths += `<path d="M${C},${C} L${x1.toFixed(1)},${y1.toFixed(1)} A${R},${R} 0 ${frac>0.5?1:0} 1 ${x2.toFixed(1)},${y2.toFixed(1)} Z" fill="${col}" stroke="#FFFDF6" stroke-width="1.4"/>`;
+    }
+    ang = a2;
+  });
+  const legend = rows.slice(0, 4).map(([id, v]) =>
+    `<span class="wkp-row"><i style="background:${typeMeta(id).color}"></i>${escHtml(typeMeta(id).label)} <b>${formatMinutes(v)}</b></span>`).join('');
+  return `<div class="wk-pie">
+    <svg width="56" height="56" viewBox="0 0 56 56">${paths}</svg>
+    <div class="wk-pie-legend">${legend}<span class="wkp-total">${formatMinutes(total)} logged</span></div>
+  </div>`;
+}
+
 function createMeeting() {
   const title = document.getElementById('nm-title').value.trim() || 'Team Meeting';
   // auto-default the date to today if the user didn't pick one
@@ -55,7 +157,12 @@ function createMeeting() {
     prompt: tmpl?.prompt || '',
     notes,
     checks: {},
-    things: {}
+    things: {},
+    oneThing: {},
+    absent: [],
+    // leaderboard positions frozen at this moment, so a past meeting always
+    // shows who was ahead on the day rather than who is ahead now
+    standings: snapshotStandings()
   };
   state.meetings.unshift(meeting);
   save();
@@ -153,7 +260,7 @@ function renderMeetingCards(meetings) {
     if (state.people.length === 0) {
       peopleCols = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-emoji">⚓</div><p>No crew yet!</p><small>Add people in "Edit People" and they'll appear here as columns.</small></div>`;
     } else {
-      peopleCols = visiblePeople().map(p => {
+      peopleCols = meetingAttendees(m).map(p => {
         const hsl = hexToHsl(p.color);
         const bg = `hsl(${hsl[0]},${hsl[1]}%,${Math.min(96, hsl[2] + 22)}%)`;
         const border = p.color;
@@ -166,6 +273,8 @@ function renderMeetingCards(meetings) {
         const mtTotal = myMeetingTasks.length;
         const mtPct = mtTotal > 0 ? Math.round((mtDone / mtTotal) * 100) : 0;
 
+        const st = standingFor(m, p.id);
+        const dueSoon = tasksDueThisWeek(m, p.id);
         const checks = (m.checks && m.checks[p.id]) || [];
         const checksHtml = checks.map((chk, ci) => `
           <div class="pcheck-row">
@@ -188,10 +297,24 @@ function renderMeetingCards(meetings) {
 
         return `<div class="person-col" style="background:${bg}; border-color:${border}; border-width:2px; border-style:solid;">
           <div class="person-col-header" style="color:${border}; border-color:${border}">
-            <span>${escHtml(p.name)}</span>
+            <span class="pc-name">
+              ${st ? `<span class="pc-rank" title="Position when this meeting was created — ${st.pts} pts">${rankMedal(st.rank)}</span>` : ''}
+              ${escHtml(p.name)}
+            </span>
+            ${(typeof stickerStrip === 'function') ? `<span class="pc-stickers">${stickerStrip(p)}</span>` : ''}
             <button class="col-expand-btn" style="color:${border}" title="Expand ${escAttr(p.name)}'s tasks" onclick="openPersonExpand(${m.id}, '${p.id}')">⤢</button>
+            <button class="col-drop-btn" title="${escAttr(p.name + " didn't attend")}" onclick="dropFromMeeting(${m.id}, '${p.id}')">✕</button>
           </div>
           ${tmpl && tmpl.prompt ? `<div style="font-size:11px; font-weight:700; color:var(--ink-light); margin-bottom:5px; font-style:italic">${escHtml(tmpl.prompt)}</div>` : ''}
+          <div class="one-thing" style="border-color:${border}">
+            <div class="things-header" style="color:${border}">⚡ 1 THING — quickest win
+              <button class="thing-pick" style="color:${border}" onclick="openTaskPicker(${m.id}, '${p.id}', 'one')">pick</button>
+            </div>
+            <input class="thing-text" value="${escAttr((m.oneThing && m.oneThing[p.id]) || '')}"
+              placeholder="the fastest thing you could finish now…"
+              onchange="editOneThing(${m.id}, '${p.id}', this.value)">
+          </div>
+
           <textarea class="person-notes-area"
             placeholder="Notes for ${escAttr(p.name)}…  (type /checkbox)"
             oninput="handleSlashInput(event, ${m.id}, '${p.id}')"
@@ -200,14 +323,29 @@ function renderMeetingCards(meetings) {
           >${escHtml(m.notes[p.id] || '')}</textarea>
 
           <div class="things-box" style="border-color:${border}">
-            <div class="things-header" style="color:${border}">⭐ 3 THINGS</div>
+            <div class="things-header" style="color:${border}">⭐ 3 THINGS
+              <button class="thing-pick" style="color:${border}" onclick="openTaskPicker(${m.id}, '${p.id}', 'three')">pick</button>
+            </div>
             ${thingsHtml}
             ${things.length < 6 ? `<button class="thing-add" style="color:${border}" onclick="addThing(${m.id}, '${p.id}')">＋ add a thing</button>` : ''}
           </div>
 
           <div class="checks-label" style="color:${border}">✅ Tasks (sync to board)</div>
+          ${dueSoon.length ? `<div class="due-week">
+            <div class="due-week-h">from the board · due within a week</div>
+            ${dueSoon.map(tk => `<label class="due-week-row ${tk.done ? 'done' : ''}">
+              <input type="checkbox" ${tk.done ? 'checked' : ''} onchange="toggleTask(${tk.id}); renderMeetings();">
+              <span>${escHtml(tk.text)}</span>
+              <b>${escHtml(new Date(tk.due + 'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}))}</b>
+            </label>`).join('')}
+          </div>` : ''}
           <div class="person-checks" id="checks-${m.id}-${p.id}">${checksHtml}</div>
           <button class="thing-add" style="color:${border}" onclick="addPCheck(${m.id}, '${p.id}')">＋ add checkbox</button>
+
+          <div class="wk-pie-box" style="border-color:${border}">
+            <div class="things-header" style="color:${border}">📊 THIS PAST WEEK</div>
+            ${weekPieFor(p.id, border)}
+          </div>
 
           <div class="meeting-stats">
             <div class="meeting-donut">${completenessDonut(mtDone, mtTotal, border)}</div>
@@ -216,6 +354,11 @@ function renderMeetingCards(meetings) {
               <div style="font-size:11px; color:var(--ink-light);">${mtDone}/${mtTotal} tasks · ⏱️ ${formatMinutes(mtTotalMins)} total</div>
             </div>
           </div>
+
+          ${(p.purchases && p.purchases.length) || p.streakFixers ? `<div class="pc-buys">
+            ${p.streakFixers ? `<span class="pc-buy" title="${p.streakFixers} streak fixer(s)">🩹${p.streakFixers}</span>` : ''}
+            ${(p.purchases || []).map(x => `<span class="pc-buy" title="${escAttr(x.name)}">${x.image ? `<img src="${escAttr(x.image)}" alt="">` : (x.emoji || '🎁')}</span>`).join('')}
+          </div>` : ''}
         </div>`;
       }).join('');
     }
@@ -242,6 +385,11 @@ function renderMeetingCards(meetings) {
         </div>
       </div>
       <div class="meeting-note-body">
+        ${(m.absent || []).length ? `<div class="absent-strip">
+          <span>Not attending:</span>
+          ${(m.absent || []).map(id => { const ap = personById(id); return ap
+            ? `<button class="absent-chip" onclick="restoreToMeeting(${m.id}, '${id}')" title="Add ${escAttr(ap.name)} back">${escHtml(ap.name)} ↩</button>` : ''; }).join('')}
+        </div>` : ''}
         <div class="people-grid">${peopleCols}</div>
       </div>
     </div>`;
@@ -609,4 +757,72 @@ function showConfirm(message, onYes) {
   overlay.querySelector('#cf-no').onclick = () => overlay.remove();
   overlay.querySelector('#cf-yes').onclick = () => { overlay.remove(); onYes(); };
   overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+}
+
+// ══════════════════════════════════════════════
+//  PICKERS — pull real tasks into 1 Thing / 3 Things
+// ══════════════════════════════════════════════
+let pickerCtx = { meetingId: null, personId: null, mode: 'three' };
+
+function editOneThing(mid, pid, value) {
+  const m = state.meetings.find(x => x.id === mid);
+  if (!m) return;
+  if (!m.oneThing) m.oneThing = {};
+  m.oneThing[pid] = value;
+  save();
+}
+
+function openTaskPicker(mid, pid, mode) {
+  pickerCtx = { meetingId: mid, personId: pid, mode };
+  const modal = document.getElementById('task-picker');
+  if (!modal) return;
+  const p = personById(pid);
+  document.getElementById('tp-title').textContent =
+    mode === 'one' ? '⚡ Pick the quickest win' : '⭐ Pick the top three';
+  document.getElementById('tp-sub').textContent = mode === 'one'
+    ? `${p ? p.name + "'s" : 'Their'} open tasks that take 35 minutes or less — shortest first.`
+    : `${p ? p.name + "'s" : 'Their'} open high-priority tasks. Choose up to three.`;
+
+  const pool = state.tasks
+    .filter(t => t.assigneeId === pid && !t.done)
+    .filter(t => mode === 'one' ? taskEffectiveMins(t) <= 35 : t.priority === 'high');
+  pool.sort((a, b) => mode === 'one'
+    ? taskEffectiveMins(a) - taskEffectiveMins(b)
+    : (a.due || '9999').localeCompare(b.due || '9999'));
+
+  document.getElementById('tp-list').innerHTML = pool.length ? pool.map(t => `
+    <label class="tp-row">
+      <input type="${mode === 'one' ? 'radio' : 'checkbox'}" name="tp" value="${t.id}">
+      <span class="tp-text">${escHtml(t.text)}</span>
+      <span class="tp-meta">⏱ ${formatMinutes(taskEffectiveMins(t))}${t.due ? ' · ' + escHtml(t.due) : ''}</span>
+    </label>`).join('')
+    : `<div class="tp-empty">${mode === 'one'
+        ? 'Nothing open at 35 minutes or under. Shorten a task, or add a quick one.'
+        : 'No open high-priority tasks. Mark some 🔴 High on the board first.'}</div>`;
+  modal.style.display = 'flex';
+}
+
+function applyTaskPicker() {
+  const { meetingId, personId, mode } = pickerCtx;
+  const m = state.meetings.find(x => x.id === meetingId);
+  if (!m) return;
+  const chosen = [...document.querySelectorAll('#tp-list input:checked')]
+    .map(el => state.tasks.find(t => String(t.id) === el.value)).filter(Boolean);
+  if (!chosen.length) { showToast('Pick at least one'); return; }
+
+  if (mode === 'one') {
+    if (!m.oneThing) m.oneThing = {};
+    m.oneThing[personId] = chosen[0].text;
+  } else {
+    if (!m.things) m.things = {};
+    const cur = m.things[personId] || ['', '', ''];
+    const picks = chosen.slice(0, 3).map(t => t.text);
+    // fill the three slots, keeping anything already typed that wasn't replaced
+    m.things[personId] = [0, 1, 2].map(i => picks[i] || cur[i] || '')
+      .concat(cur.slice(3).filter(Boolean));
+  }
+  save();
+  closeModal('task-picker');
+  renderMeetings();
+  showToast(mode === 'one' ? '⚡ Set as the quickest win' : `⭐ Added ${Math.min(chosen.length, 3)} to 3 Things`);
 }
