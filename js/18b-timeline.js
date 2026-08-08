@@ -9,6 +9,13 @@
 //  This module is self-contained on purpose: it defines its own date helpers
 //  rather than borrowing from 07-worldcup.js or 15-logs.js, so edits to those
 //  files can't break it.
+//
+//  ⚠️ NAMING: every module here is a classic script sharing ONE global scope,
+//  so two files declaring the same function name silently clobber each other —
+//  last one loaded wins. This file once declared `renderTimeline`, which
+//  15-logs.js already used to draw the day timeline; the log view started
+//  rendering the string "undefined". Everything public here is prefixed `tl`,
+//  `book`, `project` or `status` to keep out of the way. Keep it that way.
 // ═══════════════════════════════════════════════════════════════
 
 // Register our two collections with the sync engine at runtime. `const` arrays
@@ -134,7 +141,7 @@ function showTlMode(mode) {
 
 function renderTimelineSection() {
   if (tlMode === 'shelf') renderBookshelf();
-  else renderTimeline();
+  else renderTlBoard();
   renderTlProjectFilter();
 }
 
@@ -148,7 +155,7 @@ function renderTlProjectFilter() {
 function onTlFilterChange() {
   const sel = document.getElementById('tl-project-filter');
   tlFilterProject = sel ? sel.value : '';
-  renderTimeline();
+  renderTlBoard();
 }
 
 // ══════════════════════════════════════════════
@@ -181,11 +188,11 @@ function tlRange(pts) {
 
 function setTlScale(v) {
   tlScale = Math.max(0.4, Math.min(60, v));
-  renderTimeline();
+  renderTlBoard();
 }
 function zoomTl(mult) { setTlScale(tlScale * mult); }
 
-function renderTimeline() {
+function renderTlBoard() {
   const wrap = document.getElementById('tl-canvas');
   if (!wrap) return;
   const pts = tlVisiblePoints();
@@ -310,7 +317,7 @@ function zoomTlAt(mult, clientX) {
   const dayUnderCursor = (wrap.scrollLeft + cursorX) / Math.max(0.0001, tlScale);
 
   tlScale = Math.max(0.02, Math.min(60, tlScale * mult));
-  renderTimeline();                       // may clamp tlScale further
+  renderTlBoard();                       // may clamp tlScale further
 
   wrap.scrollLeft = (dayUnderCursor * tlScale) - cursorX;
 }
