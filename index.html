@@ -11197,6 +11197,263 @@ function removeBookLink(i) {
   p.links.splice(i, 1); save(); renderOpenBook();
 }
 
+// ═══════════════════════════════════════════════════════════════
+//  BOOK TASK HANDLERS
+//  These were lost when renderProjectTimeline was rewritten — a block
+//  replacement between two anchors swallowed everything in between, and
+//  because they're only ever called from inline onclick/onchange, nothing
+//  complained until a book was opened. Restored here.
+// ═══════════════════════════════════════════════════════════════
+
+/** One activity for the whole book: re-tags every task and point under it. */
+function setBookActivity(typeId) {
+  const p = projectById(bookOpenId);
+  if (!p) return;
+  p.activityType = typeId;
+  const tasks = projectTasks(p);
+  tasks.forEach(t => { t.type = typeId; });
+  pointsForProject(p.id).forEach(pt => { pt.type = typeId; });
+  save();
+  renderOpenBook();
+  renderTlBoard();
+  if (typeof refreshTaskSurfaces === 'function') refreshTaskSurfaces();
+  showToast(`🎨 ${tasks.length} task${tasks.length === 1 ? '' : 's'} set to ${typeMeta(typeId).label}`);
+}
+
+// ── renaming a task straight from the book ──
+let editingTaskId = null;
+
+function startTaskRename(id) {
+  editingTaskId = id;
+  renderOpenBook();
+  setTimeout(() => {
+    const el = document.getElementById('bk-rename');
+    if (el) { el.focus(); el.select(); }
+  }, 30);
+}
+
+function commitTaskRename(id, value) {
+  if (editingTaskId !== id) return;          // Escape already cancelled it
+  const p = projectById(bookOpenId);
+  const t = state.tasks.find(x => x.id === id);
+  editingTaskId = null;
+  // re-rendering inside a blur handler tears out the blurring element
+  const redraw = () => setTimeout(renderOpenBook, 0);
+  if (!p || !t) { redraw(); return; }
+  const clean = (value || '').trim();
+  if (clean) {
+    t.text = `${p.name}: ${clean}`;          // keep the prefix so it stays attached
+    const pt = tlPoints().find(x => x.taskId === id);
+    if (pt) pt.title = clean;
+    save();
+    if (typeof refreshTaskSurfaces === 'function') refreshTaskSurfaces();
+  }
+  redraw();
+}
+
+function setBookTaskMins(id, v) {
+  const t = state.tasks.find(x => x.id === id);
+  if (!t) return;
+  t.mins = Math.max(0, parseInt(v, 10) || 0);
+  save();
+  renderOpenBook();
+  if (typeof refreshTaskSurfaces === 'function') refreshTaskSurfaces();
+}
+
+/** Dates stay editable after the fact, and the timeline follows. */
+function setBookTaskDate(id, field, value) {
+  const t = state.tasks.find(x => x.id === id);
+  if (!t) return;
+  if (field === 'due' && value && t.start && value < t.start) {
+    showToast('Due has to come after the start ⏳'); renderOpenBook(); return;
+  }
+  if (field === 'start' && value && t.due && value > t.due) {
+    showToast('The start has to come before the due date ⏳'); renderOpenBook(); return;
+  }
+  t[field] = value || '';
+  const pt = tlPoints().find(x => x.taskId === id);
+  if (pt) {
+    if (field === 'due') pt.endDate = value || '';
+    else pt.date = value || pt.date;
+    if (pt.endDate && pt.endDate <= pt.date) pt.endDate = '';
+  }
+  save();
+  renderOpenBook();
+  renderTlBoard();
+  if (typeof refreshTaskSurfaces === 'function') refreshTaskSurfaces();
+}
+
+/** Subtasks carry their own text, range and estimate. */
+function setBookSubField(taskId, si, field, value) {
+  const t = state.tasks.find(x => x.id === taskId);
+  if (!t || !t.subtasks || !t.subtasks[si]) return;
+  const s = t.subtasks[si];
+  if (field === 'mins') s.mins = Math.max(0, parseInt(value, 10) || 0);
+  else if (field === 'due' && value && s.start && value < s.start) {
+    showToast('Due has to come after the start ⏳'); renderOpenBook(); return;
+  }
+  else s[field] = value;
+  save();
+  renderOpenBook();
+  renderTlBoard();
+  if (typeof refreshTaskSurfaces === 'function') refreshTaskSurfaces();
+}
+
+function addBookSubtask(id) {
+  const t = state.tasks.find(x => x.id === id);
+  if (!t) return;
+  if (!Array.isArray(t.subtasks)) t.subtasks = [];
+  t.subtasks.push({ text: 'New step', done: false, mins: 15 });
+  save();
+  renderOpenBook();
+  if (typeof refreshTaskSurfaces === 'function') refreshTaskSurfaces();
+}
+
+function removeBookSubtask(id, si) {
+  const t = state.tasks.find(x => x.id === id);
+  if (!t || !t.subtasks) return;
+  t.subtasks.splice(si, 1);
+  save();
+  renderOpenBook();
+  if (typeof refreshTaskSurfaces === 'function') refreshTaskSurfaces();
+}
+
+function setTaskProjStatus(taskId, statusId) {
+  const t = state.tasks.find(x => x.id === taskId);
+  if (!t) return;
+  t.projStatus = statusId;
+  save();
+  renderOpenBook();
+}
+
+/** Add a task from the book, with its own range, and drop it on the timeline. */
+function addProjectTask() {
+  const p = projectById(bookOpenId);
+  const input = document.getElementById('bk-new-task');
+  if (!p || !input) return;
+  const raw = input.value.trim();
+  if (!raw) { showToast('Type what needs doing first ✍️'); return; }
+
+  const startEl = document.getElementById('bk-new-start');
+  const dueEl = document.getElementById('bk-new-due');
+  const start = (startEl && startEl.value) || tlToday();
+  const due = (dueEl && dueEl.value) || '';
+  if (due && due < start) { showToast('The due date has to come after the start ⏳'); return; }
+  const dueKey = due || start;
+
+  const task = {
+    id: Date.now() + Math.floor(Math.random() * 999),
+    text: `${p.name}: ${raw}`,
+    assigneeId: myPersonId() || (state.people[0] && state.people[0].id) || '',
+    priority: 'medium',
+    type: p.activityType || getActivityTypes()[0].id,
+    mins: Math.max(0, parseInt((document.getElementById('bk-new-mins') || {}).value, 10) || 0),
+    start,
+    due: dueKey,
+    done: false,
+    source: 'project',
+    subtasks: [],
+    collapsed: false
+  };
+  state.tasks.push(task);
+
+  tlPoints().push({
+    id: 'tp' + Date.now() + Math.floor(Math.random() * 999),
+    createdAt: Date.now(),
+    title: raw, date: start, endDate: due || '',
+    projectId: p.id, type: task.type, taskId: task.id
+  });
+
+  save();
+  input.value = '';
+  renderOpenBook();
+  renderBookshelf();
+  if (typeof refreshTaskSurfaces === 'function') refreshTaskSurfaces();
+  showToast(`✅ "${task.text}" — due ${tlLabel(dueKey)}, and it's on the timeline`);
+}
+
+/** Clicking the bare line inside a book's timeline adds a point to THAT project. */
+function bookAxisClick(e, projectId) {
+  const canvas = e.currentTarget.closest('.bk-canvas');
+  if (!canvas) return;
+  const strip = canvas.querySelector('.tl-strip');
+  const scale = parseFloat(strip.dataset.scale) || 6;
+  const start = strip.dataset.start;
+  const rect = canvas.getBoundingClientRect();
+  const contentX = canvas.scrollLeft + (e.clientX - rect.left);
+  const key = tlAddDays(start, Math.round(contentX / Math.max(0.0001, scale)));
+  closeBook();
+  tlFilterProject = projectId;
+  showTlMode('timeline');
+  openPointModal(null, key);
+}
+
+// ══════════════════════════════════════════════
+//  STATUS EDITOR — rename, recolour, add, remove
+//  (also lost in the renderProjectTimeline rewrite)
+// ══════════════════════════════════════════════
+function openStatusEditor() {
+  renderStatusEditor();
+  const m = document.getElementById('status-editor');
+  if (m) m.style.display = 'flex';
+}
+
+function renderStatusEditor() {
+  const box = document.getElementById('se-list');
+  if (!box) return;
+  const list = projectStatuses();
+  box.innerHTML = list.map((s, i) => `
+    <div class="se-row">
+      <input type="color" value="${escAttr(s.color)}" onchange="editStatus(${i},'color',this.value)" title="Colour">
+      <input class="form-input" value="${escAttr(s.label)}" maxlength="26"
+        oninput="editStatus(${i},'label',this.value)">
+      <button onclick="removeStatus(${i})" title="Remove" ${list.length <= 1 ? 'disabled' : ''}>×</button>
+    </div>`).join('');
+}
+
+function editStatus(i, field, value) {
+  const list = projectStatuses();
+  if (!list[i]) return;
+  list[i][field] = value;
+  save();
+  if (field === 'color') renderStatusEditor();
+  if (bookOpenId) renderOpenBook();
+  renderBookshelf();
+}
+
+function addStatus() {
+  projectStatuses().push({
+    id: 'st' + Date.now() + Math.floor(Math.random() * 99),
+    label: 'New status', color: '#7FC4E8'
+  });
+  save();
+  renderStatusEditor();
+}
+
+function removeStatus(i) {
+  const list = projectStatuses();
+  if (list.length <= 1) return;
+  const gone = list[i];
+  const fallback = (list[0].id === gone.id ? list[1] : list[0]).label;
+  askConfirm(`Remove "${gone.label}"? Anything using it falls back to "${fallback}".`, () => {
+    list.splice(i, 1);
+    save();
+    renderStatusEditor();
+    if (bookOpenId) renderOpenBook();
+    renderBookshelf();
+  }, 'Remove it');
+}
+
+function resetStatuses() {
+  askConfirm('Put the five original statuses back? Your custom ones are replaced.', () => {
+    state.projectStatuses = DEFAULT_STATUSES.map(s => ({ ...s }));
+    save();
+    renderStatusEditor();
+    if (bookOpenId) renderOpenBook();
+    renderBookshelf();
+  }, 'Reset them');
+}
+
 
 // ═══════════════════════════════════════════════════════════════
 //  WAY OF BOATS — 19-boot.js
