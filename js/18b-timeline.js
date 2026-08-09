@@ -262,11 +262,53 @@ function onTlFilterChange() {
 //  drawn as bars along it. Zoom is pixels-per-day; panning is just the
 //  container's horizontal scroll.
 // ══════════════════════════════════════════════
+/** Strip the "Project: " prefix for display. */
+function stripProjectName(proj, text) {
+  if (!proj) return text || '';
+  return (text || '').replace(
+    new RegExp('^' + proj.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ':\\s*', 'i'), '');
+}
+
+/**
+ * Points the timeline shows that nobody placed by hand.
+ *
+ * A task belonging to a project appears whether it was made from the timeline,
+ * from the book, from the task board or from a meeting — if it has a due date
+ * it gets a marker. Subtasks with their own dates get smaller markers on the
+ * same lane, so you can see the shape of the work inside a task.
+ */
+function derivedPointsFor(proj) {
+  const out = [];
+  const placed = new Set(tlPoints().map(x => x.taskId).filter(Boolean));
+  projectTasks(proj).forEach(tk => {
+    if (!placed.has(tk.id) && (tk.due || tk.start)) {
+      out.push({
+        id: 'd' + tk.id, derived: true, taskId: tk.id, projectId: proj.id,
+        title: stripProjectName(proj, tk.text),
+        date: tk.start || tk.due, endDate: tk.due || tk.start,
+        type: tk.type, done: tk.done
+      });
+    }
+    (tk.subtasks || []).forEach((s, si) => {
+      if (!s.due && !s.start) return;
+      out.push({
+        id: 'sub' + tk.id + '_' + si, derived: true, sub: true, parentId: tk.id, subIndex: si,
+        projectId: proj.id, title: s.text || 'step',
+        date: s.start || s.due, endDate: s.due || s.start,
+        type: tk.type, done: s.done
+      });
+    });
+  });
+  return out;
+}
+
 function tlVisiblePoints() {
   // a point is only visible if its book is — that keeps other people's work,
   // and your own archived work, off the main timeline
-  const mine = new Set(projects().filter(p => ownsProject(p) && !p.archived).map(p => String(p.id)));
-  const all = tlPoints().filter(p => mine.has(String(p.projectId)));
+  const live = projects().filter(p => ownsProject(p) && !p.archived);
+  const mine = new Set(live.map(p => String(p.id)));
+  const all = tlPoints().filter(p => mine.has(String(p.projectId)))
+    .concat(...live.map(derivedPointsFor));
   const list = tlFilterProject
     ? all.filter(p => String(p.projectId) === String(tlFilterProject))
     : all;
@@ -293,95 +335,193 @@ function setTlScale(v) {
 }
 function zoomTl(mult) { setTlScale(tlScale * mult); }
 
+// Brackets live in a thin band just above the line; cards live in a band above
+// THAT. Keeping the two separate is what stops a busy month from growing a
+// skyscraper — the bracket band is only as tall as it needs to be, and the card
+// band never exceeds CARD_ROWS no matter how many events pile up.
+const BR_LEVEL_H  = 10;    // one bracket level — deliberately shallow
+// Two lines may never run along each other, and the only way to guarantee that
+// is to give every overlapping bracket its own level. So this isn't really a
+// cap; it's a ceiling for absurd data. The level height is what keeps it low:
+// six things running at once is 72px, not a skyscraper.
+const BR_MAX      = 60;
+const CARD_W      = 186;
+const CARD_H      = 78;
+const CARD_ROWS   = 3;     // cards cycle through this many heights, then repeat
+const CARD_STAGGER= 21;    // vertical offset per card row
+const EV_PAD      = 10;
+
+/** Interval-pack into at most `maxRows` rows. Returns rows used. */
+function packRows(items, maxRows, getL, getR) {
+  const rows = [];
+  let used = 0;
+  items.forEach(it => {
+    let r = 0;
+    for (; r < maxRows; r++) {
+      if (!rows[r]) rows[r] = [];
+      if (!rows[r].some(([s, e]) => !(getR(it) < s - EV_PAD || getL(it) > e + EV_PAD))) break;
+    }
+    if (r >= maxRows) {
+      // out of room: take the row that frees up soonest and nudge sideways so
+      // the card can never be completely hidden behind another
+      r = 0;
+      let best = Infinity;
+      for (let k = 0; k < maxRows; k++) {
+        const last = rows[k][rows[k].length - 1];
+        if (last && last[1] < best) { best = last[1]; r = k; }
+      }
+      it.nudge = 14;
+    }
+    rows[r].push([getL(it), getR(it)]);
+    it.row = r;
+    used = Math.max(used, r + 1);
+  });
+  return used;
+}
+
+/** Pack one side of the line: brackets first, then cards. */
+function layoutSide(list) {
+  if (!list.length) return { brLevels: 0 };
+  const brLevels = packRows(list.slice().sort((a, b) => a.x1 - b.x1), BR_MAX, e => e.x1, e => e.x2);
+  list.forEach(e => { e.brLevel = e.row; e.row = 0; e.nudge = 0; });
+  packRows(list, CARD_ROWS, e => e.cardL, e => e.cardL + CARD_W);
+  return { brLevels };
+}
+
 function renderTlBoard() {
   const wrap = document.getElementById('tl-canvas');
   if (!wrap) return;
   const pts = tlVisiblePoints();
   const { start, end } = tlRange(pts);
   const days = Math.max(1, tlDaysBetween(start, end));
-  // The strip is at least as wide as its window so the axis spans the view,
-  // but content is always laid out at the true scale so zooming visibly
-  // spreads the points apart.
+
   const winW = wrap.clientWidth || 900;
-  // Don't let anyone zoom out past "the whole thing fits" — beyond that the
-  // points just bunch against the left edge with dead space to the right.
-  const minScale = Math.max(0.02, (winW - 40) / days);
+  const minScale = Math.max(0.02, (winW - 120) / days);
   if (tlScale < minScale) tlScale = minScale;
   const width = Math.max(winW, days * tlScale);
   const x = key => tlDaysBetween(start, key) * tlScale;
 
-  // ── ruler ticks ──
-  // Aim for a tick roughly every 120px whatever the zoom, then snap that to a
-  // calendar-friendly interval so labels land on sensible dates instead of
-  // arbitrary ones. Fixed thresholds looked fine at some zooms and left the
-  // ruler nearly empty at others.
+  const evs = pts.map(q => {
+    const due = pointDue(q);
+    const x1 = x(q.date), x2 = x(due);
+    // the card is CENTRED on the due leg, clamped so it can't leave the canvas
+    const cardL = Math.max(0, Math.min(width - CARD_W, x2 - CARD_W / 2));
+    return { q, due, x1, x2, cardL, ranged: due !== q.date, nudge: 0 };
+  }).sort((a, b) => a.x2 - b.x2);
+
+  // Alternate sides. Hanging half the work below the line halves how tall
+  // either side has to grow, and gives the whole thing room to breathe.
+  evs.forEach((e, i) => { e.down = (i % 2 === 1); });
+  const up = evs.filter(e => !e.down), down = evs.filter(e => e.down);
+  const upL = layoutSide(up), downL = layoutSide(down);
+
+  const cardZone = CARD_H + (CARD_ROWS - 1) * CARD_STAGGER;
+  const GUTTER = 15;   // kept clear of brackets so the countdowns stay readable
+  const RULER = 33;    // band under the line holding the date ticks
+  const upBr   = up.length   ? upL.brLevels   * BR_LEVEL_H + 6 : 0;
+  const downBr = down.length ? downL.brLevels * BR_LEVEL_H + 6 : 0;
+  const lineY  = (up.length ? upBr + GUTTER + 12 + cardZone + 14 : 40);
+  const belowH = RULER + (down.length ? downBr + GUTTER + 12 + cardZone + 14 : 30);
+  const height = lineY + belowH + 8;
+  const upCardBottom = lineY - GUTTER - upBr - 12;   // undersides of the top cards
+  const downCardTop  = lineY + RULER + GUTTER + downBr + 12; // tops of the bottom cards
+
+  // ── ruler: faint full-height guides, labels parked at the very bottom ──
   const NICE_STEPS = [1, 2, 3, 7, 14, 30, 61, 91, 182, 365, 730, 1825];
   const wanted = Math.max(1, (days * tlScale) / 120);
   const raw = Math.max(1, days / wanted);
-  let stepDays = NICE_STEPS.reduce((best, n) =>
-    Math.abs(n - raw) < Math.abs(best - raw) ? n : best, NICE_STEPS[0]);
-  // hard ceiling on tick nodes so a decade at full zoom can't spray thousands
-  // of divs into the DOM
-  const MAX_TICKS = 400;
-  while (days / stepDays > MAX_TICKS) stepDays *= 2;
+  let stepDays = NICE_STEPS.reduce((b2, n) => Math.abs(n - raw) < Math.abs(b2 - raw) ? n : b2, NICE_STEPS[0]);
+  while (days / stepDays > 400) stepDays *= 2;
   const fmt = stepDays >= 365 ? (k => { const d = tlParse(k); return d ? d.getFullYear() : k; })
             : stepDays >= 61  ? (k => tlLabel(k, true))
             : (k => tlLabel(k));
-
   let ticks = '';
   for (let d = 0; d <= days; d += stepDays) {
-    const key = tlAddDays(start, d);
-    ticks += `<div class="tl-tick" style="left:${(d * tlScale).toFixed(1)}px">
-      <div class="tl-tick-line"></div><div class="tl-tick-label">${escHtml(String(fmt(key)))}</div>
+    ticks += `<div class="tl-tick" style="left:${(d * tlScale).toFixed(1)}px;height:${height}px">
+      <div class="tl-tick-line"></div>
+      <div class="tl-tick-mark" style="top:${lineY}px"></div>
+      <div class="tl-tick-label" style="top:${(lineY + 13).toFixed(0)}px">${escHtml(String(fmt(tlAddDays(start, d))))}</div>
     </div>`;
   }
 
-  // today marker, when it falls inside the range
   const today = tlToday();
   const todayMark = (today >= start && today <= end)
-    ? `<div class="tl-today" style="left:${x(today).toFixed(1)}px"><span>today</span></div>` : '';
+    ? `<div class="tl-today" style="left:${x(today).toFixed(1)}px;height:${height - 26}px"><span>today</span></div>` : '';
 
-  // ── eras: a bar spanning date → endDate ──
-  const eras = pts.filter(p => p.endDate && p.endDate > p.date).map(p => {
-    const proj = projectById(p.projectId);
+  const evHtml = evs.map(ev => {
+    const q = ev.q;
+    const proj = projectById(q.projectId);
     const col = (proj && proj.color) || 'var(--ocean)';
-    const left = x(p.date), w = Math.max(6, x(p.endDate) - left);
-    return `<div class="tl-era" style="left:${left.toFixed(1)}px;width:${w.toFixed(1)}px;background:${col}"
-      title="${escAttr((proj ? proj.name + ' · ' : '') + p.title + ' · starts ' + tlLabel(p.date, true) + ', due ' + tlLabel(p.endDate, true))}"></div>`;
-  }).join('');
+    const meta = q.type ? typeMeta(q.type) : null;
+    const w = Math.max(2, ev.x2 - ev.x1);
+    const legH = GUTTER + (ev.brLevel + 1) * BR_LEVEL_H;
+    // a down-side leg has to reach back up through the ruler band to the line
+    const reach = ev.down ? RULER : 0;
+    const brTop = ev.down ? lineY + RULER : lineY - legH;   // container top
+    const barOff = ev.down ? legH : 0;                 // where the bar sits inside it
+    const footOff = ev.down ? 0 : legH;                // feet always meet the line
+    const cardTop = ev.down
+      ? downCardTop + ev.row * CARD_STAGGER
+      : upCardBottom - CARD_H - ev.row * CARD_STAGGER;
+    // Carry the due-end leg the rest of the way so the bracket actually meets
+    // the underside of its card, instead of stopping short with a gap.
+    const barAbsY = ev.down ? brTop + barOff : brTop;
+    // Going up, the link is drawn from the card's TOP down to the bar and the
+    // card paints over it — cards size to their content, so measuring down from
+    // cardTop by the CARD_H constant would leave a gap under short ones.
+    const linkTop = ev.down ? barAbsY : cardTop;
+    const linkH   = Math.max(0, ev.down ? cardTop - barAbsY : barAbsY - cardTop);
+    const click = q.derived ? `onclick="openBook('${q.projectId}')"` : `onclick="openPointModal('${q.id}')"`;
 
-  // ── points, alternating above / below the line ──
-  const markers = pts.map((p, i) => {
-    const proj = projectById(p.projectId);
-    const col = (proj && proj.color) || 'var(--ocean)';
-    const above = i % 2 === 0;
-    const meta = p.type ? typeMeta(p.type) : null;
-    const task = p.taskId ? state.tasks.find(t => t.id === p.taskId) : null;
-    const due = pointDue(p);
-    const dueX = x(due);
-    // the boat is drawn relative to the marker, so it lands on the start date
-    const boat = (due !== p.date)
-      ? `<div class="tl-boat" style="left:${(x(p.date) - dueX).toFixed(1)}px;color:${col}"
-           title="${escAttr('starts ' + tlLabel(p.date, true))}">⛵</div>` : '';
-    return `<div class="tl-point ${above ? 'above' : 'below'}" data-pid="${p.id}" style="left:${dueX.toFixed(1)}px"
-        onclick="openPointModal('${p.id}')" title="${escAttr('due ' + tlLabel(due, true))}">
-      ${boat}
-      <div class="tl-card" style="border-color:${col}">
-        <div class="tl-card-date">${due !== p.date ? '⛵ ' + escHtml(tlLabel(p.date)) + ' → ' : ''}${escHtml(tlLabel(due, true))}</div>
-        <div class="tl-card-title">${escHtml(p.title || 'Untitled')}</div>
-        ${proj ? `<div class="tl-card-proj" style="color:${col}">${escHtml(proj.emoji || '📘')} ${escHtml(proj.name)}</div>` : ''}
-        ${meta ? `<span class="tl-card-chip" style="background:${meta.color}">${escHtml(meta.label)}</span>` : ''}
-        ${task ? `<span class="tl-card-chip ${task.done ? 'done' : ''}" style="background:var(--ink-light)">${task.done ? '✓ task done' : '◻ task'}</span>` : ''}
+    return `<div class="tl-ev ${q.sub ? 'is-sub' : ''} ${q.done ? 'is-done' : ''} ${ev.ranged ? '' : 'is-moment'} ${ev.down ? 'below' : ''}"
+        data-pid="${q.id}" style="left:${ev.x1.toFixed(1)}px;top:0" ${click}
+        title="${escAttr(q.title + ' · ' + (ev.ranged ? tlLabel(q.date) + ' → ' : '') + tlLabel(ev.due, true))}">
+
+      <div class="tl-ev-bracket" style="--c:${col};top:${brTop.toFixed(1)}px">
+        <div class="tl-ev-bar" style="width:${w.toFixed(1)}px;top:${barOff}px"></div>
+        <div class="tl-ev-leg l" style="height:${legH + reach}px;top:${-reach}px"></div>
+        ${ev.ranged ? `<div class="tl-ev-leg r" style="height:${legH + reach}px;top:${-reach}px;left:${w.toFixed(1)}px"></div>` : ''}
+        <div class="tl-ev-foot l" style="top:${footOff - reach}px"></div>
+        ${ev.ranged ? `<div class="tl-ev-foot r" style="top:${footOff - reach}px;left:${w.toFixed(1)}px"></div>` : ''}
+        ${ev.ranged ? `<div class="tl-ev-boat" style="top:${(ev.down ? 4 : legH - 19)}px">⛵</div>` : ''}
       </div>
-      <div class="tl-stem" style="background:${col}"></div>
-      <div class="tl-dot" style="background:${col}"></div>
+
+      <div class="tl-ev-link" style="--c:${col};left:${(ev.ranged ? w : 0).toFixed(1)}px;top:${linkTop.toFixed(1)}px;height:${linkH.toFixed(1)}px"></div>
+
+      <div class="tl-ev-card" style="border-color:${col};top:${cardTop.toFixed(1)}px;left:${(ev.cardL - ev.x1 + ev.nudge).toFixed(1)}px">
+        <div class="tl-card-range">⛵ ${ev.ranged
+            ? escHtml(tlLabel(q.date)) + ' → ' + escHtml(tlLabel(ev.due, true))
+            : escHtml(tlLabel(ev.due, true))}</div>
+        <div class="tl-card-title">${q.sub ? '↳ ' : ''}${escHtml(q.title || 'Untitled')}</div>
+        ${proj ? `<div class="tl-card-proj" style="color:${col}">${escHtml(proj.emoji || '📘')} ${escHtml(proj.name)}</div>` : ''}
+        <div class="tl-ev-chips">
+          ${meta ? `<span class="tl-card-chip" style="background:${meta.color}">${escHtml(meta.label)}</span>` : ''}
+          ${q.done ? `<span class="tl-card-chip" style="background:var(--matcha)">✓ done</span>` : ''}
+        </div>
+      </div>
+
     </div>`;
   }).join('');
 
-  wrap.innerHTML = `<div class="tl-strip" style="width:${width.toFixed(0)}px">
+  // Countdowns are drawn last, in one layer above every bracket, so a later
+  // event's lines can never paint over an earlier event's pill.
+  const pillHtml = evs.map(ev => {
+    const left = ev.q.done ? null : daysUntil(ev.due);
+    const cd = left === null ? { t: '—', c: '' }
+      : left < 0   ? { t: Math.abs(left) + 'd over', c: 'over' }
+      : left === 0 ? { t: 'today', c: 'today' }
+      : { t: left + 'd left', c: left <= 7 ? 'soon' : '' };
+    const y = ev.down ? lineY + RULER + GUTTER / 2 : lineY - GUTTER / 2;
+    return `<div class="tl-ev-due ${cd.c}" style="left:${ev.x2.toFixed(1)}px;top:${y.toFixed(1)}px">
+      <b>${escHtml(cd.t)}</b></div>`;
+  }).join('');
+
+  wrap.innerHTML = `<div class="tl-strip" style="width:${width.toFixed(0)}px;height:${height}px">
       <div class="tl-ticks">${ticks}</div>
-      <div class="tl-axis"></div>
-      ${eras}${todayMark}${markers}
+      <div class="tl-mainline" style="top:${lineY}px"></div>
+      ${todayMark}
+      ${evHtml}
+      <div class="tl-pills">${pillHtml}</div>
     </div>`;
 
   const empty = document.getElementById('tl-empty');
@@ -389,7 +529,7 @@ function renderTlBoard() {
   const rangeLabel = document.getElementById('tl-range');
   if (rangeLabel) {
     rangeLabel.textContent = pts.length
-      ? `${tlLabel(start, true)} → ${tlLabel(end, true)} · ${pts.length} point${pts.length === 1 ? '' : 's'}`
+      ? `${tlLabel(start, true)} → ${tlLabel(end, true)} · ${pts.length} event${pts.length === 1 ? '' : 's'}`
       : 'nothing plotted yet';
   }
   const zl = document.getElementById('tl-zoom-label');
@@ -430,10 +570,10 @@ function tlPanDown(e) {
   const wrap = document.getElementById('tl-canvas');
   if (!wrap) return;
   // let cards keep their own click behaviour
-  if (e.target.closest && e.target.closest('.tl-point')) return;
+  if (e.target.closest && e.target.closest('.tl-ev')) return;
   tlPan = { x: e.clientX, scroll: wrap.scrollLeft, moved: 0, wrap,
-            onAxis: !!(e.target.classList && (e.target.classList.contains('tl-axis') ||
-                       e.target.classList.contains('tl-strip') || e.target.classList.contains('tl-era'))) };
+            onAxis: !!(e.target.classList && (e.target.classList.contains('tl-mainline') ||
+                       e.target.classList.contains('tl-strip'))) };
   wrap.classList.add('panning');
   e.preventDefault();
 }
@@ -471,9 +611,9 @@ function stepTlPoint(dir) {
   if (tlFocusIdx < 0) tlFocusIdx = 0;
   const target = pts[tlFocusIdx];
   const wrap = document.getElementById('tl-canvas');
-  const el = wrap && wrap.querySelector(`.tl-point[data-pid="${target.id}"]`);
+  const el = wrap && wrap.querySelector(`.tl-ev[data-pid="${target.id}"]`);
   if (!wrap || !el) return;
-  wrap.querySelectorAll('.tl-point.focused').forEach(n => n.classList.remove('focused'));
+  wrap.querySelectorAll('.tl-ev.focused').forEach(n => n.classList.remove('focused'));
   el.classList.add('focused');
   const left = parseFloat(el.style.left) || 0;
   wrap.scrollTo({ left: left - wrap.clientWidth / 2, behavior: 'smooth' });
@@ -614,9 +754,10 @@ function renderBookshelf() {
     return `<button class="book ${p.archived ? 'is-archived' : ''}" style="--book:${col};--book-dark:${shade(col, -0.42)}" onclick="openBook('${p.id}')"
         title="${escAttr(p.name + ' · ' + prog.pct + '% done · ' + cd.text + (p.archived ? ' · archived' : ''))}">
       ${p.dueDate ? `<span class="book-days ${cd.cls}">${escHtml(cd.d !== null && cd.d >= 0 ? cd.d + 'd' : Math.abs(cd.d) + 'd!')}</span>` : ''}
+      ${p.cover ? `<span class="book-cover" style="background-image:url('${escAttr(p.cover)}')"></span>` : ''}
       ${p.archived ? '<span class="book-arch">archived</span>' : ''}
       <span class="book-cog" onclick="event.stopPropagation(); openBookEditor('${p.id}')" title="Edit, archive or delete">⋯</span>
-      <span class="book-emoji">${escHtml(p.emoji || '📘')}</span>
+      <span class="book-emoji">${p.cover ? '' : escHtml(p.emoji || '📘')}</span>
       <span class="book-title">${escHtml(p.name || 'Untitled')}</span>
       <span class="book-status" style="background:${statusOf(p.status).color};color:#fff">${escHtml(statusOf(p.status).label)}</span>
       <span class="book-progress"><span style="width:${prog.pct}%"></span></span>
@@ -662,6 +803,11 @@ function openBookEditor(id) {
     osel.value = (p && p.ownerId) || myPersonId() || (crew[0] && crew[0].id) || '';
   }
 
+  pendingCover = null;
+  const prev = document.getElementById('bk-cover-preview');
+  if (prev) prev.innerHTML = (p && p.cover)
+    ? `<img src="${escAttr(p.cover)}" alt=""><button onclick="clearBookCover()">remove</button>`
+    : '<span class="bk-cover-none">no cover</span>';
   const arch = document.getElementById('bk-archive');
   if (arch) {
     arch.style.display = p ? 'inline-flex' : 'none';
@@ -670,6 +816,37 @@ function openBookEditor(id) {
   document.getElementById('bk-delete').style.display = p ? 'inline-flex' : 'none';
   document.getElementById('book-editor').style.display = 'flex';
   setTimeout(() => document.getElementById('bk-name').focus(), 60);
+}
+
+let pendingCover = null;
+function onBookCoverPick(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      // crop to the spine's shape and shrink hard — a raw photo would bloat sync
+      const W = 200, H = 280;
+      const c = document.createElement('canvas');
+      c.width = W; c.height = H;
+      const ctx = c.getContext('2d');
+      const scale = Math.max(W / img.width, H / img.height);
+      const dw = img.width * scale, dh = img.height * scale;
+      ctx.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh);
+      pendingCover = c.toDataURL('image/jpeg', 0.78);
+      const prev = document.getElementById('bk-cover-preview');
+      if (prev) prev.innerHTML = `<img src="${pendingCover}" alt=""><button onclick="clearBookCover()">remove</button>`;
+    };
+    img.onerror = () => showToast("Couldn't read that image.");
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+}
+function clearBookCover() {
+  pendingCover = '';
+  const prev = document.getElementById('bk-cover-preview');
+  if (prev) prev.innerHTML = '<span class="bk-cover-none">no cover</span>';
 }
 
 function saveBookFromModal() {
@@ -686,6 +863,7 @@ function saveBookFromModal() {
   p.emoji = document.getElementById('bk-emoji').value;
   p.color = document.getElementById('bk-color').value;
   p.dueDate = document.getElementById('bk-due').value || '';
+  if (pendingCover !== null) p.cover = pendingCover;
   const osel = document.getElementById('bk-owner');
   if (osel && osel.value) p.ownerId = osel.value;
   else if (!p.ownerId) p.ownerId = myPersonId() || '';
@@ -842,24 +1020,31 @@ function renderOpenBook() {
                    title="Click to rename">${escHtml(strip(t.text))}</span>`}
             <select class="bk-task-status" style="background:${st.color}"
               onchange="setTaskProjStatus(${t.id}, this.value)">${statusOptions(t.projStatus)}</select>
-            <span class="bk-task-due">${t.due ? escHtml(tlLabel(t.due)) : '—'}</span>
           </div>
           <div class="bk-task-meta">
-            <span class="bk-mins" title="${subs.length ? 'sum of its subtasks' : 'time estimate'}">
-              ⏱ ${formatMinutes(mins)}${subs.length ? ' (subtasks)' : ''}</span>
-            ${!subs.length ? `<select class="bk-mins-sel" onchange="setBookTaskMins(${t.id}, this.value)">
-              ${[5,10,15,20,30,45,60,90,120,180,240].map(m =>
-                `<option value="${m}" ${mins === m ? 'selected' : ''}>${formatMinutes(m)}</option>`).join('')}
-            </select>` : ''}
+            <label class="bk-f">starts<input type="date" value="${escAttr(t.start || '')}"
+              onchange="setBookTaskDate(${t.id}, 'start', this.value)"></label>
+            <label class="bk-f">due<input type="date" value="${escAttr(t.due || '')}"
+              onchange="setBookTaskDate(${t.id}, 'due', this.value)"></label>
+            ${subs.length
+              ? `<span class="bk-mins" title="sum of its subtasks">⏱ ${formatMinutes(mins)} (subtasks)</span>`
+              : `<label class="bk-f">mins<input type="number" min="0" max="1440" step="5" value="${mins}"
+                   onchange="setBookTaskMins(${t.id}, this.value)"></label>`}
             <button class="bk-sub-add" onclick="addBookSubtask(${t.id})" title="Add a subtask">＋ sub</button>
           </div>
           ${subs.length ? `<div class="bk-subs">${subs.map((s, si) => `
-            <label class="bk-sub ${s.done ? 'done' : ''}">
+            <div class="bk-sub ${s.done ? 'done' : ''}">
               <input type="checkbox" ${s.done ? 'checked' : ''} onchange="toggleSubtask(${t.id}, ${si}); renderOpenBook();">
-              <span>${escHtml(s.text || 'subtask')}</span>
-              <span class="bk-sub-mins">${formatMinutes(s.mins || 0)}</span>
+              <input class="bk-sub-text" value="${escAttr(s.text || '')}" placeholder="step…"
+                onchange="setBookSubField(${t.id}, ${si}, 'text', this.value)">
+              <label class="bk-f">starts<input type="date" value="${escAttr(s.start || '')}"
+                onchange="setBookSubField(${t.id}, ${si}, 'start', this.value)"></label>
+              <label class="bk-f">due<input type="date" value="${escAttr(s.due || '')}"
+                onchange="setBookSubField(${t.id}, ${si}, 'due', this.value)"></label>
+              <label class="bk-f">mins<input type="number" min="0" max="600" step="5" value="${s.mins || 0}"
+                onchange="setBookSubField(${t.id}, ${si}, 'mins', this.value)"></label>
               <button onclick="removeBookSubtask(${t.id}, ${si})" title="Remove">×</button>
-            </label>`).join('')}</div>` : ''}
+            </div>`).join('')}</div>` : ''}
         </div>`;
       }).join('')}</div>`
         : `<div class="bk-empty">Nothing here yet. Add a task below, or drop a point on the timeline.</div>`}
@@ -915,10 +1100,8 @@ function renderOpenBook() {
           onkeydown="if(event.key==='Enter') addProjectTask()">
         <div class="bk-add-dates">
           <label>Starts<input class="form-input" id="bk-new-start" type="date" value="${tlToday()}"></label>
-          <label>Due by<input class="form-input" id="bk-new-due" type="date" value="${escAttr(p.dueDate || '')}"></label>
-          <label>Takes<select class="form-input" id="bk-new-mins">
-            ${[5,10,15,20,30,45,60,90,120,180,240].map(m => `<option value="${m}" ${m === 30 ? 'selected' : ''}>${formatMinutes(m)}</option>`).join('')}
-          </select></label>
+          <label>Due by<input class="form-input" id="bk-new-due" type="date"></label>
+          <label>Mins<input class="form-input" id="bk-new-mins" type="number" min="0" max="1440" step="5" value="30"></label>
           <button class="btn-primary" onclick="addProjectTask()">＋ Add task</button>
         </div>
         <div class="bk-add-hint">Lands on the task board and drops a marker on the timeline.</div>
@@ -929,263 +1112,63 @@ function renderOpenBook() {
 
 // A project's own timeline — same renderer idea, scoped and compact.
 function renderProjectTimeline(p) {
-  const pts = pointsForProject(p.id);
+  const pts = pointsForProject(p.id).concat(derivedPointsFor(p))
+    .sort((a, b) => pointDue(a).localeCompare(pointDue(b)));
   if (!pts.length) {
     return `<div class="bk-empty" style="padding:30px 10px;text-align:center">
-      No points on this project's timeline yet.
-      <div style="margin-top:10px"><button class="btn-primary" onclick="closeBook(); tlFilterProject='${p.id}'; showTlMode('timeline'); openPointModal(null);">📍 Add the first one</button></div>
+      No dated work on this project yet.
+      <div style="margin-top:10px"><button class="btn-primary" onclick="closeBook(); tlFilterProject='${p.id}'; showTlMode('timeline'); openPointModal(null);">📍 Add the first point</button></div>
     </div>`;
   }
   const start = tlAddDays(pts[0].date, -7);
   const lastEnd = pts.reduce((m, q) => (pointDue(q) > m ? pointDue(q) : m), pts[0].date);
   const end = tlAddDays(lastEnd, 7);
   const days = Math.max(1, tlDaysBetween(start, end));
-  const scale = Math.max(3, Math.min(24, 760 / days));
-  const width = Math.max(600, days * scale);
+  const scale = Math.max(3, Math.min(24, 700 / days));
+  const width = Math.max(560, days * scale);
   const x = k => tlDaysBetween(start, k) * scale;
   const col = p.color || '#3B9BD4';
 
-  const eras = pts.filter(q => q.endDate && q.endDate > q.date).map(q =>
-    `<div class="tl-era" style="left:${x(q.date).toFixed(1)}px;width:${Math.max(6, x(q.endDate) - x(q.date)).toFixed(1)}px;background:${col}"></div>`).join('');
-
-  const marks = pts.map((q, i) => {
+  const MINI_W = 130;
+  const evs = pts.map(q => {
     const due = pointDue(q);
-    const dueX = x(due);
-    const boat = (due !== q.date)
-      ? `<div class="tl-boat" style="left:${(x(q.date) - dueX).toFixed(1)}px;color:${col}">⛵</div>` : '';
-    return `
-    <div class="tl-point ${i % 2 === 0 ? 'above' : 'below'}" style="left:${dueX.toFixed(1)}px"
-      onclick="closeBook(); openPointModal('${q.id}')">
-      ${boat}
-      <div class="tl-card" style="border-color:${col}">
-        <div class="tl-card-date">${due !== q.date ? '⛵ ' + escHtml(tlLabel(q.date)) + ' → ' : ''}${escHtml(tlLabel(due, true))}</div>
-        <div class="tl-card-title">${escHtml(q.title)}</div>
+    const x1 = x(q.date), x2 = x(due);
+    return { q, due, x1, x2, cardL: Math.max(0, x2 - MINI_W / 2), ranged: due !== q.date, nudge: 0 };
+  }).sort((a, b) => a.x2 - b.x2);
+  const levels = packRows(evs, 40, e => Math.min(e.x1, e.cardL), e => Math.max(e.x2, e.cardL + MINI_W));
+  evs.forEach(e => { e.level = e.row; });
+  const lineY = Math.max(64, levels * 62) + 56;
+
+  const html = evs.map(ev => {
+    const barY = lineY - (ev.level + 1) * 62;
+    const legH = lineY - barY;
+    const w = Math.max(2, ev.x2 - ev.x1);
+    return `<div class="tl-ev mini ${ev.q.sub ? 'is-sub' : ''} ${ev.q.done ? 'is-done' : ''}"
+        style="left:${ev.x1.toFixed(1)}px;top:${barY.toFixed(1)}px"
+        onclick="closeBook(); ${ev.q.derived ? `openBook('${p.id}')` : `openPointModal('${ev.q.id}')`}">
+      <div class="tl-ev-bracket" style="--c:${col}">
+        <div class="tl-ev-bar" style="width:${w.toFixed(1)}px"></div>
+        <div class="tl-ev-leg l" style="height:${legH.toFixed(1)}px"></div>
+        ${ev.ranged ? `<div class="tl-ev-leg r" style="height:${legH.toFixed(1)}px;left:${w.toFixed(1)}px"></div>` : ''}
+        <div class="tl-ev-foot l" style="top:${legH.toFixed(1)}px"></div>
+        ${ev.ranged ? `<div class="tl-ev-foot r" style="top:${legH.toFixed(1)}px;left:${w.toFixed(1)}px"></div>` : ''}
       </div>
-      <div class="tl-stem" style="background:${col}"></div>
-      <div class="tl-dot" style="background:${col}"></div>
+      <div class="tl-ev-card" style="border-color:${col};left:${(ev.cardL - ev.x1).toFixed(1)}px;bottom:8px">
+        <div class="tl-card-title">${ev.q.sub ? '↳ ' : ''}${escHtml(ev.q.title)}</div>
+      </div>
+      <div class="tl-ev-due" style="left:${ev.ranged ? w.toFixed(1) : 0}px;top:${(legH - 30).toFixed(1)}px">
+        <b>${escHtml(tlLabel(ev.due))}</b>
+      </div>
     </div>`;
   }).join('');
 
   return `<div class="bk-h" style="margin-bottom:8px">🕰️ ${escHtml(p.name)} timeline
       <span style="font-size:10px;font-weight:700;color:#8A6A46"> — click the line to add a point</span></div>
-    <div class="tl-canvas bk-canvas"><div class="tl-strip" data-scale="${scale}" data-start="${start}" style="width:${width.toFixed(0)}px">
-      <div class="tl-axis" onclick="bookAxisClick(event, '${p.id}')"></div>${eras}${marks}
+    <div class="tl-canvas bk-canvas"><div class="tl-strip" data-scale="${scale}" data-start="${start}"
+        style="width:${width.toFixed(0)}px;height:${lineY + 34}px">
+      <div class="tl-mainline" style="top:${lineY}px" onclick="bookAxisClick(event, '${p.id}')"></div>
+      ${html}
     </div></div>`;
-}
-
-/**
- * Add a task straight to the project without going via the timeline.
- * It gets the project's own complete-by date so it still lands on the board
- * and the calendar somewhere sensible.
- */
-function addProjectTask() {
-  const p = projectById(bookOpenId);
-  const input = document.getElementById('bk-new-task');
-  if (!p || !input) return;
-  const raw = input.value.trim();
-  if (!raw) { showToast('Type what needs doing first ✍️'); return; }
-
-  const startEl = document.getElementById('bk-new-start');
-  const dueEl = document.getElementById('bk-new-due');
-  const start = (startEl && startEl.value) || tlToday();
-  let due = (dueEl && dueEl.value) || '';
-  if (due && due < start) { showToast('The due date has to come after the start ⏳'); return; }
-
-  // The task is due on the due date if there is one, otherwise on the start —
-  // same rule the timeline uses, so the marker and the task always agree.
-  const dueKey = due || start;
-
-  const task = {
-    id: Date.now() + Math.floor(Math.random() * 999),
-    text: `${p.name}: ${raw}`,
-    assigneeId: myPersonId() || (state.people[0] && state.people[0].id) || '',
-    priority: 'medium',
-    type: p.activityType || getActivityTypes()[0].id,
-    mins: parseInt((document.getElementById('bk-new-mins') || {}).value, 10) || 30,
-    due: dueKey,
-    done: false,
-    source: 'project',
-    subtasks: [],
-    collapsed: false
-  };
-  state.tasks.push(task);
-
-  // ...and a matching timeline point, so adding work from the book puts it on
-  // the timeline without a second trip
-  tlPoints().push({
-    id: 'tp' + Date.now() + Math.floor(Math.random() * 999),
-    createdAt: Date.now(),
-    title: raw,
-    date: start,
-    endDate: due || '',
-    projectId: p.id,
-    type: task.type,
-    taskId: task.id
-  });
-
-  save();
-  input.value = '';
-  renderOpenBook();
-  renderBookshelf();
-  if (typeof refreshTaskSurfaces === 'function') refreshTaskSurfaces();
-  showToast(`✅ "${task.text}" — due ${tlLabel(dueKey)}, and it's on the timeline`);
-}
-
-// Clicking the bare line inside a book's timeline adds a point to THAT project.
-function bookAxisClick(e, projectId) {
-  const canvas = e.currentTarget.closest('.bk-canvas');
-  if (!canvas) return;
-  const strip = canvas.querySelector('.tl-strip');
-  const scale = parseFloat(strip.dataset.scale) || 6;
-  const start = strip.dataset.start;
-  const rect = canvas.getBoundingClientRect();
-  const contentX = canvas.scrollLeft + (e.clientX - rect.left);
-  const key = tlAddDays(start, Math.round(contentX / Math.max(0.0001, scale)));
-  closeBook();
-  tlFilterProject = projectId;
-  showTlMode('timeline');
-  openPointModal(null, key);
-}
-
-// Which activity the whole project counts as. Setting it re-tags every task
-// under the book, so the pie chart and the calendar agree with the project.
-function setBookActivity(typeId) {
-  const p = projectById(bookOpenId);
-  if (!p) return;
-  p.activityType = typeId;
-  const tasks = projectTasks(p);
-  tasks.forEach(t => { t.type = typeId; });
-  // timeline points for this book follow too
-  pointsForProject(p.id).forEach(pt => { pt.type = typeId; });
-  save();
-  renderOpenBook();
-  renderTlBoard();
-  if (typeof refreshTaskSurfaces === 'function') refreshTaskSurfaces();
-  showToast(`🎨 ${tasks.length} task${tasks.length === 1 ? '' : 's'} set to ${typeMeta(typeId).label}`);
-}
-
-// ── editing a task straight from the book ──
-let editingTaskId = null;
-function startTaskRename(id) {
-  editingTaskId = id;
-  renderOpenBook();
-  setTimeout(() => {
-    const el = document.getElementById('bk-rename');
-    if (el) { el.focus(); el.select(); }
-  }, 30);
-}
-function commitTaskRename(id, value) {
-  // Escape already cancelled this edit — the blur that follows is just noise
-  if (editingTaskId !== id) return;
-  const p = projectById(bookOpenId);
-  const t = state.tasks.find(x => x.id === id);
-  editingTaskId = null;
-  // Re-rendering from inside a blur handler tears out the element that's
-  // blurring and the browser throws, so hand it to the next tick instead.
-  const redraw = () => setTimeout(renderOpenBook, 0);
-  if (!p || !t) { redraw(); return; }
-  const clean = (value || '').trim();
-  if (clean) {
-    // keep the "Project: " prefix so the task stays attached to this book
-    t.text = `${p.name}: ${clean}`;
-    // and keep any linked timeline point's label in step
-    const pt = tlPoints().find(x => x.taskId === id);
-    if (pt) pt.title = clean;
-    save();
-    if (typeof refreshTaskSurfaces === 'function') refreshTaskSurfaces();
-  }
-  redraw();
-}
-function setBookTaskMins(id, v) {
-  const t = state.tasks.find(x => x.id === id);
-  if (!t) return;
-  t.mins = parseInt(v, 10) || 0;
-  save();
-  renderOpenBook();
-  if (typeof refreshTaskSurfaces === 'function') refreshTaskSurfaces();
-}
-function addBookSubtask(id) {
-  const t = state.tasks.find(x => x.id === id);
-  if (!t) return;
-  if (!Array.isArray(t.subtasks)) t.subtasks = [];
-  t.subtasks.push({ text: 'New step', done: false, mins: 15 });
-  save();
-  renderOpenBook();
-  if (typeof refreshTaskSurfaces === 'function') refreshTaskSurfaces();
-  showToast('Subtask added — edit it on the task board');
-}
-function removeBookSubtask(id, si) {
-  const t = state.tasks.find(x => x.id === id);
-  if (!t || !t.subtasks) return;
-  t.subtasks.splice(si, 1);
-  save();
-  renderOpenBook();
-  if (typeof refreshTaskSurfaces === 'function') refreshTaskSurfaces();
-}
-
-function setTaskProjStatus(taskId, statusId) {
-  const t = state.tasks.find(x => x.id === taskId);
-  if (!t) return;
-  t.projStatus = statusId;
-  save();
-  renderOpenBook();
-}
-
-// ══════════════════════════════════════════════
-//  STATUS EDITOR — rename, recolour, add, remove
-// ══════════════════════════════════════════════
-function openStatusEditor() {
-  renderStatusEditor();
-  document.getElementById('status-editor').style.display = 'flex';
-}
-function renderStatusEditor() {
-  const box = document.getElementById('se-list');
-  if (!box) return;
-  box.innerHTML = projectStatuses().map((s, i) => `
-    <div class="se-row">
-      <input type="color" value="${escAttr(s.color)}" onchange="editStatus(${i},'color',this.value)" title="Colour">
-      <input class="form-input" value="${escAttr(s.label)}" maxlength="26"
-        oninput="editStatus(${i},'label',this.value)">
-      <button onclick="removeStatus(${i})" title="Remove" ${projectStatuses().length <= 1 ? 'disabled' : ''}>×</button>
-    </div>`).join('');
-}
-function editStatus(i, field, value) {
-  const list = projectStatuses();
-  if (!list[i]) return;
-  list[i][field] = value;
-  save();
-  if (field === 'color') renderStatusEditor();
-  if (bookOpenId) renderOpenBook();
-  renderBookshelf();
-}
-function addStatus() {
-  projectStatuses().push({
-    id: 'st' + Date.now() + Math.floor(Math.random() * 99),
-    label: 'New status', color: '#7FC4E8'
-  });
-  save();
-  renderStatusEditor();
-}
-function removeStatus(i) {
-  const list = projectStatuses();
-  if (list.length <= 1) return;
-  const gone = list[i];
-  askConfirm(`Remove "${gone.label}"? Anything using it falls back to "${list[0].id === gone.id ? list[1].label : list[0].label}".`, () => {
-    list.splice(i, 1);
-    save();
-    renderStatusEditor();
-    if (bookOpenId) renderOpenBook();
-    renderBookshelf();
-  }, 'Remove it');
-}
-function resetStatuses() {
-  askConfirm('Put the five original statuses back? Your custom ones are replaced.', () => {
-    state.projectStatuses = DEFAULT_STATUSES.map(s => ({ ...s }));
-    save();
-    renderStatusEditor();
-    if (bookOpenId) renderOpenBook();
-    renderBookshelf();
-  }, 'Reset them');
 }
 
 // ── book field handlers ──
