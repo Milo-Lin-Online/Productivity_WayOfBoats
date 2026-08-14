@@ -26,7 +26,7 @@ const GACHA_SMALL = [
   { id: 'goldfish',  emoji: '🐠', name: 'Goldfish' },
   { id: 'clownfish', emoji: '🎏', name: 'Clownfish' },
   { id: 'shrimp',    emoji: '🦐', name: 'Cleaner Shrimp' },
-  { id: 'shrimp2',   emoji: '🍤', name: 'A Different Shrimp' },
+  { id: 'shrimp2',   emoji: '🍤', name: 'Cooked Shrimp :(' },
   { id: 'snail',     emoji: '🐚', name: 'Sea Snail' },
 ];
 
@@ -38,7 +38,8 @@ const GACHA_BIG = [
   { id: 'crab',    emoji: '🦀', name: 'Dungeness Crab' },
   { id: 'octopus', emoji: '🐙', name: 'Octopus' },
   { id: 'squid',   emoji: '🦑', name: 'Giant Squid' },
-  { id: 'jelly',   emoji: '🪼', name: 'Jellyfish' },
+  { id: 'jelly',    emoji: '🪼', name: 'Jellyfish' },
+  { id: 'stingray', emoji: '🥏', name: 'Stingray' },
 ];
 
 // The rare one inside the big-fish pool: 10% of big pulls, worth 3 like any big fish.

@@ -524,15 +524,32 @@ function queueCatch(entry) {
 
 // Reel one in: play the reveal, then bank whatever it holds.
 let revealTimer = null;
-function openCatch(catchId) {
+let revealFailsafe = null;
+/**
+ * Reel one in.
+ *
+ * `awardOnly` skips the reveal so a batch can play a single animation at the
+ * end instead of cancelling its own timers — see openAllCatches.
+ */
+function openCatch(catchId, awardOnly) {
+  const p = personById(myPersonId());
+  if (!p) return null;
+  if (!Array.isArray(p.openedCatches)) p.openedCatches = [];
+
   const list = pendingCatches();
-  const idx = list.findIndex(c => c.id === catchId);
-  if (idx < 0) return;
+  // ids survive a JSON round trip as numbers or strings depending on where
+  // they came from, so compare loosely
+  const idx = list.findIndex(c => String(c.id) === String(catchId));
+  if (idx < 0) return null;
+  if (p.openedCatches.some(x => String(x) === String(catchId))) {
+    // already reeled in on another device — drop it rather than pay out twice
+    list.splice(idx, 1); save(); renderPomo(); return null;
+  }
   const entry = list[idx];
   list.splice(idx, 1);
+  p.openedCatches.push(entry.id);
+  if (p.openedCatches.length > 300) p.openedCatches = p.openedCatches.slice(-300);
 
-  const p = personById(myPersonId());
-  if (!p) return;
   if (!Array.isArray(p.fish)) p.fish = [];
 
   const awarded = [];
@@ -556,15 +573,30 @@ function openCatch(catchId) {
   }
 
   save();
-  showCatchReveal(entry, awarded);
+  if (!awardOnly) showCatchReveal(entry, awarded);
   renderPomo();
   renderLeaderboard();
+  return awarded;
 }
 
+/**
+ * Reel in everything at once.
+ *
+ * This used to fire openCatch on a 260ms stagger, and every call begins with
+ * clearTimeout(revealTimer) — so each reveal cancelled the one before it and
+ * all but the last sat on "Reeling it in…" forever. The fish were awarded; the
+ * animation simply never finished, which is what made it look frozen.
+ *
+ * Now everything is banked first and one reveal plays for the lot.
+ */
 function openAllCatches() {
-  const ids = pendingCatches().map(c => c.id);
-  if (!ids.length) return;
-  ids.forEach((id, i) => setTimeout(() => openCatch(id), i * 260));
+  const entries = pendingCatches().slice();
+  if (!entries.length) return;
+  const all = [];
+  entries.forEach(c => { const got = openCatch(c.id, true); if (got) all.push(...got); });
+  if (!all.length) { renderPomo(); return; }
+  showCatchReveal({ tierLabel: entries.length + ' catches reeled in',
+                    minutes: 0, goal: '', earlyRoll: false }, all);
 }
 
 function showCatchReveal(entry, awarded) {
@@ -582,7 +614,15 @@ function showCatchReveal(entry, awarded) {
   modal.style.display = 'flex';
 
   clearTimeout(revealTimer);
+  // Belt and braces: land the animation regardless, so nobody is ever left
+  // watching a spinner because something downstream threw.
+  clearTimeout(revealFailsafe);
+  revealFailsafe = setTimeout(() => {
+    const st = document.getElementById('catch-stage');
+    if (st && st.classList.contains('casting')) st.className = 'catch-stage landed';
+  }, 2600);
   revealTimer = setTimeout(() => {
+   try {
     stage.className = 'catch-stage landed';
     const sock = awarded.find(a => a.sock);
     const pity = awarded.find(a => a.pityMessage);
@@ -607,11 +647,19 @@ function showCatchReveal(entry, awarded) {
         <div class="catch-name">${escHtml(a.name)}${a.bonus ? ' (bonus!)' : ''}</div>
         <div class="catch-pts">${a.sock ? 'no points' : '+' + fishValue(a) + ' pts'}</div>
       </div>`).join('');
+   } catch (e) {
+    stage.className = 'catch-stage landed';
+    title.textContent = 'Nice catch!';
+    body.innerHTML = `<div class="catch-item"><div class="catch-emoji">🐟</div>
+      <div class="catch-name">${awarded.length} item(s) banked</div></div>`;
+    console.error('[boats] catch reveal failed', e);
+   }
   }, 1100);
 }
 
 function closeCatchReveal() {
   clearTimeout(revealTimer);
+  clearTimeout(revealFailsafe);
   const m = document.getElementById('catch-modal');
   if (m) m.style.display = 'none';
 }

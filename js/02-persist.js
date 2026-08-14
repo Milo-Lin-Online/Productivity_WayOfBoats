@@ -25,7 +25,7 @@ const APP_VERSION = (document.querySelector('meta[name="app-version"]') || {}).c
 
 const ITEM_COLLECTIONS = ['people', 'tasks', 'meetings', 'events', 'posts', 'messages'];
 // Singletons stored as a single row each.
-const SINGLETONS = ['templates', 'activityTypes', 'wcCategories', 'personTemplates', 'wsName', 'wsSub', 'scoreEpoch', 'storeItems', 'storeEnabled'];
+const SINGLETONS = ['_graves', 'templates', 'activityTypes', 'wcCategories', 'personTemplates', 'wsName', 'wsSub', 'scoreEpoch', 'storeItems', 'storeEnabled'];
 
 // A snapshot of what we last saw, so save() can push only what changed.
 let lastSnapshot = {};
@@ -216,6 +216,11 @@ async function pushChangedItems() {
     ensureRecordUids(p);
     PEOPLE_MERGER.stamp(p, lastSnapshot['people:' + p.id]);
   });
+  // Same idea for the id-keyed lists: note which items changed so the far end
+  // can pick the newer edit rather than the last one to arrive.
+  Object.keys(ID_LIST_SINGLETONS).forEach(k => {
+    if (Array.isArray(state[k])) stampIdList(k, state[k], lastSnapshot['single:' + k]);
+  });
   const map = buildItemMap();
   const rows = [];
   for (const k in map) {
@@ -294,7 +299,16 @@ function applyItemRow(item_key, data, isDelete) {
   const [kind, ...rest] = item_key.split(':');
   const idPart = rest.join(':');
   if (kind === 'single') {
-    if (!isDelete) state[idPart] = data;
+    if (!isDelete) {
+      // Singletons come in three shapes and each needs different handling:
+      //   · per-person maps  — merge key by key, each person owns their entry
+      //   · id-keyed lists   — merge item by item, newest edit wins, deletions stick
+      //   · plain values     — last write wins, which is right for a name or a flag
+      if (idPart === '_graves')                     state._graves = mergeTombstones(state._graves, data);
+      else if (PERSON_KEYED_SINGLETONS[idPart])     state[idPart] = mergePersonKeyedMap(state[idPart], data);
+      else if (ID_LIST_SINGLETONS[idPart])          state[idPart] = mergeIdList(idPart, state[idPart], data);
+      else                                          state[idPart] = data;
+    }
   } else if (ITEM_COLLECTIONS.includes(kind)) {
     if (!state[kind]) state[kind] = [];
     const arr = state[kind];
@@ -323,7 +337,12 @@ function applyItemRow(item_key, data, isDelete) {
         // streaks, a pile of logs and a handful of scalars, each of which can
         // be edited on a different device. Replacing the object wholesale
         // threw away whatever the other device had touched. Merge per field.
-        const merged = PEOPLE_MERGER.merge(arr[idx], data);
+        //
+        // A row older than ours has missed an admin correction, so its scores
+        // are not to be trusted; take only its personal fields.
+        const stale = rowEpoch(data) < rowEpoch(arr[idx]);
+        const merged = stale ? PEOPLE_MERGER.mergeStale(arr[idx], data)
+                             : PEOPLE_MERGER.merge(arr[idx], data);
         // if what we ended up with differs from what arrived, the row in the
         // database is now behind us and needs correcting
         if (snapshotOf(merged) !== snapshotOf(data)) staleRowRejected = true;

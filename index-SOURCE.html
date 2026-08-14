@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Stop phones serving a stale copy of the app from cache. The version below is
+     also used by the in-app update check. Bump APP_VERSION on every deploy. -->
+<meta name="app-version" content="2026.08.13-1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>⚓ WAY OF BOATS — The Immortal Typhoon</title>
+<!-- FAVICON — swap this data URI for your own image later (e.g. <link rel="icon" href="myfish.png">) -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%9F%3C/text%3E%3C/svg%3E">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- The stylesheet is versioned from the meta tag above rather than a literal,
+       so bumping the version busts the CSS too. It was hardcoded before, which
+       meant the browser happily served a stale stylesheet forever. -->
+  <script>
+  (function () {
+    var v = (document.querySelector('meta[name="app-version"]') || {}).content || '0';
+    var l = document.createElement('link');
+    l.rel = 'stylesheet';
+    l.href = 'css/styles.css?v=' + v;
+    document.head.appendChild(l);
+  })();
+  </script>
+</head>
+<body>
+
+<!-- Remote cursor layer -->
+<div id="cursor-layer"></div>
+
+<!-- Animated water at the bottom -->
+<div id="wave-band">
+  <svg viewBox="0 0 1440 90" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0,40 C180,10 360,70 540,45 C720,20 900,75 1080,45 C1260,15 1380,55 1440,40 L1440,90 L0,90 Z" fill="#8FD0F0" opacity="0.55"/>
+    <path d="M0,55 C200,30 400,80 600,55 C800,30 1000,80 1200,55 C1320,40 1400,60 1440,55 L1440,90 L0,90 Z" fill="#6CC4E8" opacity="0.7"/>
+    <path d="M0,70 C240,55 480,85 720,70 C960,55 1200,85 1440,70 L1440,90 L0,90 Z" fill="#3B9BD4" opacity="0.85"/>
+  </svg>
+</div>
+
+<!-- Floating paper boats — hulls sit on the waterline (bottom ~38px within the 90px wave band) -->
+<div class="floaty-boat" style="bottom:22px; left:6%; animation-delay:0s">
+  <svg width="56" height="44" viewBox="0 0 56 44">
+    <polygon points="28,2 28,26 10,26" fill="#E8536A" stroke="white" stroke-width="1.5"/>
+    <polygon points="30,6 30,26 46,26" fill="#F7E98E" stroke="white" stroke-width="1.5"/>
+    <rect x="27.5" y="2" width="2" height="26" fill="#8B5E3C"/>
+    <path d="M6,28 L50,28 L43,42 L13,42 Z" fill="#FFFFFF" stroke="#3B9BD4" stroke-width="1.5"/>
+    <path d="M6,28 L50,28 L47,33 L9,33 Z" fill="#DCF1FB"/>
+  </svg>
+</div>
+<div class="floaty-boat" style="bottom:22px; right:10%; animation-delay:1.2s">
+  <svg width="48" height="38" viewBox="0 0 56 44">
+    <polygon points="28,2 28,26 12,26" fill="#3B9BD4" stroke="white" stroke-width="1.5"/>
+    <rect x="27.5" y="2" width="2" height="26" fill="#8B5E3C"/>
+    <path d="M6,28 L50,28 L43,42 L13,42 Z" fill="#FFFFFF" stroke="#E8536A" stroke-width="1.5"/>
+    <path d="M6,28 L50,28 L47,33 L9,33 Z" fill="#FDE8EC"/>
+  </svg>
+</div>
+<div class="floaty-boat" style="bottom:24px; left:44%; animation-delay:2.4s">
+  <svg width="40" height="32" viewBox="0 0 56 44">
+    <polygon points="28,4 28,26 14,26" fill="#7AAF72" stroke="white" stroke-width="1.5"/>
+    <rect x="27.5" y="4" width="2" height="24" fill="#8B5E3C"/>
+    <path d="M8,28 L48,28 L42,42 L14,42 Z" fill="#FFFFFF" stroke="#3B9BD4" stroke-width="1.5"/>
+  </svg>
+</div>
+<div class="floaty-boat" style="bottom:22px; left:24%; animation-delay:0.6s">
+  <svg width="44" height="35" viewBox="0 0 56 44">
+    <polygon points="28,3 28,26 13,26" fill="#FF7A3C" stroke="white" stroke-width="1.5"/>
+    <rect x="27.5" y="3" width="2" height="25" fill="#8B5E3C"/>
+    <path d="M6,28 L50,28 L43,42 L13,42 Z" fill="#FFFFFF" stroke="#2876B0" stroke-width="1.5"/>
+    <path d="M6,28 L50,28 L47,33 L9,33 Z" fill="#DCF1FB"/>
+  </svg>
+</div>
+<div class="floaty-boat" style="bottom:24px; right:30%; animation-delay:3s">
+  <svg width="38" height="30" viewBox="0 0 56 44">
+    <polygon points="28,5 28,26 15,26" fill="#C9B8E8" stroke="white" stroke-width="1.5"/>
+    <rect x="27.5" y="5" width="2" height="23" fill="#8B5E3C"/>
+    <path d="M8,28 L48,28 L42,42 L14,42 Z" fill="#FFFFFF" stroke="#7AAF72" stroke-width="1.5"/>
+  </svg>
+</div>
+
+<!-- Floating paper fish -->
+<div id="fish-layer"></div>
+
+<!-- FISHING FOCUS TIMER -->
+<div id="pomodoro" class="pomo-collapsed">
+  <button id="pomo-toggle" onclick="togglePomo()" title="Fishing focus timer">🎣</button>
+  <div id="pomo-panel">
+    <div class="pomo-rs left"   onpointerdown="pomoResizeDown(event,'left')"   ondblclick="resetPomoSize()" title="Drag to widen · double-click to reset"></div>
+    <div class="pomo-rs top"    onpointerdown="pomoResizeDown(event,'top')"    ondblclick="resetPomoSize()" title="Drag to grow taller · double-click to reset"></div>
+    <div class="pomo-rs corner" onpointerdown="pomoResizeDown(event,'corner')" ondblclick="resetPomoSize()" title="Drag to resize · double-click to reset"></div>
+    <div class="pomo-title">🎣 Cast a Focus Line</div>
+
+    <!-- goal -->
+    <input id="pomo-goal" class="pomo-goal" placeholder="What are you fishing for? (your goal)" maxlength="80">
+
+    <!-- THINGS TO DO RIGHT NOW (from your Task Board) -->
+    <div class="pomo-todo">
+      <div class="pomo-todo-title">⚡ Things to do right now</div>
+      <div id="pomo-todo-list"></div>
+      <div class="pomo-todo-add">
+        <select id="pomo-task-picker" class="pomo-todo-input" onchange="addPomoTaskFromBoard()">
+          <option value="">＋ add a task…</option>
+        </select>
+      </div>
+      <div id="pomo-suggest" class="pomo-suggest"></div>
+    </div>
+
+    <!-- editable minutes -->
+    <div class="pomo-set-row">
+      <span style="font-size:11px;font-weight:800;color:var(--ink-light)">Minutes:</span>
+      <button class="pomo-step" onclick="bumpPomoMinutes(-5)">−</button>
+      <input id="pomo-minutes" class="pomo-minutes" type="number" min="1" max="180" value="25" onchange="setPomoMinutes(this.value)">
+      <button class="pomo-step" onclick="bumpPomoMinutes(5)">＋</button>
+    </div>
+
+    <div id="pomo-time">25:00</div>
+    <div id="pomo-goal-display" class="pomo-goal-display"></div>
+
+    <div class="pomo-btn-row">
+      <button class="pomo-ctrl" id="pomo-startbtn" onclick="startPausePomo()">🎣 Cast</button>
+      <button class="pomo-ctrl ghost" onclick="resetPomo()" title="Reset">↺</button>
+    </div>
+
+    <div id="pomo-line" style="display:none"></div>
+
+    <div class="pomo-catch">
+      <div style="font-size:11px;font-weight:800;color:var(--ink-light);margin-bottom:4px;">Your catch today</div>
+      <div id="pomo-fish-tank">🌊</div>
+      <label class="pomo-auto" title="Skip the reveal and bank catches automatically">
+        <input type="checkbox" id="pomo-autoopen" onchange="setAutoOpenCatches(this.checked)">
+        <span>open catches automatically</span>
+      </label>
+    </div>
+  </div>
+</div>
+
+<!-- fish-caught popup -->
+<div id="fish-caught" class="fish-caught" style="display:none">
+  <div class="fc-fish" id="fc-fish-emoji">🐟</div>
+  <div class="fc-name" id="fc-fish-name">A fish!</div>
+  <div class="fc-sub">added to your catch 🎣</div>
+</div>
+
+<!-- MESSAGE BOARD pop-out -->
+<div id="msgboard" class="board-collapsed">
+  <button id="board-toggle" onclick="toggleBoard()" title="Message board">💬</button>
+  <div id="board-panel">
+    <div class="board-title">🐚 Bottle Board <span style="font-size:10px;font-weight:700;color:var(--ink-light)">(silly notes for the crew)</span></div>
+    <div id="board-notes"></div>
+    <div class="board-input-row">
+      <input id="board-input" class="board-input" placeholder="Drop a message in a bottle…" maxlength="140" onkeydown="if(event.key==='Enter') postMessage()">
+      <button class="board-send" onclick="postMessage()">🍾</button>
+    </div>
+  </div>
+</div>
+
+<!-- App -->
+<div id="app">
+
+  <!-- SIDEBAR -->
+  <nav id="sidebar">
+    <div class="sidebar-logo">
+      <div style="font-size:34px; line-height:1; margin-bottom:6px;">⚓</div>
+      <div class="ws-title" contenteditable="true" spellcheck="false"
+        onblur="saveWorkspaceName(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"
+        title="Click to rename">WAY OF BOATS</div>
+      <span class="ws-sub" contenteditable="true" spellcheck="false"
+        onblur="saveWorkspaceSub(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"
+        title="Click to edit">the immortal typhoon 🌊</span>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Menu</div>
+      <button class="nav-btn active" onclick="showSection('meetings')" id="nav-meetings">
+        <span class="emoji">📋</span> <span>Meetings</span>
+      </button>
+      <button class="nav-btn" onclick="showSection('tasks')" id="nav-tasks">
+        <span class="emoji">✅</span> <span>Tasks</span>
+      </button>
+      <button class="nav-btn" onclick="showSection('leaderboard')" id="nav-leaderboard">
+        <span class="emoji">🏆</span> <span>Leaderboard</span>
+      </button>
+      <button class="nav-btn" onclick="showSection('calendar')" id="nav-calendar">
+        <span class="emoji">📆</span> <span>Content</span>
+      </button>
+      <button class="nav-btn" onclick="showSection('worldcup')" id="nav-worldcup">
+        <span class="emoji">🏆</span> <span>World Cup</span>
+      </button>
+      <button class="nav-btn" onclick="showSection('planning')" id="nav-planning">
+        <span class="emoji">📓</span> <span>Planning</span>
+      </button>
+      <button class="nav-btn" onclick="showSection('timeline')" id="nav-timeline">
+        <span class="emoji">🕰️</span> <span>Timeline</span>
+      </button>
+      <button class="nav-btn" onclick="showSection('admin')" id="nav-admin" style="display:none">
+        <span class="emoji">🛠️</span> <span>Admin</span>
+      </button>
+    </div>
+
+    <hr class="sidebar-divider">
+
+    <div class="nav-section">
+      <div class="online-label">🟢 Online now</div>
+      <div id="online-users-list"></div>
+    </div>
+
+    <hr class="sidebar-divider">
+
+    <div style="margin-top: auto;">
+      <button class="nav-btn" onclick="openPeopleConfig()">
+        <span class="emoji">👥</span> <span>Edit People</span>
+      </button>
+      <button class="nav-btn" onclick="openMyNameModal()">
+        <span class="emoji">🪪</span> <span>My Name</span>
+      </button>
+      <button class="nav-btn" onclick="openSyncModal()">
+        <span class="emoji">☁️</span> <span>Live Sync</span>
+      </button>
+      <button class="nav-btn" onclick="forceUpdate()" title="Reload the newest version and clear this device's cache">
+        <span class="emoji">⟳</span> <span>Force update</span>
+      </button>
+      <div id="app-version" style="font-size:9px; font-weight:700; text-align:center; color:var(--ink-light); opacity:0.7; margin-top:4px;"></div>
+      <div id="sync-status" style="font-size:10px; font-weight:800; text-align:center; padding:6px; border-radius:10px; margin-top:6px; background:rgba(0,0,0,0.05); color:var(--ink-light);">
+        ⚪ Local only
+      </div>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <main id="main">
+
+    <!-- MEETINGS SECTION -->
+    <div id="section-meetings" class="page-section active">
+      <div class="page-header">
+        <div class="page-title">📋 Meeting <span>Notes</span></div>
+        <div style="display:flex; gap:8px">
+          <button class="btn-secondary" onclick="openTemplatesModal()">✏️ Templates</button>
+          <button class="btn-primary" onclick="openNewMeetingModal()">＋ New Meeting</button>
+        </div>
+      </div>
+
+      <div class="tab-bar" id="week-tabs"></div>
+
+      <div id="next-task-banner" class="next-task-banner" style="display:none"></div>
+
+      <div id="meeting-notes-container">
+        <div class="empty-state">
+          <div class="empty-emoji">📝</div>
+          <p>No meetings yet!</p>
+          <small>Click "New Meeting" to get started.</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- TASKS SECTION -->
+    <div id="section-tasks" class="page-section">
+      <div class="page-header">
+        <div class="page-title">✅ Task <span>Board</span></div>
+      </div>
+
+      <div id="post-reminder-bar"></div>
+
+      <div class="paper-card">
+        <div class="task-input-row">
+          <input class="task-input" id="task-input" placeholder="Add a new task…" onkeydown="if(event.key==='Enter') addTask()">
+          <select class="assignee-select" id="task-assignee"></select>
+          <select class="assignee-select" id="task-priority" title="Priority">
+            <option value="high">🔴 High</option>
+            <option value="medium" selected>🟡 Medium</option>
+            <option value="low">🟢 Low</option>
+          </select>
+          <select class="assignee-select" id="task-type" title="Activity type"></select>
+          <input class="assignee-select" id="task-mins" title="Estimated time — type like 30m, 90 min, 2h" placeholder="30m" value="30m" style="width:64px; text-align:center; background:white; border:2.5px solid var(--lavender);">
+          <input class="assignee-select" id="task-due" type="date" title="Due date (optional) — beat it for a ⭐">
+          <button class="btn-primary" onclick="addTask()">＋ Add</button>
+        </div>
+
+        <div class="filter-row" id="task-filters">
+          <button class="filter-chip active" onclick="filterTasks('all', this)">All</button>
+          <button class="filter-chip" onclick="filterTasks('open', this)">Open</button>
+          <button class="filter-chip" onclick="filterTasks('done', this)">Done</button>
+          <select class="assignee-select" id="filter-person" onchange="changeSort()" title="Filter by person"></select>
+          <span style="flex:1"></span>
+          <button class="filter-chip" id="batch-toggle" onclick="toggleBatchMode(this)" title="Select multiple tasks to edit at once">Batch edit</button>
+          <button class="filter-chip" onclick="openTypesModal()" title="Edit activity types">⚙️ Activities</button>
+          <select class="assignee-select" id="sort-priority" onchange="changeSort()" title="Sort by priority">
+            <option value="">Sort: Priority ▾</option>
+            <option value="high-first">High → Low</option>
+            <option value="low-first">Low → High</option>
+          </select>
+          <select class="assignee-select" id="sort-time" onchange="changeSort()" title="Sort by time estimate">
+            <option value="">Sort: Time ▾</option>
+            <option value="short-first">Shortest first</option>
+            <option value="long-first">Longest first</option>
+          </select>
+          <select class="assignee-select" id="sort-due" onchange="changeSort()" title="Sort by due date">
+            <option value="">Sort: Due date ▾</option>
+            <option value="soon-first">Due soonest</option>
+            <option value="late-first">Due latest</option>
+          </select>
+          <div class="task-search-wrap">
+            <span class="task-search-ico">🔍</span>
+            <input id="task-search" class="task-search" type="search" placeholder="Search tasks…"
+              oninput="onTaskSearch(this.value)" autocomplete="off">
+            <button class="task-search-x" id="task-search-x" onclick="clearTaskSearch()" title="Clear" style="display:none">×</button>
+          </div>
+          <select class="assignee-select" id="sort-type" onchange="changeSort()" title="Filter by activity"></select>
+        </div>
+
+        <!-- batch edit bar (hidden until batch mode on) -->
+        <div id="batch-bar" style="display:none; align-items:center; gap:8px; flex-wrap:wrap; background:var(--ocean-pale); border-radius:12px; padding:10px; margin-bottom:14px;">
+          <span style="font-size:12px;font-weight:800;color:var(--ocean-deep)"><span id="batch-count">0</span> selected — set:</span>
+          <select class="assignee-select" id="batch-priority"><option value="">Priority…</option><option value="high">🔴 High</option><option value="medium">🟡 Medium</option><option value="low">🟢 Low</option></select>
+          <select class="assignee-select" id="batch-type"><option value="">Activity…</option></select>
+          <select class="assignee-select" id="batch-person"><option value="">Assignee…</option></select>
+          <select class="assignee-select" id="batch-mins" title="Time estimate">
+            <option value="">Time…</option>
+            <option value="5">5 min</option><option value="10">10 min</option>
+            <option value="15">15 min</option><option value="20">20 min</option>
+            <option value="30">30 min</option><option value="45">45 min</option>
+            <option value="60">1 hr</option><option value="90">1 hr 30</option>
+            <option value="120">2 hr</option><option value="180">3 hr</option>
+            <option value="240">4 hr</option><option value="480">8 hr</option>
+          </select>
+          <label style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:800;color:var(--ocean-deep)">
+            Due <input class="assignee-select" id="batch-due" type="date" style="padding:4px 6px">
+          </label>
+          <button class="btn-primary" onclick="applyBatch()">Apply</button>
+          <button class="filter-chip" onclick="selectAllTasks()">Select all shown</button>
+          <button class="filter-chip" onclick="clearBatch()">Clear</button>
+        </div>
+
+        <div class="task-list" id="task-list"></div>
+      </div>
+
+      <div class="paper-card">
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+          <div style="font-family:'Kalam',cursive; font-size:20px; font-weight:700; color:var(--ocean-deep);">🥧 Time by Activity</div>
+          <select class="assignee-select" id="pie-person" onchange="renderPie()"></select>
+        </div>
+        <div id="pie-wrap" style="display:flex; flex-wrap:wrap; gap:24px; align-items:center;">
+          <div id="pie-svg-holder"></div>
+          <div id="pie-legend" style="flex:1; min-width:180px;"></div>
+        </div>
+        <div id="pie-recs" style="margin-top:16px;"></div>
+      </div>
+    </div>
+
+    <!-- LEADERBOARD SECTION -->
+    <div id="section-leaderboard" class="page-section">
+      <div class="page-header">
+        <div class="page-title">🏆 Leader<span>board</span></div>
+        <span style="font-size:13px; font-weight:700; color:var(--ink-light);">Based on completed tasks</span>
+      </div>
+      <div id="leaderboard-panel"></div>
+
+    </div>
+
+    <!-- CALENDAR SECTION -->
+    <div id="section-calendar" class="page-section">
+      <div class="page-header">
+        <div class="page-title">📆 Content <span>Calendar</span></div>
+        <span style="font-size:13px; font-weight:700; color:#E8F1F8;">plan your social posts across the month</span>
+      </div>
+      <div class="paper-card" style="padding:16px;">
+        <div class="cal-toolbar">
+          <div class="cal-nav">
+            <button class="btn-secondary cal-arrow" onclick="calShift(-1)" title="Previous">‹</button>
+            <div class="cal-period-label" id="cal-period-label">—</div>
+            <button class="btn-secondary cal-arrow" onclick="calShift(1)" title="Next">›</button>
+            <button class="btn-secondary" onclick="calToday()" style="font-size:12px;">Today</button>
+          </div>
+          <div class="cal-toolbar-right">
+            <div class="cal-view-toggle">
+              <button id="cal-view-month" class="cal-view-btn active" onclick="setCalView('month')">Month</button>
+              <button id="cal-view-week" class="cal-view-btn" onclick="setCalView('week')">Week</button>
+            </div>
+            <button class="btn-primary" onclick="openPostModal(null)">＋ Add Post</button>
+          </div>
+        </div>
+        <div id="calendar-grid"></div>
+        <div style="font-size:12px; font-weight:600; color:var(--ink-light); margin-top:10px;">
+          Each post shows a colored band from its <b>start</b> day to its <b>publish</b> day. Click any post to edit it or turn it into a task.<br>
+          Your own task due dates land on the day they're due (⏰ upcoming · ❗overdue · ✓ done), tinted by activity category. Click one to open it on the board.
+        </div>
+        <div id="cal-due-legend" style="display:flex; flex-wrap:wrap; gap:10px; margin-top:8px;"></div>
+      </div>
+    </div>
+
+    <!-- WORLD CUP SECTION -->
+    <div id="section-worldcup" class="page-section">
+      <div class="page-header">
+        <div class="page-title">🏆 World <span>Cup</span></div>
+        <span style="font-size:13px; font-weight:700; color:#E8F1F8;">consistency beats perfection</span>
+      </div>
+      <div class="paper-card">
+        <div style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+          <div class="rules-box" style="flex:1; min-width:240px;">
+            <b>🏆 How the World Cup works</b>
+            <div class="rules-note">
+              • Tap a category's circle each day you do it — that builds your 🔥 streak.<br>
+              • Miss a day and that streak resets to <b>0</b>, but the check-in still counts toward your month.<br>
+              • <b>Every</b> check-in this month earns leaderboard points, consecutive or not: your month total ÷ 10. Go to the gym 19 scattered days and that's <b>1.9 points</b>.<br>
+              • Keep a category checked <b>26 days in one month</b> and you catch <b>3 🎣 fish</b> (once per category, per month).<br>
+              • Days roll over at <b>1:00 AM Eastern Time</b> (a little grace for night owls).<br>
+              • Everyone sets their <b>own</b> categories — tap "⚙️ my goals" on your card.
+            </div>
+          </div>
+          <button class="btn-secondary" onclick="openWcCategoriesModal()">⚙️ My Goals</button>
+        </div>
+        <div style="overflow-x:auto;">
+          <table id="worldcup-table"></table>
+        </div>
+      </div>
+
+      <!-- FISH MARKET -->
+      <div class="paper-card" id="market-card" style="margin-top:24px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:6px;">
+          <div style="font-family:'Kalam',cursive; font-size:22px; font-weight:700; color:var(--ocean-deep);">🐠 Fish Market</div>
+          <div class="market-balance" id="market-balance">🎣 0 fish</div>
+        </div>
+        <div style="font-size:12px; font-weight:700; color:var(--ink-light); margin-bottom:14px;">
+          Spend the fish you catch on stickers for your profile. Buy one, then equip it from your player profile on the leaderboard.
+        </div>
+        <div id="market-closed" style="display:none; font-size:12px; font-weight:800; color:var(--sail-red); background:var(--strawberry-pale); border-radius:10px; padding:8px 10px; margin-bottom:12px;">
+          🔒 The shop is currently closed by the admin. (You can see this because you're the admin.)
+        </div>
+        <div id="market-shelf" class="market-shelf"></div>
+      </div>
+    </div>
+
+    <!-- PLANNING SECTION (private spiral notebook) -->
+    <div id="section-planning" class="page-section">
+      <div class="page-header">
+        <div class="page-title">📓 Plan<span>ning</span></div>
+        <span style="font-size:13px; font-weight:700; color:#E8F1F8;" id="planning-owner">your own page, separate from everyone else's</span>
+      </div>
+
+      <div class="nb-tabs">
+        <button class="nb-tab active" id="nbtab-logs" onclick="showNbTab('logs')">🕑 Logs</button>
+        <button class="nb-tab" id="nbtab-notes" onclick="showNbTab('notes')">✍️ Notes to self</button>
+      </div>
+
+      <div class="notebook">
+        <div class="nb-rings" id="nb-rings"></div>
+
+        <!-- ══ LOGS (today + the archive, one interface) ══ -->
+        <div class="nb-pane active" id="nbpane-logs">
+          <div class="nb-head">
+            <div class="nb-title">🕑 Logs</div>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <span class="nb-saved" id="nb-log-saved">saved ✓</span>
+              <select class="assignee-select" id="log-person" onchange="onLogPersonChange()" title="Whose logs to show"></select>
+            </div>
+          </div>
+          <div style="font-size:12px; font-weight:700; color:var(--ink-light); margin-bottom:12px;">
+            Pick a day below to open it. Drag empty space to add a block, drag a block to move it,
+            drag an edge to resize, click it to edit.
+          </div>
+
+          <div class="nb-sub"><div class="nb-sub-label">Your week</div><span style="font-size:11px; font-weight:700; color:var(--ink-light);">last 7 days, plus tomorrow to plan into</span></div>
+          <div class="wk" id="log-week"></div>
+
+          <hr class="nb-divider">
+
+          <div class="nb-sub">
+            <div class="nb-sub-label">📑 Contents</div>
+            <span style="font-size:11px; font-weight:700; color:var(--ink-light);" id="log-count"></span>
+          </div>
+          <div class="log-toc" id="log-toc"></div>
+
+          <div id="log-detail" style="margin-top:18px;"></div>
+        </div>
+
+        <!-- ══ NOTES TO SELF ══ -->
+        <div class="nb-pane" id="nbpane-notes">
+          <div class="nb-head">
+            <div class="nb-title">✍️ Notes to self</div>
+            <span class="nb-saved" id="nb-saved">saved ✓</span>
+          </div>
+
+          <div class="nb-paper">
+            <textarea class="nb-textarea" id="nb-textarea" spellcheck="true"
+              placeholder="Brain dump. Half-thoughts welcome…"
+              oninput="onPlanningInput()" onblur="savePlanningNow()"></textarea>
+          </div>
+
+          <hr class="nb-divider">
+
+          <div class="nb-sub">
+            <div class="nb-sub-label">🔗 Tasks I'm thinking about</div>
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+              <select class="assignee-select" id="nb-task-picker" title="Pin a task from the board"></select>
+              <button class="btn-secondary" onclick="addPlanningLink()" style="font-size:12px;">＋ Pin task</button>
+            </div>
+          </div>
+
+          <div class="nb-links" id="nb-links"></div>
+        </div>
+      </div>
+
+      <!-- pie of logged time, under the notebook -->
+      <div class="paper-card">
+        <div class="nb-sub">
+          <div class="nb-sub-label">🥧 Where your logged time actually went</div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <select class="assignee-select" id="logpie-person" onchange="renderLogPie()" title="Whose logged time to show"></select>
+            <select class="assignee-select" id="logpie-range" onchange="renderLogPie()">
+              <option value="today">Today</option>
+              <option value="week" selected>Last 7 days</option>
+              <option value="all">All time</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap:24px; align-items:center;">
+          <div id="logpie-svg"></div>
+          <div id="logpie-legend" style="flex:1; min-width:180px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TIMELINE SECTION -->
+    <div id="section-timeline" class="page-section">
+      <div class="page-header">
+        <div class="page-title">🕰️ Time<span>line</span></div>
+        <span style="font-size:13px; font-weight:700; color:#E8F1F8;" id="tl-range">nothing plotted yet</span>
+      </div>
+
+      <div class="nb-tabs">
+        <button class="nb-tab active" id="tl-tab-timeline" onclick="showTlMode('timeline')">🕰️ All timelines</button>
+        <button class="nb-tab" id="tl-tab-shelf" onclick="showTlMode('shelf')">📚 Project bookshelf</button>
+      </div>
+
+      <div class="paper-card" style="border-radius:4px 20px 20px 20px;">
+        <!-- ── ALL TIMELINES ── -->
+        <div class="tl-pane active" id="tl-pane-timeline">
+          <div class="tl-toolbar">
+            <select class="assignee-select" id="tl-project-filter" onchange="onTlFilterChange()"></select>
+            <div class="tl-zoom">
+              <button class="btn-secondary" onclick="zoomTl(1/1.6)" title="Zoom out">−</button>
+              <span id="tl-zoom-label">weeks</span>
+              <button class="btn-secondary" onclick="zoomTl(1.6)" title="Zoom in">＋</button>
+            </div>
+            <button class="btn-primary" onclick="openPointModal(null)" style="font-size:13px;">📍 Add a point</button>
+          </div>
+          <div class="tl-hint">Drag to travel · ⌘/Ctrl + scroll to zoom where you point · ← → to hop between points · click the line to add one</div>
+          <div class="tl-canvas" id="tl-canvas" onwheel="tlWheel(event)" onpointerdown="tlPanDown(event)"></div>
+          <div id="tl-empty" class="tl-empty-note" style="display:none">
+            Nothing on the timeline yet. Add a book on the shelf, then drop a point on it.
+          </div>
+        </div>
+
+        <!-- ── BOOKSHELF ── -->
+        <div class="tl-pane" id="tl-pane-shelf">
+          <div class="shelf-head">
+            <div class="nb-sub-label">📚 Your shelf</div>
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+              <span id="shelf-archive-bar"></span>
+              <span style="font-size:11px;font-weight:700;color:var(--ink-light);">click a spine to open it</span>
+            </div>
+          </div>
+          <div class="shelf">
+            <div class="shelf-books" id="tl-shelf"></div>
+            <div class="shelf-plank"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADMIN SECTION (only reachable when your name is adminmilo) -->
+    <div id="section-admin" class="page-section">
+      <div class="page-header">
+        <div class="page-title">🛠️ Ad<span>min</span></div>
+        <span style="font-size:13px; font-weight:700; color:#E8F1F8;">overrides &amp; resets — this account is invisible to the crew</span>
+      </div>
+
+      <div class="paper-card">
+        <div class="nb-sub"><div class="nb-sub-label">🧹 Clear finished tasks from a meeting</div></div>
+        <div style="font-size:12px; font-weight:700; color:var(--ink-light); margin-bottom:10px;">
+          Deletes every task already marked done under one meeting, for everyone. Unfinished tasks are left alone.
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+          <select class="assignee-select" id="admin-meeting" onchange="renderAdminMeetingCount()"></select>
+          <button class="btn-secondary" onclick="adminClearDoneFromMeeting()" style="color:var(--sail-red);">🧹 Clear done tasks</button>
+          <span style="font-size:12px; font-weight:800; color:var(--ocean-deep);" id="admin-meeting-count"></span>
+        </div>
+      </div>
+
+      <div class="paper-card">
+        <div class="nb-sub"><div class="nb-sub-label">🎛️ Per-player overrides</div></div>
+        <div style="font-size:12px; font-weight:700; color:var(--ink-light); margin-bottom:10px;">
+          Type a number and press Enter (or click away) to set it exactly — no confirmation needed.
+          Points ± is added on top of the computed score and may be negative.
+        </div>
+        <div id="admin-players"></div>
+      </div>
+
+      <div class="paper-card">
+        <div class="nb-sub">
+          <div class="nb-sub-label">🐠 Fish Market</div>
+          <label class="admin-toggle">
+            <input type="checkbox" id="admin-store-on" onchange="adminToggleStore(this.checked)">
+            <span>Shop open to the crew</span>
+          </label>
+        </div>
+        <div style="font-size:12px; font-weight:700; color:var(--ink-light); margin-bottom:10px;">
+          Nine slots. The 🩹 Streak Fixer is permanent and can't be removed — the other eight are yours.
+          Items you add here are collectibles: they can't be equipped, they just show on a player's profile.
+        </div>
+        <div id="admin-store-list" class="admin-store-list"></div>
+        <div class="admin-store-add">
+          <input class="form-input" id="store-new-name" placeholder="Item name" maxlength="28">
+          <input class="form-input" id="store-new-cost" type="number" min="1" max="99" value="4" title="Cost in fish">
+          <input class="form-input" id="store-new-emoji" placeholder="🎁" maxlength="4" title="Fallback emoji">
+          <label class="btn-secondary" style="cursor:pointer; font-size:12px;">
+            🖼️ Pick image<input type="file" accept="image/*" id="store-new-file" onchange="onStoreImagePick(this)" style="display:none">
+          </label>
+          <button class="btn-primary" onclick="adminAddStoreItem()" style="font-size:12px;">＋ Add item</button>
+        </div>
+        <div id="store-new-preview" style="margin-top:8px;"></div>
+      </div>
+
+      <div class="paper-card">
+        <div class="nb-sub">
+          <div class="nb-sub-label">🎰 Gacha drop rules</div>
+          <span style="font-size:11px;font-weight:800;color:var(--sail-red);">CONFIDENTIAL — admin only</span>
+        </div>
+        <div style="font-size:12px; font-weight:700; color:var(--ink-light); margin-bottom:10px;">
+          Players never see these numbers. This card only exists inside the admin section.
+        </div>
+        <div id="admin-gacha-rules"></div>
+      </div>
+
+      <div class="paper-card">
+        <div class="nb-sub">
+          <div class="nb-sub-label">🏅 Meeting winners</div>
+          <select class="assignee-select" id="admin-winner-meeting" onchange="renderAdminWinners()"></select>
+        </div>
+        <div style="font-size:12px; font-weight:700; color:var(--ink-light); margin-bottom:10px;">
+          Standings are frozen when a meeting is created. Correct them here if they're wrong.
+        </div>
+        <div id="admin-winners"></div>
+      </div>
+
+      <div class="paper-card">
+        <div class="nb-sub"><div class="nb-sub-label">💣 Reset everyone</div></div>
+        <div style="font-size:12px; font-weight:700; color:var(--ink-light); margin-bottom:10px;">
+          Use these when you want a clean slate for a new scoring period. Each one asks first.
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn-secondary" onclick="adminResetAll('fish')">🎣 Clear all fish</button>
+          <button class="btn-secondary" onclick="adminResetAll('streaks')">🔥 Clear all streaks &amp; check-ins</button>
+          <button class="btn-secondary" onclick="adminResetAll('stars')">⭐ Clear all stars</button>
+          <button class="btn-secondary" onclick="adminResetAll('focus')">⏳ Clear all focus time</button>
+          <button class="btn-secondary" onclick="adminResetAll('logs')">🕑 Clear all day logs</button>
+          <button class="btn-secondary" onclick="adminResetAll('adjust')">🎛️ Clear all adjustments</button>
+          <button class="btn-secondary" onclick="adminResetAll('purchases')">🛍️ Clear all purchases</button>
+          <button class="btn-secondary" onclick="adminResetAll('everything')" style="color:var(--sail-red);">💣 Reset all scoring</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- PERSON EXPAND MODAL (Notion-style expanded view) -->
+<div class="modal-overlay" id="person-expand-modal" style="display:none" onclick="if(event.target===this) closeModal('person-expand-modal')">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-title" id="pe-title">Tasks</div>
+    <div style="font-size:12px;font-weight:700;color:var(--ink-light);margin-bottom:8px;">
+      These are the same tasks as the board — edit time, category, and subtasks here.
+    </div>
+    <div id="pe-tasklist" style="display:flex;flex-direction:column;gap:10px;max-height:52vh;overflow-y:auto;"></div>
+    <button class="btn-secondary" style="margin-top:12px;width:100%" id="pe-add">＋ Add a task for this person</button>
+    <div class="modal-footer">
+      <button class="btn-primary" onclick="closeModal('person-expand-modal')">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- WORLD CUP CATEGORIES MODAL -->
+<!-- PLAYER PROFILE MODAL -->
+<div class="modal-overlay" id="player-modal" style="display:none" onclick="if(event.target===this) closeModal('player-modal')">
+  <div class="modal" style="max-width:460px">
+    <div id="player-modal-body"></div>
+    <div class="modal-footer">
+      <button class="btn-primary" onclick="closeModal('player-modal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="wc-categories-modal" style="display:none" onclick="if(event.target===this) closeModal('wc-categories-modal')">
+  <div class="modal">
+    <div class="modal-title">⚙️ World Cup Categories</div>
+    <p style="font-size:13px; font-weight:600; color:var(--ink-light); margin-bottom:14px;">Daily check-in habits everyone tracks a streak for.</p>
+    <div id="wc-categories-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+    <button class="btn-secondary" style="margin-top:12px; width:100%" onclick="addWcCategory()">＋ Add Category</button>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="resetWcCategories()">↺ Reset</button>
+      <button class="btn-primary" onclick="saveWcCategories()">Save 💾</button>
+    </div>
+  </div>
+</div>
+
+<!-- SOCIAL POST MODAL -->
+<div class="modal-overlay" id="post-modal" style="display:none" onclick="if(event.target===this) closeModal('post-modal')">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-title" id="post-modal-title">📱 Social Post</div>
+    <div class="form-group">
+      <label class="form-label">Title / hook</label>
+      <input class="form-input" id="post-title" placeholder="e.g. Launch teaser, Founder story…">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Platform</label>
+      <select class="form-input" id="post-platform">
+        <option value="Instagram">📸 Instagram</option>
+        <option value="LinkedIn">💼 LinkedIn</option>
+        <option value="TikTok">🎵 TikTok</option>
+        <option value="X / Twitter">🐦 X / Twitter</option>
+        <option value="YouTube">▶️ YouTube</option>
+        <option value="Facebook">👍 Facebook</option>
+        <option value="Threads">🧵 Threads</option>
+        <option value="Blog">✍️ Blog</option>
+        <option value="Other">🌐 Other</option>
+      </select>
+    </div>
+    <div class="form-row2">
+      <div class="form-group">
+        <label class="form-label">Start / make it by</label>
+        <input class="form-input" type="date" id="post-start">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Publish date</label>
+        <input class="form-input" type="date" id="post-publish">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Color</label>
+      <div id="post-colors" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
+    </div>
+    <div class="form-group" id="post-maketask-wrap">
+      <button class="btn-secondary" style="width:100%" onclick="makePostTask()">🛠️ Make Task (assign to me · 25 min · Social Media)</button>
+      <div id="post-task-note" style="font-size:11px;font-weight:700;color:var(--matcha);margin-top:5px;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="deletePost()" style="color:var(--sail-red); border-color:var(--sail-red)">Delete</button>
+      <button class="btn-primary" onclick="savePost()">Save 💾</button>
+    </div>
+  </div>
+</div>
+
+<!-- NEW MEETING MODAL -->
+<div class="modal-overlay" id="new-meeting-modal" style="display:none" onclick="if(event.target===this) closeModal('new-meeting-modal')">
+  <div class="modal">
+    <div class="modal-title">📋 New Meeting</div>
+
+    <div class="form-group">
+      <label class="form-label">Meeting Title</label>
+      <input class="form-input" id="nm-title" placeholder="e.g. Weekly Sync, Sprint Planning…">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Week / Date</label>
+      <input class="form-input" type="date" id="nm-date">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Template</label>
+      <div class="template-grid" id="template-grid"></div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('new-meeting-modal')">Cancel</button>
+      <button class="btn-primary" onclick="createMeeting()">Create Meeting ✨</button>
+    </div>
+  </div>
+</div>
+
+<!-- ACTIVITY TYPES MODAL -->
+<div class="modal-overlay" id="types-modal" style="display:none" onclick="if(event.target===this) closeModal('types-modal')">
+  <div class="modal">
+    <div class="modal-title">⚙️ Activity Types</div>
+    <p style="font-size:13px; font-weight:600; color:var(--ink-light); margin-bottom:14px;">Edit the emoji and name of each activity. Add or remove as you like.</p>
+    <div id="types-edit-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+    <button class="btn-secondary" style="margin-top:12px; width:100%" onclick="addActivityType()">＋ Add Activity</button>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="resetActivityTypes()">↺ Reset</button>
+      <button class="btn-primary" onclick="saveActivityTypes()">Save 💾</button>
+    </div>
+  </div>
+</div>
+
+<!-- TEMPLATES EDITOR MODAL -->
+<div class="modal-overlay" id="templates-modal" style="display:none" onclick="if(event.target===this) closeModal('templates-modal')">
+  <div class="modal">
+    <div class="modal-title">✏️ Meeting Templates</div>
+    <p style="font-size:13px; font-weight:600; color:var(--ink-light); margin-bottom:14px;">Edit the name, emoji, and the prompt line shown in each person's column. Changes save for everyone.</p>
+    <div id="templates-edit-list" style="display:flex; flex-direction:column; gap:10px;"></div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="resetTemplates()">↺ Reset</button>
+      <button class="btn-primary" onclick="saveTemplates()">Save Templates 💾</button>
+    </div>
+  </div>
+</div>
+
+<!-- PEOPLE CONFIG MODAL -->
+<div class="modal-overlay" id="people-modal" style="display:none" onclick="if(event.target===this) closeModal('people-modal')">
+  <div class="modal">
+    <div class="modal-title">👥 Edit Team Members</div>
+    <p style="font-size:13px; font-weight:600; color:var(--ink-light); margin-bottom:14px;">These names appear as columns in every meeting note.</p>
+    <div class="people-config-list" id="people-config-list"></div>
+    <button class="btn-secondary" style="margin-top:12px; width:100%" onclick="addPersonConfig()">＋ Add Person</button>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('people-modal')">Cancel</button>
+      <button class="btn-primary" onclick="savePeople()">Save Team 💾</button>
+    </div>
+  </div>
+</div>
+
+<!-- MY NAME MODAL -->
+<div class="modal-overlay" id="myname-modal" style="display:none" onclick="if(event.target===this) closeModal('myname-modal')">
+  <div class="modal">
+    <div class="modal-title">🪪 Who are you?</div>
+    <div class="form-group">
+      <label class="form-label">Your display name (shown as your cursor)</label>
+      <input class="form-input" id="myname-input" placeholder="e.g. Alex 🌸" maxlength="20" oninput="mynameCounter(this)">
+      <span id="myname-counter" style="font-size:11px; font-weight:700; color:var(--ink-light); display:block; text-align:right; margin-top:4px;"></span>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-primary" onclick="saveMyName()">Save ✨</button>
+    </div>
+  </div>
+</div>
+
+<!-- UPDATE BANNER — appears when the server has a newer build than this tab -->
+<div id="update-banner" style="display:none">
+  <span id="update-msg">A newer version of the app is available.</span>
+  <button onclick="forceUpdate()">⟳ Update now</button>
+  <button class="ghost" onclick="document.getElementById('update-banner').style.display='none'">Later</button>
+</div>
+
+<!-- GACHA REVEAL -->
+<div class="modal-overlay" id="catch-modal" style="display:none" onclick="if(event.target===this) closeCatchReveal()">
+  <div class="modal" style="max-width:420px;text-align:center">
+    <div class="catch-stage" id="catch-stage">
+      <div class="cs-rod">🎣</div>
+      <div class="cs-string"></div>
+      <div class="cs-splash">🌊</div>
+    </div>
+    <div class="modal-title" id="catch-title" style="margin-top:6px">Reeling it in…</div>
+    <div id="catch-sub" style="font-size:12px;font-weight:700;color:var(--ink-light);margin-bottom:12px"></div>
+    <div id="catch-result" class="catch-result"></div>
+    <div class="modal-footer" style="justify-content:center">
+      <button class="btn-primary" onclick="closeCatchReveal()">Nice</button>
+    </div>
+  </div>
+</div>
+
+<!-- ONE TIMER PER PERSON -->
+<div class="modal-overlay" id="timer-conflict" style="display:none" onclick="if(event.target===this) closeModal('timer-conflict')">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-title">⏳ A timer is already running</div>
+    <div style="font-size:13px;font-weight:700;color:var(--ink);line-height:1.5;margin-bottom:6px">
+      Your account has a focus timer going somewhere else — another tab, or another device.
+      Close it there first, then come back and start this one.
+    </div>
+    <div style="font-size:12px;font-weight:700;color:var(--ink-light);margin-bottom:6px" id="tc-detail"></div>
+    <div id="tc-error" style="display:none;font-size:12px;font-weight:800;color:var(--sail-red);margin-bottom:10px"></div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('timer-conflict')">Cancel</button>
+      <button class="btn-primary" onclick="retryAfterTimerConflict()">I closed it — start</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD / EDIT A TIMELINE POINT -->
+<div class="modal-overlay" id="point-modal" style="display:none" onclick="if(event.target===this) closeModal('point-modal')">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-title" id="pt-modal-title">📍 Add a point</div>
+    <div class="form-group">
+      <label class="form-label">What happens here?</label>
+      <input class="form-input" id="pt-title" placeholder="e.g. First draft delivered" maxlength="70">
+    </div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <div class="form-group" style="flex:1; min-width:130px;">
+        <label class="form-label">Starts</label>
+        <input class="form-input" id="pt-date" type="date">
+      </div>
+      <div class="form-group" style="flex:1; min-width:130px;">
+        <label class="form-label">Due by <span style="font-weight:600;color:var(--ink-light)">(optional)</span></label>
+        <input class="form-input" id="pt-end" type="date">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Project book</label>
+      <select class="form-input" id="pt-project"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Activity category</label>
+      <select class="form-input" id="pt-type"></select>
+    </div>
+    <label class="pt-check">
+      <input type="checkbox" id="pt-maketask" checked>
+      <span>Make a task for this <small id="pt-task-note"></small></span>
+    </label>
+    <div class="modal-footer" style="justify-content:space-between;">
+      <button class="btn-secondary" id="pt-delete" onclick="deletePointFromModal()" style="display:none;color:var(--sail-red)">🗑 Delete</button>
+      <div style="display:flex;gap:8px;margin-left:auto">
+        <button class="btn-secondary" onclick="closeModal('point-modal')">Cancel</button>
+        <button class="btn-primary" onclick="savePointFromModal()">Save ✨</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD / EDIT A PROJECT BOOK -->
+<div class="modal-overlay" id="book-editor" style="display:none" onclick="if(event.target===this) closeModal('book-editor')">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-title" id="bk-modal-title">📚 Add a book</div>
+    <div class="form-group">
+      <label class="form-label">Project name</label>
+      <input class="form-input" id="bk-name" placeholder="e.g. Launch reel" maxlength="40">
+    </div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <div class="form-group" style="flex:0 0 96px;">
+        <label class="form-label">Cover</label>
+        <select class="form-input" id="bk-emoji"></select>
+      </div>
+      <div class="form-group" style="flex:0 0 96px;">
+        <label class="form-label">Color</label>
+        <input class="form-input bk-color-input" id="bk-color" type="color" value="#3B9BD4">
+      </div>
+      <div class="form-group" style="flex:1; min-width:130px;">
+        <label class="form-label">Complete by</label>
+        <input class="form-input" id="bk-due" type="date">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Cover art <span style="font-weight:600;color:var(--ink-light)">(optional)</span></label>
+      <div class="bk-cover-row">
+        <div id="bk-cover-preview"><span class="bk-cover-none">no cover</span></div>
+        <label class="btn-secondary" style="cursor:pointer;font-size:12px">
+          🖼️ Upload<input type="file" accept="image/*" onchange="onBookCoverPick(this)" style="display:none">
+        </label>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Whose shelf</label>
+      <select class="form-input" id="bk-owner"></select>
+      <div style="font-size:10.5px;font-weight:600;color:var(--ink-light);margin-top:3px">
+        Only this person sees the book. Change it to hand the project over.
+      </div>
+    </div>
+    <div class="modal-footer" style="justify-content:space-between; flex-wrap:wrap; gap:8px;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-secondary" id="bk-archive" onclick="toggleArchiveBook()" style="display:none">📦 Archive</button>
+        <button class="btn-secondary" id="bk-delete" onclick="deleteBookFromModal()" style="display:none;color:var(--sail-red)">🗑 Delete</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-left:auto">
+        <button class="btn-secondary" onclick="closeModal('book-editor')">Cancel</button>
+        <button class="btn-primary" onclick="saveBookFromModal()">Save ✨</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AN OPEN BOOK -->
+<div class="modal-overlay" id="book-modal" style="display:none" onclick="if(event.target===this) closeBook()">
+  <div class="desk">
+    <!-- props rest ON THE DESK, not on the page: the compass tucks behind the
+         book's top-right corner, the ink bottle sits beside it entirely -->
+    <div class="ob-compass" aria-hidden="true">
+      <svg viewBox="0 0 120 120">
+        <circle cx="60" cy="60" r="55" class="cp-ring"/>
+        <circle cx="60" cy="60" r="44" class="cp-ring thin"/>
+        <circle cx="60" cy="60" r="7" class="cp-hub"/>
+        <g class="cp-rose">
+          <path d="M60 6 L67 53 L60 60 L53 53 Z" class="cp-n"/>
+          <path d="M60 114 L53 67 L60 60 L67 67 Z" class="cp-s"/>
+          <path d="M6 60 L53 53 L60 60 L53 67 Z" class="cp-s"/>
+          <path d="M114 60 L67 67 L60 60 L67 53 Z" class="cp-s"/>
+          <path d="M22 22 L56 56 L48 48 Z" class="cp-d"/>
+          <path d="M98 98 L64 64 L72 72 Z" class="cp-d"/>
+          <path d="M98 22 L64 56 L72 48 Z" class="cp-d"/>
+          <path d="M22 98 L56 64 L48 72 Z" class="cp-d"/>
+        </g>
+        <text x="60" y="26" class="cp-lbl">N</text>
+        <text x="60" y="102" class="cp-lbl">S</text>
+        <text x="18" y="65" class="cp-lbl">W</text>
+        <text x="102" y="65" class="cp-lbl">E</text>
+      </svg>
+    </div>
+    <div class="ob-ink" aria-hidden="true">
+      <svg viewBox="0 0 100 100">
+        <ellipse cx="46" cy="88" rx="30" ry="7" class="ik-shadow"/>
+        <path d="M28 52 h36 a4 4 0 0 1 4 4 v24 a8 8 0 0 1 -8 8 h-28 a8 8 0 0 1 -8 -8 v-24 a4 4 0 0 1 4 -4 z" class="ik-body"/>
+        <path d="M30 68 h32 v12 a8 8 0 0 1 -8 8 h-16 a8 8 0 0 1 -8 -8 z" class="ik-fill"/>
+        <rect x="38" y="42" width="16" height="12" rx="3" class="ik-neck"/>
+        <rect x="34" y="34" width="24" height="10" rx="4" class="ik-cork"/>
+        <path d="M64 46 C78 30 86 20 92 12 C86 24 80 38 70 52 Z" class="ik-quill"/>
+        <path d="M70 52 L62 60" class="ik-nib"/>
+      </svg>
+    </div>
+
+    <div class="open-book">
+    <div class="ob-head">
+      <div class="modal-title" id="book-modal-title" style="margin:0"></div>
+      <div class="ob-countdown" id="ob-countdown"></div>
+      <div class="ob-actions">
+        <button onclick="editOpenBook()" title="Edit this project">✎</button>
+        <button id="ob-archive" onclick="archiveOpenBook()" title="Archive this project">📦</button>
+        <button class="ob-del" onclick="deleteOpenBook()" title="Delete this project and its tasks">🗑</button>
+      </div>
+      <div class="ob-nav">
+        <button onclick="flipBook(-1)" title="Previous page">◀</button>
+        <span id="book-page-label">Notes &amp; status</span>
+        <button onclick="flipBook(1)" title="Next page">▶</button>
+        <button onclick="closeBook()" title="Close" class="ob-x">✕</button>
+      </div>
+    </div>
+    <div class="ob-body" id="book-body"></div>
+    <div class="ob-spine"></div>
+    </div>
+  </div>
+</div>
+
+<!-- STATUS EDITOR -->
+<div class="modal-overlay" id="status-editor" style="display:none" onclick="if(event.target===this) closeModal('status-editor')">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-title">🎨 Project statuses</div>
+    <div style="font-size:12px;font-weight:700;color:var(--ink-light);line-height:1.5;margin-bottom:12px">
+      Rename them, recolour them, add your own. These are shared across every project and every task.
+    </div>
+    <div id="se-list" class="se-list"></div>
+    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+      <button class="btn-secondary" onclick="addStatus()" style="font-size:12px">＋ Add status</button>
+      <button class="btn-secondary" onclick="resetStatuses()" style="font-size:12px">↺ Back to defaults</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-primary" onclick="closeModal('status-editor')">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- PICK TASKS FOR 1 THING / 3 THINGS -->
+<div class="modal-overlay" id="task-picker" style="display:none" onclick="if(event.target===this) closeModal('task-picker')">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-title" id="tp-title">Pick tasks</div>
+    <div id="tp-sub" style="font-size:12px;font-weight:700;color:var(--ink-light);line-height:1.5;margin-bottom:12px"></div>
+    <div id="tp-list" class="tp-list"></div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('task-picker')">Cancel</button>
+      <button class="btn-primary" onclick="applyTaskPicker()">Use these ✨</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN: EDIT SOMEONE'S STREAKS -->
+<div class="modal-overlay" id="streak-editor" style="display:none" onclick="if(event.target===this) closeModal('streak-editor')">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-title">🔥 Streaks — <span id="sk-who"></span></div>
+    <div style="font-size:12px;font-weight:700;color:var(--ink-light);line-height:1.5;margin-bottom:12px">
+      Set a streak, this month's check-in tally, or when they last checked in.
+      Changes outrank whatever their own devices are holding.
+    </div>
+    <div id="sk-list" class="sk-list"></div>
+    <div class="modal-footer">
+      <button class="btn-primary" onclick="closeModal('streak-editor')">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- IN-APP CONFIRM (native confirm() can be silently suppressed by the browser
+     via "prevent this page from creating additional dialogs", which makes
+     destructive actions look broken) -->
+<div class="modal-overlay" id="confirm-modal" style="display:none" onclick="if(event.target===this) closeModal('confirm-modal')">
+  <div class="modal" style="max-width:430px">
+    <div class="modal-title" id="confirm-title">⚠️ Are you sure?</div>
+    <div id="confirm-body" style="font-size:13px; font-weight:700; color:var(--ink); line-height:1.5; margin-bottom:6px;"></div>
+    <div style="font-size:12px; font-weight:600; color:var(--ink-light); margin-bottom:14px;">This can't be undone.</div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('confirm-modal')">Cancel</button>
+      <button class="btn-primary" id="confirm-ok" onclick="runPendingConfirm()">Yes, do it</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOG / PLAN ACTIVITY ENTRY MODAL -->
+<div class="modal-overlay" id="entry-modal" style="display:none" onclick="if(event.target===this) closeModal('entry-modal')">
+  <div class="modal">
+    <div class="modal-title" id="entry-title">🕑 Log an activity</div>
+    <div style="font-size:12px; font-weight:700; color:var(--ink-light); margin-bottom:12px;" id="entry-daylabel"></div>
+
+    <div class="form-group">
+      <label class="form-label">What were you doing?</label>
+      <input class="form-input" id="entry-label" placeholder="e.g. storyboarding the reel" maxlength="80">
+    </div>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <div class="form-group" style="flex:1; min-width:120px;">
+        <label class="form-label">Start</label>
+        <input class="form-input" id="entry-start" type="time" step="300" oninput="updateEntryPreview()">
+      </div>
+      <div class="form-group" style="flex:1; min-width:120px;">
+        <label class="form-label">End</label>
+        <input class="form-input" id="entry-end" type="time" step="300" oninput="updateEntryPreview()">
+      </div>
+    </div>
+    <div style="font-size:11px; font-weight:700; color:var(--ink-light); margin:-6px 0 12px;" id="entry-dur">—</div>
+
+    <div class="form-group">
+      <label class="form-label">Activity</label>
+      <select class="form-input" id="entry-type" onchange="updateEntryPreview()"></select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Tasks worked on <span style="font-weight:600; color:var(--ink-light);">(optional)</span></label>
+      <div class="ent-tasks" id="entry-tasks"></div>
+    </div>
+
+    <div class="modal-footer" style="justify-content:space-between;">
+      <button class="btn-secondary" id="entry-delete" onclick="deleteEntryFromModal()" style="display:none; color:var(--sail-red);">🗑 Delete</button>
+      <div style="display:flex; gap:8px; margin-left:auto;">
+        <button class="btn-secondary" onclick="closeModal('entry-modal')">Cancel</button>
+        <button class="btn-primary" onclick="saveEntryFromModal()">Save ✨</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LIVE SYNC MODAL -->
+<div class="modal-overlay" id="sync-modal" style="display:none" onclick="if(event.target===this) closeModal('sync-modal')">
+  <div class="modal">
+    <div class="modal-title">☁️ Live Sync Setup</div>
+    <p style="font-size:13px; font-weight:600; color:var(--ink-light); margin-bottom:14px;">
+      Connect a free Supabase project so everyone shares the same live data and cursors.
+      Paste your <b>Project URL</b> and <b>anon public key</b> below. Setup steps are at the bottom.
+    </p>
+    <div class="form-group">
+      <label class="form-label">Project URL</label>
+      <input class="form-input" id="sync-url" placeholder="https://xxxxxxxx.supabase.co">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Anon public key</label>
+      <input class="form-input" id="sync-key" placeholder="eyJhbGciOi...">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Room name (any word — your team shares this)</label>
+      <input class="form-input" id="sync-room" placeholder="our-crew" value="our-crew">
+    </div>
+
+    <details style="margin-top:8px; background:var(--ocean-pale); border-radius:12px; padding:12px;">
+      <summary style="font-weight:800; color:var(--ocean-deep); font-size:13px;">📖 One-time setup steps (click)</summary>
+      <ol style="font-size:12px; font-weight:600; color:var(--ink); line-height:1.7; margin:10px 0 0 18px;">
+        <li>Go to <b>supabase.com</b> → sign up free → <b>New Project</b>.</li>
+        <li>Wait ~2 min for it to build.</li>
+        <li>Left sidebar → <b>SQL Editor</b> → paste &amp; run this:
+          <div style="background:white; border-radius:8px; padding:8px; margin:6px 0; font-family:monospace; font-size:11px; user-select:all;">create table boats_items (room text, item_key text, data jsonb, updated_at bigint, primary key (room, item_key));<br>alter table boats_items enable row level security;<br>create policy "all" on boats_items for all using (true) with check (true);<br>alter publication supabase_realtime add table boats_items;</div>
+        </li>
+        <li><b>Already using the old version?</b> Also run this so your data migrates:
+          <div style="background:white; border-radius:8px; padding:8px; margin:6px 0; font-family:monospace; font-size:11px; user-select:all;">-- keep the old table too; the app reads it once to migrate<br>-- (nothing to run if boats_state already exists)</div>
+        </li>
+        <li>Left sidebar → <b>Project Settings</b> → <b>API</b>.</li>
+        <li>Copy <b>Project URL</b> → paste above.</li>
+        <li>Copy the <b>anon / public</b> key → paste above.</li>
+        <li>Pick a room name, share it + this page's link with your team, and hit Connect!</li>
+      </ol>
+    </details>
+
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="disconnectSync()">Disconnect</button>
+      <button class="btn-primary" onclick="connectSync()">Connect ☁️</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MODULE LOADER
+     Scripts are appended with async=false, which keeps them executing in
+     listed order while still downloading in parallel. Running this at the
+     END of <body> means the DOM already exists when 19-boot.js fires.
+
+     The ?v= query is the app version from the meta tag above, so bumping
+     that one string cache-busts every file at once — which is what stops
+     phones running half-old, half-new code.
+     ═══════════════════════════════════════════════════════════════ -->
+<script>
+(function () {
+  var meta = document.querySelector('meta[name="app-version"]');
+  var v = meta ? meta.content : Date.now();
+  var modules = [
+    '01-config',
+    '02-persist',
+    '02b-merge',
+    '03-navigation',
+    '04-meetings',
+    '05-tasks',
+    '06-admin',
+    '07-worldcup',
+    '08-shop',
+    '09-leaderboard',
+    '10-charts',
+    '11-people',
+    '12-effects',
+    '13-pomodoro',
+    '14-notes',
+    '15-logs',
+    '16-timeline-drag',
+    '17-focus-bank',
+    '18-calendar',
+    '18b-timeline',
+    '19-boot'
+  ];
+  modules.forEach(function (name) {
+    var s = document.createElement('script');
+    s.src = 'js/' + name + '.js?v=' + v;
+    s.async = false;              // preserve execution order
+    s.onerror = function () {
+      document.body.insertAdjacentHTML('afterbegin',
+        '<div style="position:fixed;top:0;left:0;right:0;z-index:999;background:#E8536A;' +
+        'color:#fff;font:700 13px sans-serif;padding:10px;text-align:center">' +
+        'Could not load js/' + name + '.js — the app needs its whole folder, ' +
+        'not just index.html.</div>');
+    };
+    document.body.appendChild(s);
+  });
+})();
+</script>
+
+</body>
+</html>

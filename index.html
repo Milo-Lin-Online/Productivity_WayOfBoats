@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <!-- Stop phones serving a stale copy of the app from cache. The version below is
      also used by the in-app update check. Bump APP_VERSION on every deploy. -->
-<meta name="app-version" content="2026.08.11-2">
+<meta name="app-version" content="2026.08.13-1">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -2674,6 +2674,28 @@
 .tl-ev.focused .tl-ev-link { opacity: 1; }
 .tl-ev.is-sub .tl-ev-link { opacity: .3; }
 .tl-ev.is-done .tl-ev-link { opacity: .22; }
+
+/* ── admin: streak editor ── */
+.sk-list { display: flex; flex-direction: column; gap: 9px; max-height: 380px; overflow-y: auto; }
+.sk-row { border: 2px solid var(--ocean-pale); border-radius: 11px; padding: 9px 11px; background: var(--warm-white); }
+.sk-cat { font-size: 13px; color: var(--ink); margin-bottom: 6px; }
+.sk-fields { display: flex; gap: 9px; flex-wrap: wrap; }
+.sk-f { display: flex; flex-direction: column; gap: 3px; font-size: 9.5px; font-weight: 800; color: var(--ocean-deep); }
+.sk-f input {
+  font-family: inherit; font-size: 12px; font-weight: 800; color: var(--ink);
+  border: 2px solid var(--ocean-pale); border-radius: 8px; padding: 4px 6px; background: #fff;
+}
+.sk-f input[type=number] { width: 78px; text-align: center; }
+.sk-warn {
+  margin-top: 7px; font-size: 11px; font-weight: 700; line-height: 1.45;
+  background: var(--butter-light); border: 1.5px solid #E9C46A;
+  border-radius: 8px; padding: 6px 8px; color: var(--ink);
+}
+.sk-warn button {
+  font-family: inherit; font-size: 10.5px; font-weight: 800; cursor: pointer;
+  border: 1.5px solid var(--sunset-deep); background: transparent;
+  color: var(--sunset-deep); border-radius: 10px; padding: 1px 8px; margin-left: 5px;
+}
 </style>
 </head>
 <body>
@@ -3706,6 +3728,21 @@
   </div>
 </div>
 
+<!-- ADMIN: EDIT SOMEONE'S STREAKS -->
+<div class="modal-overlay" id="streak-editor" style="display:none" onclick="if(event.target===this) closeModal('streak-editor')">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-title">🔥 Streaks — <span id="sk-who"></span></div>
+    <div style="font-size:12px;font-weight:700;color:var(--ink-light);line-height:1.5;margin-bottom:12px">
+      Set a streak, this month's check-in tally, or when they last checked in.
+      Changes outrank whatever their own devices are holding.
+    </div>
+    <div id="sk-list" class="sk-list"></div>
+    <div class="modal-footer">
+      <button class="btn-primary" onclick="closeModal('streak-editor')">Done</button>
+    </div>
+  </div>
+</div>
+
 <!-- IN-APP CONFIRM (native confirm() can be silently suppressed by the browser
      via "prevent this page from creating additional dialogs", which makes
      destructive actions look broken) -->
@@ -3961,7 +3998,7 @@ const APP_VERSION = (document.querySelector('meta[name="app-version"]') || {}).c
 
 const ITEM_COLLECTIONS = ['people', 'tasks', 'meetings', 'events', 'posts', 'messages'];
 // Singletons stored as a single row each.
-const SINGLETONS = ['templates', 'activityTypes', 'wcCategories', 'personTemplates', 'wsName', 'wsSub', 'scoreEpoch', 'storeItems', 'storeEnabled'];
+const SINGLETONS = ['_graves', 'templates', 'activityTypes', 'wcCategories', 'personTemplates', 'wsName', 'wsSub', 'scoreEpoch', 'storeItems', 'storeEnabled'];
 
 // A snapshot of what we last saw, so save() can push only what changed.
 let lastSnapshot = {};
@@ -4152,6 +4189,11 @@ async function pushChangedItems() {
     ensureRecordUids(p);
     PEOPLE_MERGER.stamp(p, lastSnapshot['people:' + p.id]);
   });
+  // Same idea for the id-keyed lists: note which items changed so the far end
+  // can pick the newer edit rather than the last one to arrive.
+  Object.keys(ID_LIST_SINGLETONS).forEach(k => {
+    if (Array.isArray(state[k])) stampIdList(k, state[k], lastSnapshot['single:' + k]);
+  });
   const map = buildItemMap();
   const rows = [];
   for (const k in map) {
@@ -4230,7 +4272,16 @@ function applyItemRow(item_key, data, isDelete) {
   const [kind, ...rest] = item_key.split(':');
   const idPart = rest.join(':');
   if (kind === 'single') {
-    if (!isDelete) state[idPart] = data;
+    if (!isDelete) {
+      // Singletons come in three shapes and each needs different handling:
+      //   · per-person maps  — merge key by key, each person owns their entry
+      //   · id-keyed lists   — merge item by item, newest edit wins, deletions stick
+      //   · plain values     — last write wins, which is right for a name or a flag
+      if (idPart === '_graves')                     state._graves = mergeTombstones(state._graves, data);
+      else if (PERSON_KEYED_SINGLETONS[idPart])     state[idPart] = mergePersonKeyedMap(state[idPart], data);
+      else if (ID_LIST_SINGLETONS[idPart])          state[idPart] = mergeIdList(idPart, state[idPart], data);
+      else                                          state[idPart] = data;
+    }
   } else if (ITEM_COLLECTIONS.includes(kind)) {
     if (!state[kind]) state[kind] = [];
     const arr = state[kind];
@@ -4259,7 +4310,12 @@ function applyItemRow(item_key, data, isDelete) {
         // streaks, a pile of logs and a handful of scalars, each of which can
         // be edited on a different device. Replacing the object wholesale
         // threw away whatever the other device had touched. Merge per field.
-        const merged = PEOPLE_MERGER.merge(arr[idx], data);
+        //
+        // A row older than ours has missed an admin correction, so its scores
+        // are not to be trusted; take only its personal fields.
+        const stale = rowEpoch(data) < rowEpoch(arr[idx]);
+        const merged = stale ? PEOPLE_MERGER.mergeStale(arr[idx], data)
+                             : PEOPLE_MERGER.merge(arr[idx], data);
         // if what we ended up with differs from what arrived, the row in the
         // database is now behind us and needs correcting
         if (snapshotOf(merged) !== snapshotOf(data)) staleRowRejected = true;
@@ -4623,15 +4679,26 @@ class MergeStrategy {
 // ── identities ──────────────────────────────────────────────
 // Legacy records carry no uid, so it's derived from their contents. Two
 // devices holding the same old fish derive the same key and dedupe correctly.
-/** What a record IS, ignoring any id already written to it. */
+/**
+ * What a record IS, ignoring any id already written to it.
+ *
+ * Returns null when the record carries nothing identifying at all. Two such
+ * records would otherwise produce the same key and one would be deleted as a
+ * duplicate — dropping real data to fix a duplication bug is a worse outcome
+ * than leaving a duplicate in place, so anything unidentifiable is kept.
+ */
 function fishContentKey(f) {
-  return ['f', f && f.emoji, f && f.name, f && f.minutes, f && f.at].join('|');
+  if (!f) return null;
+  const bits = [f.emoji, f.name, f.minutes, f.at].filter(v => v !== undefined && v !== null && v !== '');
+  if (!bits.length) return null;
+  return ['f', f.emoji, f.name, f.minutes, f.at].join('|');
 }
 function purchaseContentKey(x) {
   // one purchase per shop item, so the item id is the identity
   return 'p|' + String((x && x.id) || [x && x.name, x && x.at].join('|'));
 }
-function fishIdentity(f) { return (f && f.uid) || fishContentKey(f); }
+let unidentifiedSeq = 0;
+function fishIdentity(f) { return (f && f.uid) || fishContentKey(f) || ('f?' + (++unidentifiedSeq)); }
 function purchaseIdentity(x) { return (x && x.uid) || purchaseContentKey(x); }
 
 /**
@@ -4697,9 +4764,10 @@ function repairDuplicates(p) {
     const seen = new Set(), keep = [];
     p.fish.forEach(f => {
       const k = fishContentKey(f);
+      if (k === null) { keep.push(f); return; }   // unidentifiable — never drop it
       if (seen.has(k)) { removed++; return; }
       seen.add(k);
-      if (f) f.uid = k;
+      f.uid = k;
       keep.push(f);
     });
     p.fish = keep;
@@ -4763,17 +4831,50 @@ function mergeLogDay(a, b) {
   return { ...(b.editedAt > a.editedAt ? b : a), entries, edited };
 }
 
+/**
+ * Some singletons are maps keyed by personId — everyone's World Cup categories
+ * in one object, everyone's meeting templates in another. They were being
+ * replaced wholesale on arrival, so a device holding a stale or empty copy
+ * could wipe out categories other people had carefully customised.
+ *
+ * Each person owns their own entry: we keep ours for ourselves and accept
+ * theirs for everyone else. Nothing is ever deleted — a key missing from the
+ * incoming copy stays put.
+ */
+function mergePersonKeyedMap(local, incoming) {
+  // the legacy shape was a flat array shared by everyone; prefer whichever
+  // side has already moved to the per-person object
+  if (Array.isArray(local) && !Array.isArray(incoming)) return incoming || local;
+  if (Array.isArray(incoming) && !Array.isArray(local)) return local || incoming;
+  if (Array.isArray(local) && Array.isArray(incoming)) return incoming.length ? incoming : local;
+
+  const me = (typeof myPersonId === 'function') ? myPersonId() : null;
+  const admin = (typeof isAdmin === 'function') && isAdmin();
+  const out = { ...(local || {}) };
+  Object.entries(incoming || {}).forEach(([pid, val]) => {
+    if (!admin && me && String(pid) === String(me) && out[pid]) return;  // mine
+    out[pid] = val;
+  });
+  return out;
+}
+
+/** Singletons that must never be replaced wholesale. */
+const PERSON_KEYED_SINGLETONS = { wcCategories: true, personTemplates: true };
+
 // ── the policy ──────────────────────────────────────────────
 /** Fields carrying a per-field timestamp, stamped centrally at push time. */
 const TS_FIELDS = ['name', 'color', 'stars', 'pomoMinutes', 'pomoSessions',
                    'pointsAdjust', 'activeStickers', 'planning', 'streakFixers',
-                   'socks', 'scoreEpoch', 'wcCategories', 'timerLock'];
+                   'socks', 'scoreEpoch', 'timerLock'];
 
 const PERSON_POLICY = {
   fish:        MergeStrategy.unionById(fishIdentity),
   purchases:   MergeStrategy.unionById(purchaseIdentity),
   stickers:    MergeStrategy.unionSet(),
   pendingCatches: MergeStrategy.unionById(c => String(c && c.id)),
+  // ids of catches already reeled in — the tombstones that stop a union from
+  // handing an opened catch back
+  openedCatches: MergeStrategy.unionSet(),
   wc:          MergeStrategy.byKey(mergeWcCategory),
   logs:        MergeStrategy.byKey(mergeLogDay),
 };
@@ -4804,6 +4905,22 @@ class PersonMerger {
     return person;
   }
 
+  /**
+   * A row stamped BEFORE our copy is a ghost from a device that hasn't heard
+   * about an admin correction yet. Take its harmless parts — logs, notebook,
+   * name — but keep our scores, or the union would quietly restore whatever
+   * the admin just took away. (A streak set down to 14 was losing to a stale
+   * device still claiming 99, because the merge takes the higher of the two.)
+   */
+  mergeStale(local, incoming) {
+    const merged = this.merge(local, incoming);
+    PersonMerger.SCORE_FIELDS.forEach(f => {
+      if (local && Object.prototype.hasOwnProperty.call(local, f)) merged[f] = local[f];
+      else delete merged[f];
+    });
+    return merged;
+  }
+
   /** Reconcile our copy of a person with one that arrived from elsewhere. */
   merge(local, incoming) {
     if (!local) return ensureRecordUids({ ...incoming });
@@ -4825,12 +4942,110 @@ class PersonMerger {
       out._ts[k] = Math.max(lts[k] || 0, its[k] || 0);
     });
 
+    // A catch opened on one device was being resurrected by the union from a
+    // device that hadn't seen it opened — so it reappeared on the line and
+    // could be reeled in a second time, paying out twice. Tombstones win.
+    if (Array.isArray(out.openedCatches) && out.openedCatches.length) {
+      const gone = new Set(out.openedCatches.map(String));
+      out.pendingCatches = (out.pendingCatches || []).filter(c => !gone.has(String(c && c.id)));
+      if (out.openedCatches.length > 300) out.openedCatches = out.openedCatches.slice(-300);
+    }
+
     repairDuplicates(out);
     return out;
   }
 }
 
+/** What an admin correction owns outright. */
+PersonMerger.SCORE_FIELDS = ['fish', 'stars', 'pomoMinutes', 'pomoSessions', 'wc',
+                             'pointsAdjust', 'scoreEpoch', 'streakFixers', 'socks',
+                             'stickers', 'activeStickers', 'purchases'];
+
 const PEOPLE_MERGER = new PersonMerger(PERSON_POLICY, TS_FIELDS);
+
+// ═══════════════════════════════════════════════════════════════
+//  ID-KEYED LISTS  (projects, timeline points, shop items, activity
+//  types, meeting templates, project statuses)
+//
+//  These sync as SINGLETONS — one row holding the whole array — and were
+//  being replaced wholesale on arrival, exactly like person rows used to be.
+//  Two people adding books at the same time meant one array overwrote the
+//  other and somebody's project simply vanished.
+//
+//  They now merge item by item:
+//    · union by id, so nothing is lost
+//    · when both sides hold the same id, the one edited more recently wins
+//    · a deleted item stays deleted, via a tombstone — otherwise the union
+//      would helpfully hand back everything anyone ever removed
+// ═══════════════════════════════════════════════════════════════
+
+/** Deletions we must not undo. `{ "projects:pj1": 1699999999999 }` */
+function tombstones() {
+  if (!state._graves || typeof state._graves !== 'object') state._graves = {};
+  return state._graves;
+}
+function markDeleted(kind, id) {
+  tombstones()[kind + ':' + id] = Date.now();
+  pruneTombstones();
+}
+function isDeleted(kind, id) {
+  return Object.prototype.hasOwnProperty.call(tombstones(), kind + ':' + id);
+}
+/** Forget graves older than 90 days so the record can't grow without bound. */
+function pruneTombstones() {
+  const cutoff = Date.now() - 90 * 86400000;
+  const g = tombstones();
+  Object.keys(g).forEach(k => { if ((g[k] || 0) < cutoff) delete g[k]; });
+}
+function mergeTombstones(local, incoming) {
+  const out = { ...(local || {}) };
+  Object.entries(incoming || {}).forEach(([k, v]) => {
+    out[k] = Math.max(out[k] || 0, Number(v) || 0);
+  });
+  return out;
+}
+
+/**
+ * Note which items changed, so the far end can tell a newer edit from an older
+ * one. Stamped centrally at push time, the same way person scalars are.
+ */
+function stampIdList(kind, arr, previousJson) {
+  if (!Array.isArray(arr)) return arr;
+  let prev = null;
+  try { prev = previousJson ? JSON.parse(previousJson) : null; } catch (e) {}
+  const prevById = {};
+  if (Array.isArray(prev)) prev.forEach(it => { if (it && it.id != null) prevById[String(it.id)] = it; });
+  const now = Date.now();
+  arr.forEach(it => {
+    if (!it || it.id == null) return;
+    const old = prevById[String(it.id)];
+    const a = JSON.stringify({ ...it, _ts: 0 });
+    const b = old ? JSON.stringify({ ...old, _ts: 0 }) : null;
+    if (a !== b) it._ts = now;
+    else if (!it._ts && old) it._ts = old._ts || 0;
+  });
+  return arr;
+}
+
+function mergeIdList(kind, local, incoming) {
+  const byId = new Map();
+  const consider = arr => (Array.isArray(arr) ? arr : []).forEach(it => {
+    if (!it || it.id == null) return;
+    const key = String(it.id);
+    if (isDeleted(kind, key)) return;               // someone removed it; stay removed
+    const held = byId.get(key);
+    if (!held || (it._ts || 0) > (held._ts || 0)) byId.set(key, it);
+  });
+  consider(local);
+  consider(incoming);
+  return [...byId.values()];
+}
+
+/** Singletons that are id-keyed lists rather than single values. */
+const ID_LIST_SINGLETONS = {
+  projects: true, tlPoints: true, storeItems: true,
+  activityTypes: true, templates: true, projectStatuses: true,
+};
 
 
 // ═══════════════════════════════════════════════════════════════
@@ -6004,6 +6219,93 @@ function refreshAdminVisibility() {
 // ── admin panel ──
 // The drop tables, rendered from the SAME constants the roller uses — so this
 // card can never drift out of date with the actual odds. Admin section only.
+// ══════════════════════════════════════════════
+//  ADMIN: EDIT SOMEONE'S STREAKS
+//  Set a streak, this month's check-in tally, or the date of the last
+//  check-in — per category, per person.
+// ══════════════════════════════════════════════
+let streakEditPid = null;
+
+function openStreakEditor(pid) {
+  if (!isAdmin()) return;
+  streakEditPid = pid;
+  renderStreakEditor();
+  const m = document.getElementById('streak-editor');
+  if (m) m.style.display = 'flex';
+}
+
+function renderStreakEditor() {
+  const box = document.getElementById('sk-list');
+  const who = document.getElementById('sk-who');
+  if (!box || !isAdmin()) return;
+  const p = personById(streakEditPid);
+  if (!p) { box.innerHTML = '<div class="nb-empty">No one selected.</div>'; return; }
+  if (who) who.textContent = p.name;
+
+  const mk = estMonthKey();
+  const today = estDateKey();
+  const yesterday = prevDateKey(today);
+  if (!p.wc) p.wc = {};
+
+  box.innerHTML = getWcCategories(p.id).map(cat => {
+    const rec = p.wc[cat.id] || { streak: 0, last: null, monthCounts: {}, monthFish: {} };
+    const last = rec.last || '';
+    // reconcileStreaks() will zero anything whose last check-in is older than
+    // yesterday, so warn rather than let the admin set a value that evaporates
+    const willReset = (rec.streak > 0) && last && last !== today && last !== yesterday;
+    return `<div class="sk-row">
+      <div class="sk-cat">${escHtml(cat.emoji || '🔥')} <b>${escHtml(cat.label || cat.id)}</b></div>
+      <div class="sk-fields">
+        <label class="sk-f">streak
+          <input type="number" min="0" max="9999" value="${rec.streak || 0}"
+            onchange="adminSetStreak('${p.id}','${cat.id}','streak',this.value)"></label>
+        <label class="sk-f">check-ins this month
+          <input type="number" min="0" max="31" value="${(rec.monthCounts && rec.monthCounts[mk]) || 0}"
+            onchange="adminSetStreak('${p.id}','${cat.id}','count',this.value)"></label>
+        <label class="sk-f">last check-in
+          <input type="date" value="${escAttr(last)}"
+            onchange="adminSetStreak('${p.id}','${cat.id}','last',this.value)"></label>
+      </div>
+      ${willReset ? `<div class="sk-warn">⚠️ Last check-in is older than yesterday, so this streak resets to 0 on next load.
+        <button onclick="adminSetStreak('${p.id}','${cat.id}','last','${today}')">set it to today</button></div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+/**
+ * Write a streak value. Stamps a new score epoch so the change outranks
+ * whatever the person's own devices are holding — otherwise the merge would
+ * take the higher streak back and an admin correction downward wouldn't stick.
+ */
+function adminSetStreak(pid, catId, field, value) {
+  if (!isAdmin()) return;
+  const p = personById(pid);
+  if (!p) return;
+  if (!p.wc) p.wc = {};
+  const rec = p.wc[catId] || { streak: 0, last: null, monthCounts: {}, monthFish: {} };
+  if (!rec.monthCounts) rec.monthCounts = {};
+  if (!rec.monthFish) rec.monthFish = {};
+
+  if (field === 'streak') {
+    rec.streak = clampInt(value, 0, 9999);
+    // a streak with no recent check-in gets wiped on next load, so anchor it
+    if (rec.streak > 0 && !rec.last) rec.last = estDateKey();
+  } else if (field === 'count') {
+    rec.monthCounts[estMonthKey()] = clampInt(value, 0, 31);
+  } else if (field === 'last') {
+    rec.last = value || null;
+    if (!rec.last) rec.streak = 0;
+  }
+  p.wc[catId] = rec;
+
+  bumpScoreEpoch([p]);
+  save();
+  renderStreakEditor();
+  renderLeaderboard();
+  try { renderWorldCup(); } catch (e) {}
+  renderAdmin();
+}
+
 function renderAdminGachaRules() {
   const box = document.getElementById('admin-gacha-rules');
   if (!box || !isAdmin()) return;
@@ -6286,6 +6588,7 @@ function renderAdminPlayers() {
       </div>
       <div class="admin-row-acts">
         <span class="admin-hint">${realFish} earned${fish - realFish > 0 ? ` + ${fish - realFish} granted` : ''}</span>
+        <button class="btn-secondary" onclick="openStreakEditor('${p.id}')">🔥 edit streaks</button>
         <button class="btn-secondary" onclick="adminClear('${p.id}','streaks')">clear streaks &amp; check-ins</button>
         <button class="btn-secondary" onclick="adminClear('${p.id}','logs')">clear logs</button>
       </div>
@@ -6859,7 +7162,7 @@ function setWcCategories(personId, cats) {
 // The day rolls over at 1:00 AM Boston time (not midnight) — so anything done
 // between 12:00–12:59 AM still counts toward the previous day, giving night owls
 // a little extra time. We do this by shifting the clock back 1 hour before taking the date.
-const STREAK_ROLLOVER_HOUR = 1; // change this number to move the rollover time
+const STREAK_ROLLOVER_HOUR = 4; // change this number to move the rollover time
 function estDateKey(d = new Date()) {
   const shifted = new Date(d.getTime() - STREAK_ROLLOVER_HOUR * 3600000);
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(shifted);
@@ -6883,13 +7186,34 @@ function ensureWc(p) {
 
 // Called on load and when the WC section opens: apply "missed a day → reset" logic.
 function reconcileStreaks() {
+  // With sync configured but not yet caught up, our copy may be days behind.
+  // Zeroing a streak on that basis is exactly how a live streak gets wiped, so
+  // hold off until the room has been read.
+  if (typeof sbConfig !== 'undefined' && sbConfig && typeof syncReady !== 'undefined' && !syncReady) return;
   const today = estDateKey();
   const yesterday = prevDateKey(today);
   // One-time cleanup: remove fish that were awarded under the OLD rule
   // (first-check-in-of-month fish had no valid month/25-day basis). These are
   // tagged fromStreak but lack a 'month' field, or were granted below threshold.
-  if (!state._streakFishCleaned) {
-    state.people.forEach(p => {
+  // Only ever reconcile YOUR OWN account.
+  //
+  // This used to walk every person on the device. Two problems with that:
+  //
+  //  1. It computed other people's streaks from whatever stale copy this
+  //     device happened to hold — which is why teammates' streaks read zero
+  //     on machines that hadn't caught up yet. It runs at boot, before the
+  //     first pull, so the zeroes were showing from stale localStorage.
+  //  2. It ran before sync had a chance to correct anything, so a device that
+  //     had been closed for a week would zero everyone on sight.
+  //
+  //  Your own streak is the only one this device can judge, because it's the
+  //  only one whose check-ins this device is allowed to write.
+  const mine = (typeof myPersonId === 'function') ? myPersonId() : null;
+  const toCheck = mine ? state.people.filter(p => String(p.id) === String(mine))
+                       : [];
+
+  if (!state._streakFishCleaned && mine) {
+    toCheck.forEach(p => {
       if (Array.isArray(p.fish)) {
         p.fish = p.fish.filter(f => !(f.fromStreak && !f.month));
       }
@@ -6898,7 +7222,7 @@ function reconcileStreaks() {
     try { save(); } catch(e) {}
   }
   let fixerUsed = null;
-  state.people.forEach(p => {
+  toCheck.forEach(p => {
     const wc = ensureWc(p);
     getWcCategories(p.id).forEach(cat => {
       const rec = wc[cat.id];
@@ -8196,7 +8520,7 @@ const GACHA_SMALL = [
   { id: 'goldfish',  emoji: '🐠', name: 'Goldfish' },
   { id: 'clownfish', emoji: '🎏', name: 'Clownfish' },
   { id: 'shrimp',    emoji: '🦐', name: 'Cleaner Shrimp' },
-  { id: 'shrimp2',   emoji: '🍤', name: 'A Different Shrimp' },
+  { id: 'shrimp2',   emoji: '🍤', name: 'Cooked Shrimp :(' },
   { id: 'snail',     emoji: '🐚', name: 'Sea Snail' },
 ];
 
@@ -8208,7 +8532,8 @@ const GACHA_BIG = [
   { id: 'crab',    emoji: '🦀', name: 'Dungeness Crab' },
   { id: 'octopus', emoji: '🐙', name: 'Octopus' },
   { id: 'squid',   emoji: '🦑', name: 'Giant Squid' },
-  { id: 'jelly',   emoji: '🪼', name: 'Jellyfish' },
+  { id: 'jelly',    emoji: '🪼', name: 'Jellyfish' },
+  { id: 'stingray', emoji: '🥏', name: 'Stingray' },
 ];
 
 // The rare one inside the big-fish pool: 10% of big pulls, worth 3 like any big fish.
@@ -9898,15 +10223,32 @@ function queueCatch(entry) {
 
 // Reel one in: play the reveal, then bank whatever it holds.
 let revealTimer = null;
-function openCatch(catchId) {
+let revealFailsafe = null;
+/**
+ * Reel one in.
+ *
+ * `awardOnly` skips the reveal so a batch can play a single animation at the
+ * end instead of cancelling its own timers — see openAllCatches.
+ */
+function openCatch(catchId, awardOnly) {
+  const p = personById(myPersonId());
+  if (!p) return null;
+  if (!Array.isArray(p.openedCatches)) p.openedCatches = [];
+
   const list = pendingCatches();
-  const idx = list.findIndex(c => c.id === catchId);
-  if (idx < 0) return;
+  // ids survive a JSON round trip as numbers or strings depending on where
+  // they came from, so compare loosely
+  const idx = list.findIndex(c => String(c.id) === String(catchId));
+  if (idx < 0) return null;
+  if (p.openedCatches.some(x => String(x) === String(catchId))) {
+    // already reeled in on another device — drop it rather than pay out twice
+    list.splice(idx, 1); save(); renderPomo(); return null;
+  }
   const entry = list[idx];
   list.splice(idx, 1);
+  p.openedCatches.push(entry.id);
+  if (p.openedCatches.length > 300) p.openedCatches = p.openedCatches.slice(-300);
 
-  const p = personById(myPersonId());
-  if (!p) return;
   if (!Array.isArray(p.fish)) p.fish = [];
 
   const awarded = [];
@@ -9930,15 +10272,30 @@ function openCatch(catchId) {
   }
 
   save();
-  showCatchReveal(entry, awarded);
+  if (!awardOnly) showCatchReveal(entry, awarded);
   renderPomo();
   renderLeaderboard();
+  return awarded;
 }
 
+/**
+ * Reel in everything at once.
+ *
+ * This used to fire openCatch on a 260ms stagger, and every call begins with
+ * clearTimeout(revealTimer) — so each reveal cancelled the one before it and
+ * all but the last sat on "Reeling it in…" forever. The fish were awarded; the
+ * animation simply never finished, which is what made it look frozen.
+ *
+ * Now everything is banked first and one reveal plays for the lot.
+ */
 function openAllCatches() {
-  const ids = pendingCatches().map(c => c.id);
-  if (!ids.length) return;
-  ids.forEach((id, i) => setTimeout(() => openCatch(id), i * 260));
+  const entries = pendingCatches().slice();
+  if (!entries.length) return;
+  const all = [];
+  entries.forEach(c => { const got = openCatch(c.id, true); if (got) all.push(...got); });
+  if (!all.length) { renderPomo(); return; }
+  showCatchReveal({ tierLabel: entries.length + ' catches reeled in',
+                    minutes: 0, goal: '', earlyRoll: false }, all);
 }
 
 function showCatchReveal(entry, awarded) {
@@ -9956,7 +10313,15 @@ function showCatchReveal(entry, awarded) {
   modal.style.display = 'flex';
 
   clearTimeout(revealTimer);
+  // Belt and braces: land the animation regardless, so nobody is ever left
+  // watching a spinner because something downstream threw.
+  clearTimeout(revealFailsafe);
+  revealFailsafe = setTimeout(() => {
+    const st = document.getElementById('catch-stage');
+    if (st && st.classList.contains('casting')) st.className = 'catch-stage landed';
+  }, 2600);
   revealTimer = setTimeout(() => {
+   try {
     stage.className = 'catch-stage landed';
     const sock = awarded.find(a => a.sock);
     const pity = awarded.find(a => a.pityMessage);
@@ -9981,11 +10346,19 @@ function showCatchReveal(entry, awarded) {
         <div class="catch-name">${escHtml(a.name)}${a.bonus ? ' (bonus!)' : ''}</div>
         <div class="catch-pts">${a.sock ? 'no points' : '+' + fishValue(a) + ' pts'}</div>
       </div>`).join('');
+   } catch (e) {
+    stage.className = 'catch-stage landed';
+    title.textContent = 'Nice catch!';
+    body.innerHTML = `<div class="catch-item"><div class="catch-emoji">🐟</div>
+      <div class="catch-name">${awarded.length} item(s) banked</div></div>`;
+    console.error('[boats] catch reveal failed', e);
+   }
   }, 1100);
 }
 
 function closeCatchReveal() {
   clearTimeout(revealTimer);
+  clearTimeout(revealFailsafe);
   const m = document.getElementById('catch-modal');
   if (m) m.style.display = 'none';
 }
@@ -11092,6 +11465,7 @@ function deletePointFromModal() {
   if (i < 0) return;
   const pt = list[i];
   askConfirm(`Delete "${pt.title}"? The task it made (if any) stays on the board.`, () => {
+    markDeleted('tlPoints', pt.id);
     list.splice(i, 1);
     save();
     closeModal('point-modal');
@@ -11277,6 +11651,11 @@ function deleteProject(id) {
     });
     if (typeof pomoTaskIds !== 'undefined') pomoTaskIds = pomoTaskIds.filter(x => !taskIds.has(x));
 
+    // Record the graves, or the union merge will cheerfully restore all of
+    // this the next time a device that still has it syncs.
+    markDeleted('projects', id);
+    tlPoints().filter(x => String(x.projectId) === String(id))
+              .forEach(x => markDeleted('tlPoints', x.id));
     state.projects = projects().filter(x => String(x.id) !== String(id));
     state.tlPoints = tlPoints().filter(x => String(x.projectId) !== String(id));
 
@@ -11807,6 +12186,7 @@ function removeStatus(i) {
   const gone = list[i];
   const fallback = (list[0].id === gone.id ? list[1] : list[0]).label;
   askConfirm(`Remove "${gone.label}"? Anything using it falls back to "${fallback}".`, () => {
+    markDeleted('projectStatuses', gone.id);
     list.splice(i, 1);
     save();
     renderStatusEditor();

@@ -105,15 +105,26 @@ class MergeStrategy {
 // ── identities ──────────────────────────────────────────────
 // Legacy records carry no uid, so it's derived from their contents. Two
 // devices holding the same old fish derive the same key and dedupe correctly.
-/** What a record IS, ignoring any id already written to it. */
+/**
+ * What a record IS, ignoring any id already written to it.
+ *
+ * Returns null when the record carries nothing identifying at all. Two such
+ * records would otherwise produce the same key and one would be deleted as a
+ * duplicate — dropping real data to fix a duplication bug is a worse outcome
+ * than leaving a duplicate in place, so anything unidentifiable is kept.
+ */
 function fishContentKey(f) {
-  return ['f', f && f.emoji, f && f.name, f && f.minutes, f && f.at].join('|');
+  if (!f) return null;
+  const bits = [f.emoji, f.name, f.minutes, f.at].filter(v => v !== undefined && v !== null && v !== '');
+  if (!bits.length) return null;
+  return ['f', f.emoji, f.name, f.minutes, f.at].join('|');
 }
 function purchaseContentKey(x) {
   // one purchase per shop item, so the item id is the identity
   return 'p|' + String((x && x.id) || [x && x.name, x && x.at].join('|'));
 }
-function fishIdentity(f) { return (f && f.uid) || fishContentKey(f); }
+let unidentifiedSeq = 0;
+function fishIdentity(f) { return (f && f.uid) || fishContentKey(f) || ('f?' + (++unidentifiedSeq)); }
 function purchaseIdentity(x) { return (x && x.uid) || purchaseContentKey(x); }
 
 /**
@@ -179,9 +190,10 @@ function repairDuplicates(p) {
     const seen = new Set(), keep = [];
     p.fish.forEach(f => {
       const k = fishContentKey(f);
+      if (k === null) { keep.push(f); return; }   // unidentifiable — never drop it
       if (seen.has(k)) { removed++; return; }
       seen.add(k);
-      if (f) f.uid = k;
+      f.uid = k;
       keep.push(f);
     });
     p.fish = keep;
@@ -245,17 +257,50 @@ function mergeLogDay(a, b) {
   return { ...(b.editedAt > a.editedAt ? b : a), entries, edited };
 }
 
+/**
+ * Some singletons are maps keyed by personId — everyone's World Cup categories
+ * in one object, everyone's meeting templates in another. They were being
+ * replaced wholesale on arrival, so a device holding a stale or empty copy
+ * could wipe out categories other people had carefully customised.
+ *
+ * Each person owns their own entry: we keep ours for ourselves and accept
+ * theirs for everyone else. Nothing is ever deleted — a key missing from the
+ * incoming copy stays put.
+ */
+function mergePersonKeyedMap(local, incoming) {
+  // the legacy shape was a flat array shared by everyone; prefer whichever
+  // side has already moved to the per-person object
+  if (Array.isArray(local) && !Array.isArray(incoming)) return incoming || local;
+  if (Array.isArray(incoming) && !Array.isArray(local)) return local || incoming;
+  if (Array.isArray(local) && Array.isArray(incoming)) return incoming.length ? incoming : local;
+
+  const me = (typeof myPersonId === 'function') ? myPersonId() : null;
+  const admin = (typeof isAdmin === 'function') && isAdmin();
+  const out = { ...(local || {}) };
+  Object.entries(incoming || {}).forEach(([pid, val]) => {
+    if (!admin && me && String(pid) === String(me) && out[pid]) return;  // mine
+    out[pid] = val;
+  });
+  return out;
+}
+
+/** Singletons that must never be replaced wholesale. */
+const PERSON_KEYED_SINGLETONS = { wcCategories: true, personTemplates: true };
+
 // ── the policy ──────────────────────────────────────────────
 /** Fields carrying a per-field timestamp, stamped centrally at push time. */
 const TS_FIELDS = ['name', 'color', 'stars', 'pomoMinutes', 'pomoSessions',
                    'pointsAdjust', 'activeStickers', 'planning', 'streakFixers',
-                   'socks', 'scoreEpoch', 'wcCategories', 'timerLock'];
+                   'socks', 'scoreEpoch', 'timerLock'];
 
 const PERSON_POLICY = {
   fish:        MergeStrategy.unionById(fishIdentity),
   purchases:   MergeStrategy.unionById(purchaseIdentity),
   stickers:    MergeStrategy.unionSet(),
   pendingCatches: MergeStrategy.unionById(c => String(c && c.id)),
+  // ids of catches already reeled in — the tombstones that stop a union from
+  // handing an opened catch back
+  openedCatches: MergeStrategy.unionSet(),
   wc:          MergeStrategy.byKey(mergeWcCategory),
   logs:        MergeStrategy.byKey(mergeLogDay),
 };
@@ -286,6 +331,22 @@ class PersonMerger {
     return person;
   }
 
+  /**
+   * A row stamped BEFORE our copy is a ghost from a device that hasn't heard
+   * about an admin correction yet. Take its harmless parts — logs, notebook,
+   * name — but keep our scores, or the union would quietly restore whatever
+   * the admin just took away. (A streak set down to 14 was losing to a stale
+   * device still claiming 99, because the merge takes the higher of the two.)
+   */
+  mergeStale(local, incoming) {
+    const merged = this.merge(local, incoming);
+    PersonMerger.SCORE_FIELDS.forEach(f => {
+      if (local && Object.prototype.hasOwnProperty.call(local, f)) merged[f] = local[f];
+      else delete merged[f];
+    });
+    return merged;
+  }
+
   /** Reconcile our copy of a person with one that arrived from elsewhere. */
   merge(local, incoming) {
     if (!local) return ensureRecordUids({ ...incoming });
@@ -307,9 +368,107 @@ class PersonMerger {
       out._ts[k] = Math.max(lts[k] || 0, its[k] || 0);
     });
 
+    // A catch opened on one device was being resurrected by the union from a
+    // device that hadn't seen it opened — so it reappeared on the line and
+    // could be reeled in a second time, paying out twice. Tombstones win.
+    if (Array.isArray(out.openedCatches) && out.openedCatches.length) {
+      const gone = new Set(out.openedCatches.map(String));
+      out.pendingCatches = (out.pendingCatches || []).filter(c => !gone.has(String(c && c.id)));
+      if (out.openedCatches.length > 300) out.openedCatches = out.openedCatches.slice(-300);
+    }
+
     repairDuplicates(out);
     return out;
   }
 }
 
+/** What an admin correction owns outright. */
+PersonMerger.SCORE_FIELDS = ['fish', 'stars', 'pomoMinutes', 'pomoSessions', 'wc',
+                             'pointsAdjust', 'scoreEpoch', 'streakFixers', 'socks',
+                             'stickers', 'activeStickers', 'purchases'];
+
 const PEOPLE_MERGER = new PersonMerger(PERSON_POLICY, TS_FIELDS);
+
+// ═══════════════════════════════════════════════════════════════
+//  ID-KEYED LISTS  (projects, timeline points, shop items, activity
+//  types, meeting templates, project statuses)
+//
+//  These sync as SINGLETONS — one row holding the whole array — and were
+//  being replaced wholesale on arrival, exactly like person rows used to be.
+//  Two people adding books at the same time meant one array overwrote the
+//  other and somebody's project simply vanished.
+//
+//  They now merge item by item:
+//    · union by id, so nothing is lost
+//    · when both sides hold the same id, the one edited more recently wins
+//    · a deleted item stays deleted, via a tombstone — otherwise the union
+//      would helpfully hand back everything anyone ever removed
+// ═══════════════════════════════════════════════════════════════
+
+/** Deletions we must not undo. `{ "projects:pj1": 1699999999999 }` */
+function tombstones() {
+  if (!state._graves || typeof state._graves !== 'object') state._graves = {};
+  return state._graves;
+}
+function markDeleted(kind, id) {
+  tombstones()[kind + ':' + id] = Date.now();
+  pruneTombstones();
+}
+function isDeleted(kind, id) {
+  return Object.prototype.hasOwnProperty.call(tombstones(), kind + ':' + id);
+}
+/** Forget graves older than 90 days so the record can't grow without bound. */
+function pruneTombstones() {
+  const cutoff = Date.now() - 90 * 86400000;
+  const g = tombstones();
+  Object.keys(g).forEach(k => { if ((g[k] || 0) < cutoff) delete g[k]; });
+}
+function mergeTombstones(local, incoming) {
+  const out = { ...(local || {}) };
+  Object.entries(incoming || {}).forEach(([k, v]) => {
+    out[k] = Math.max(out[k] || 0, Number(v) || 0);
+  });
+  return out;
+}
+
+/**
+ * Note which items changed, so the far end can tell a newer edit from an older
+ * one. Stamped centrally at push time, the same way person scalars are.
+ */
+function stampIdList(kind, arr, previousJson) {
+  if (!Array.isArray(arr)) return arr;
+  let prev = null;
+  try { prev = previousJson ? JSON.parse(previousJson) : null; } catch (e) {}
+  const prevById = {};
+  if (Array.isArray(prev)) prev.forEach(it => { if (it && it.id != null) prevById[String(it.id)] = it; });
+  const now = Date.now();
+  arr.forEach(it => {
+    if (!it || it.id == null) return;
+    const old = prevById[String(it.id)];
+    const a = JSON.stringify({ ...it, _ts: 0 });
+    const b = old ? JSON.stringify({ ...old, _ts: 0 }) : null;
+    if (a !== b) it._ts = now;
+    else if (!it._ts && old) it._ts = old._ts || 0;
+  });
+  return arr;
+}
+
+function mergeIdList(kind, local, incoming) {
+  const byId = new Map();
+  const consider = arr => (Array.isArray(arr) ? arr : []).forEach(it => {
+    if (!it || it.id == null) return;
+    const key = String(it.id);
+    if (isDeleted(kind, key)) return;               // someone removed it; stay removed
+    const held = byId.get(key);
+    if (!held || (it._ts || 0) > (held._ts || 0)) byId.set(key, it);
+  });
+  consider(local);
+  consider(incoming);
+  return [...byId.values()];
+}
+
+/** Singletons that are id-keyed lists rather than single values. */
+const ID_LIST_SINGLETONS = {
+  projects: true, tlPoints: true, storeItems: true,
+  activityTypes: true, templates: true, projectStatuses: true,
+};

@@ -732,6 +732,7 @@ function deletePointFromModal() {
   if (i < 0) return;
   const pt = list[i];
   askConfirm(`Delete "${pt.title}"? The task it made (if any) stays on the board.`, () => {
+    markDeleted('tlPoints', pt.id);
     list.splice(i, 1);
     save();
     closeModal('point-modal');
@@ -917,6 +918,11 @@ function deleteProject(id) {
     });
     if (typeof pomoTaskIds !== 'undefined') pomoTaskIds = pomoTaskIds.filter(x => !taskIds.has(x));
 
+    // Record the graves, or the union merge will cheerfully restore all of
+    // this the next time a device that still has it syncs.
+    markDeleted('projects', id);
+    tlPoints().filter(x => String(x.projectId) === String(id))
+              .forEach(x => markDeleted('tlPoints', x.id));
     state.projects = projects().filter(x => String(x.id) !== String(id));
     state.tlPoints = tlPoints().filter(x => String(x.projectId) !== String(id));
 
@@ -1447,6 +1453,7 @@ function removeStatus(i) {
   const gone = list[i];
   const fallback = (list[0].id === gone.id ? list[1] : list[0]).label;
   askConfirm(`Remove "${gone.label}"? Anything using it falls back to "${fallback}".`, () => {
+    markDeleted('projectStatuses', gone.id);
     list.splice(i, 1);
     save();
     renderStatusEditor();
