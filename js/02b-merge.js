@@ -105,25 +105,97 @@ class MergeStrategy {
 // ── identities ──────────────────────────────────────────────
 // Legacy records carry no uid, so it's derived from their contents. Two
 // devices holding the same old fish derive the same key and dedupe correctly.
-function fishIdentity(f) {
-  if (f && f.uid) return f.uid;
+/** What a record IS, ignoring any id already written to it. */
+function fishContentKey(f) {
   return ['f', f && f.emoji, f && f.name, f && f.minutes, f && f.at].join('|');
 }
-function purchaseIdentity(x) {
-  if (x && x.uid) return x.uid;
-  return ['p', x && x.id, x && x.at].join('|');
+function purchaseContentKey(x) {
+  // one purchase per shop item, so the item id is the identity
+  return 'p|' + String((x && x.id) || [x && x.name, x && x.at].join('|'));
 }
+function fishIdentity(f) { return (f && f.uid) || fishContentKey(f); }
+function purchaseIdentity(x) { return (x && x.uid) || purchaseContentKey(x); }
 
-/** Give every catch a stable id so unions can dedupe it. Safe to re-run. */
+/**
+ * Give every catch a stable id so unions can dedupe it. Safe to re-run.
+ *
+ * ⚠️ The id must depend ONLY on the record's contents — never on its position.
+ * An earlier version appended the array index, which meant the same purchase
+ * got `…|0` on one device and `…|3` on another. The union saw two different
+ * keys and kept both; the array grew, indices shifted, and the next merge
+ * produced more mismatches again. That compounding is what duplicated
+ * everyone's purchases eight times over.
+ */
 function ensureRecordUids(p) {
   if (!p) return p;
   if (Array.isArray(p.fish)) {
-    p.fish.forEach((f, i) => { if (f && !f.uid) f.uid = fishIdentity(f) + '|' + i; });
+    p.fish.forEach(f => { if (f && !f.uid) f.uid = fishIdentity(f); });
   }
   if (Array.isArray(p.purchases)) {
-    p.purchases.forEach((x, i) => { if (x && !x.uid) x.uid = purchaseIdentity(x) + '|' + i; });
+    p.purchases.forEach(x => { if (x && !x.uid) x.uid = purchaseIdentity(x); });
   }
   return p;
+}
+
+/**
+ * Collapse duplicates that the index-suffix bug already wrote to people's
+ * accounts. Runs on load; harmless once everything is clean.
+ *
+ *  · purchases — one per shop item, always. buyMarketItem already refuses a
+ *    second copy, so any repeat is corruption.
+ *  · stickers  — a set of ids.
+ *  · fish      — by content. Two real catches never share a millisecond, so
+ *    matching `at` means it's the same catch written twice.
+ */
+function repairDuplicates(p) {
+  if (!p) return 0;
+  let removed = 0;
+
+  // Repair deliberately keys on CONTENT and ignores whatever uid is stored,
+  // because the records already corrupted carry index-suffixed ids — trusting
+  // those would let the duplicates survive the very pass meant to remove them.
+  if (Array.isArray(p.purchases)) {
+    const seen = new Set(), keep = [];
+    p.purchases.forEach(x => {
+      const k = purchaseContentKey(x);
+      if (seen.has(k)) { removed++; return; }
+      seen.add(k);
+      if (x) x.uid = k;                     // rewrite the bad id while we're here
+      keep.push(x);
+    });
+    p.purchases = keep;
+  }
+
+  if (Array.isArray(p.stickers)) {
+    const before = p.stickers.length;
+    p.stickers = [...new Set(p.stickers)];
+    removed += before - p.stickers.length;
+  }
+  if (Array.isArray(p.activeStickers)) {
+    p.activeStickers = [...new Set(p.activeStickers)];
+  }
+
+  if (Array.isArray(p.fish)) {
+    const seen = new Set(), keep = [];
+    p.fish.forEach(f => {
+      const k = fishContentKey(f);
+      if (seen.has(k)) { removed++; return; }
+      seen.add(k);
+      if (f) f.uid = k;
+      keep.push(f);
+    });
+    p.fish = keep;
+  }
+
+  ensureRecordUids(p);
+  return removed;
+}
+
+/** Sweep every person once, and report what it cleaned. */
+function repairAllPeople() {
+  let total = 0;
+  (state.people || []).forEach(p => { total += repairDuplicates(p); });
+  return total;
 }
 
 // ── streaks ─────────────────────────────────────────────────
@@ -235,7 +307,8 @@ class PersonMerger {
       out._ts[k] = Math.max(lts[k] || 0, its[k] || 0);
     });
 
-    return ensureRecordUids(out);
+    repairDuplicates(out);
+    return out;
   }
 }
 

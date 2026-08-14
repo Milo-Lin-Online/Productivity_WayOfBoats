@@ -11,6 +11,12 @@
 // BOOT
 // ══════════════════════════════════════════════
 load();
+// Collapse anything the duplication bug already wrote before it reaches a
+// render or a push.
+try { if (typeof repairAllPeople === 'function') {
+  const n = repairAllPeople();
+  if (n) { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); console.log('[boats] repaired', n, 'duplicate records'); }
+} } catch (e) {}
 renderAll();
 applyConfigColors();
 initCursors();

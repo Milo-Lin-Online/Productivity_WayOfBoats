@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <!-- Stop phones serving a stale copy of the app from cache. The version below is
      also used by the in-app update check. Bump APP_VERSION on every deploy. -->
-<meta name="app-version" content="2026.08.11-1">
+<meta name="app-version" content="2026.08.11-2">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -4124,6 +4124,22 @@ function buildItemMap() {
   return map;
 }
 
+/**
+ * May this device write this row?
+ *
+ * Person rows belong to the person. Yours is yours to change; everyone else's
+ * is read-only here, however out of date your copy is. The admin account is the
+ * exception, since resets and corrections have to reach every account.
+ * Non-person rows (tasks, meetings, posts) stay shared.
+ */
+function mayWriteRow(itemKey) {
+  if (!itemKey.startsWith('people:')) return true;
+  if (typeof isAdmin === 'function' && isAdmin()) return true;
+  const me = (typeof myPersonId === 'function') ? myPersonId() : null;
+  if (!me) return false;                       // no name set — read-only
+  return itemKey === 'people:' + me;
+}
+
 // Push only the rows whose JSON changed since last push (per-item last-write-wins).
 async function pushChangedItems() {
   if (!sb || !sbConfig) return;
@@ -4138,13 +4154,16 @@ async function pushChangedItems() {
   });
   const map = buildItemMap();
   const rows = [];
-  // changed or new items
   for (const k in map) {
     const snap = snapshotOf(map[k]);
-    if (lastSnapshot[k] !== snap) {
-      rows.push({ room: sbConfig.room, item_key: k, data: map[k], updated_at: now });
-      lastSnapshot[k] = snap;
-    }
+    if (lastSnapshot[k] === snap) continue;
+    // A device speaks for its own player and nobody else. Every device used to
+    // push every person row it happened to hold, so a stale copy of someone
+    // else's account could overwrite their real fish and streaks. Only the
+    // admin account may write on behalf of others.
+    if (!mayWriteRow(k)) continue;
+    rows.push({ room: sbConfig.room, item_key: k, data: map[k], updated_at: now });
+    lastSnapshot[k] = snap;
   }
   // deletions: keys we had before but not now
   const deletions = [];
@@ -4223,8 +4242,13 @@ function applyItemRow(item_key, data, isDelete) {
         // An admin reset outranks everything: if the row carries a NEWER
         // epoch than ours, that person was deliberately rewritten and we
         // take it whole rather than merging our stale numbers back in.
-        if (rowEpoch(data) > currentEpoch()) {
-          state.scoreEpoch = rowEpoch(data);
+        // Compare this person's stamp against OUR copy of the same person.
+        // It used to compare against state.scoreEpoch — a separate synced
+        // singleton — so any device whose singleton lagged saw every row as
+        // "newer", took it whole, and never merged again. That's why streaks
+        // stayed broken on some machines however many times they synced.
+        if (rowEpoch(data) > rowEpoch(arr[idx])) {
+          state.scoreEpoch = Math.max(currentEpoch(), rowEpoch(data));
           arr[idx] = ensureRecordUids({ ...data });
           lastSnapshot[item_key] = snapshotOf(arr[idx]);
           localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -4301,6 +4325,11 @@ async function pullAllItems() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       syncReady = true;
       localStorage.setItem('boats_last_sync', String(Date.now()));
+      const fixed = (typeof repairAllPeople === 'function') ? repairAllPeople() : 0;
+      if (fixed) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        showToast(`🧹 Cleared ${fixed} duplicated record(s)`);
+      }
       renderAll();
       if (dropped) showToast(`🧹 Cleared ${dropped} stale item(s) from this device's cache`);
       // Anything we kept that the room doesn't have is genuine local work that
@@ -4594,25 +4623,97 @@ class MergeStrategy {
 // ── identities ──────────────────────────────────────────────
 // Legacy records carry no uid, so it's derived from their contents. Two
 // devices holding the same old fish derive the same key and dedupe correctly.
-function fishIdentity(f) {
-  if (f && f.uid) return f.uid;
+/** What a record IS, ignoring any id already written to it. */
+function fishContentKey(f) {
   return ['f', f && f.emoji, f && f.name, f && f.minutes, f && f.at].join('|');
 }
-function purchaseIdentity(x) {
-  if (x && x.uid) return x.uid;
-  return ['p', x && x.id, x && x.at].join('|');
+function purchaseContentKey(x) {
+  // one purchase per shop item, so the item id is the identity
+  return 'p|' + String((x && x.id) || [x && x.name, x && x.at].join('|'));
 }
+function fishIdentity(f) { return (f && f.uid) || fishContentKey(f); }
+function purchaseIdentity(x) { return (x && x.uid) || purchaseContentKey(x); }
 
-/** Give every catch a stable id so unions can dedupe it. Safe to re-run. */
+/**
+ * Give every catch a stable id so unions can dedupe it. Safe to re-run.
+ *
+ * ⚠️ The id must depend ONLY on the record's contents — never on its position.
+ * An earlier version appended the array index, which meant the same purchase
+ * got `…|0` on one device and `…|3` on another. The union saw two different
+ * keys and kept both; the array grew, indices shifted, and the next merge
+ * produced more mismatches again. That compounding is what duplicated
+ * everyone's purchases eight times over.
+ */
 function ensureRecordUids(p) {
   if (!p) return p;
   if (Array.isArray(p.fish)) {
-    p.fish.forEach((f, i) => { if (f && !f.uid) f.uid = fishIdentity(f) + '|' + i; });
+    p.fish.forEach(f => { if (f && !f.uid) f.uid = fishIdentity(f); });
   }
   if (Array.isArray(p.purchases)) {
-    p.purchases.forEach((x, i) => { if (x && !x.uid) x.uid = purchaseIdentity(x) + '|' + i; });
+    p.purchases.forEach(x => { if (x && !x.uid) x.uid = purchaseIdentity(x); });
   }
   return p;
+}
+
+/**
+ * Collapse duplicates that the index-suffix bug already wrote to people's
+ * accounts. Runs on load; harmless once everything is clean.
+ *
+ *  · purchases — one per shop item, always. buyMarketItem already refuses a
+ *    second copy, so any repeat is corruption.
+ *  · stickers  — a set of ids.
+ *  · fish      — by content. Two real catches never share a millisecond, so
+ *    matching `at` means it's the same catch written twice.
+ */
+function repairDuplicates(p) {
+  if (!p) return 0;
+  let removed = 0;
+
+  // Repair deliberately keys on CONTENT and ignores whatever uid is stored,
+  // because the records already corrupted carry index-suffixed ids — trusting
+  // those would let the duplicates survive the very pass meant to remove them.
+  if (Array.isArray(p.purchases)) {
+    const seen = new Set(), keep = [];
+    p.purchases.forEach(x => {
+      const k = purchaseContentKey(x);
+      if (seen.has(k)) { removed++; return; }
+      seen.add(k);
+      if (x) x.uid = k;                     // rewrite the bad id while we're here
+      keep.push(x);
+    });
+    p.purchases = keep;
+  }
+
+  if (Array.isArray(p.stickers)) {
+    const before = p.stickers.length;
+    p.stickers = [...new Set(p.stickers)];
+    removed += before - p.stickers.length;
+  }
+  if (Array.isArray(p.activeStickers)) {
+    p.activeStickers = [...new Set(p.activeStickers)];
+  }
+
+  if (Array.isArray(p.fish)) {
+    const seen = new Set(), keep = [];
+    p.fish.forEach(f => {
+      const k = fishContentKey(f);
+      if (seen.has(k)) { removed++; return; }
+      seen.add(k);
+      if (f) f.uid = k;
+      keep.push(f);
+    });
+    p.fish = keep;
+  }
+
+  ensureRecordUids(p);
+  return removed;
+}
+
+/** Sweep every person once, and report what it cleaned. */
+function repairAllPeople() {
+  let total = 0;
+  (state.people || []).forEach(p => { total += repairDuplicates(p); });
+  return total;
 }
 
 // ── streaks ─────────────────────────────────────────────────
@@ -4724,7 +4825,8 @@ class PersonMerger {
       out._ts[k] = Math.max(lts[k] || 0, its[k] || 0);
     });
 
-    return ensureRecordUids(out);
+    repairDuplicates(out);
+    return out;
   }
 }
 
@@ -11737,6 +11839,12 @@ function resetStatuses() {
 // BOOT
 // ══════════════════════════════════════════════
 load();
+// Collapse anything the duplication bug already wrote before it reaches a
+// render or a push.
+try { if (typeof repairAllPeople === 'function') {
+  const n = repairAllPeople();
+  if (n) { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); console.log('[boats] repaired', n, 'duplicate records'); }
+} } catch (e) {}
 renderAll();
 applyConfigColors();
 initCursors();

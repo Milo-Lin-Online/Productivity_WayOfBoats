@@ -188,6 +188,22 @@ function buildItemMap() {
   return map;
 }
 
+/**
+ * May this device write this row?
+ *
+ * Person rows belong to the person. Yours is yours to change; everyone else's
+ * is read-only here, however out of date your copy is. The admin account is the
+ * exception, since resets and corrections have to reach every account.
+ * Non-person rows (tasks, meetings, posts) stay shared.
+ */
+function mayWriteRow(itemKey) {
+  if (!itemKey.startsWith('people:')) return true;
+  if (typeof isAdmin === 'function' && isAdmin()) return true;
+  const me = (typeof myPersonId === 'function') ? myPersonId() : null;
+  if (!me) return false;                       // no name set — read-only
+  return itemKey === 'people:' + me;
+}
+
 // Push only the rows whose JSON changed since last push (per-item last-write-wins).
 async function pushChangedItems() {
   if (!sb || !sbConfig) return;
@@ -202,13 +218,16 @@ async function pushChangedItems() {
   });
   const map = buildItemMap();
   const rows = [];
-  // changed or new items
   for (const k in map) {
     const snap = snapshotOf(map[k]);
-    if (lastSnapshot[k] !== snap) {
-      rows.push({ room: sbConfig.room, item_key: k, data: map[k], updated_at: now });
-      lastSnapshot[k] = snap;
-    }
+    if (lastSnapshot[k] === snap) continue;
+    // A device speaks for its own player and nobody else. Every device used to
+    // push every person row it happened to hold, so a stale copy of someone
+    // else's account could overwrite their real fish and streaks. Only the
+    // admin account may write on behalf of others.
+    if (!mayWriteRow(k)) continue;
+    rows.push({ room: sbConfig.room, item_key: k, data: map[k], updated_at: now });
+    lastSnapshot[k] = snap;
   }
   // deletions: keys we had before but not now
   const deletions = [];
@@ -287,8 +306,13 @@ function applyItemRow(item_key, data, isDelete) {
         // An admin reset outranks everything: if the row carries a NEWER
         // epoch than ours, that person was deliberately rewritten and we
         // take it whole rather than merging our stale numbers back in.
-        if (rowEpoch(data) > currentEpoch()) {
-          state.scoreEpoch = rowEpoch(data);
+        // Compare this person's stamp against OUR copy of the same person.
+        // It used to compare against state.scoreEpoch — a separate synced
+        // singleton — so any device whose singleton lagged saw every row as
+        // "newer", took it whole, and never merged again. That's why streaks
+        // stayed broken on some machines however many times they synced.
+        if (rowEpoch(data) > rowEpoch(arr[idx])) {
+          state.scoreEpoch = Math.max(currentEpoch(), rowEpoch(data));
           arr[idx] = ensureRecordUids({ ...data });
           lastSnapshot[item_key] = snapshotOf(arr[idx]);
           localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -365,6 +389,11 @@ async function pullAllItems() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       syncReady = true;
       localStorage.setItem('boats_last_sync', String(Date.now()));
+      const fixed = (typeof repairAllPeople === 'function') ? repairAllPeople() : 0;
+      if (fixed) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        showToast(`🧹 Cleared ${fixed} duplicated record(s)`);
+      }
       renderAll();
       if (dropped) showToast(`🧹 Cleared ${dropped} stale item(s) from this device's cache`);
       // Anything we kept that the room doesn't have is genuine local work that
