@@ -193,6 +193,13 @@ async function pushChangedItems() {
   if (!sb || !sbConfig) return;
   if (!syncReady) return;        // we haven't seen the room yet — say nothing
   const now = Date.now();
+  // Note WHEN each scalar last changed on our copy, before we diff. Doing it
+  // in one place means no mutation site anywhere else has to remember to, and
+  // it's what lets the other end tell a newer value from an older one.
+  (state.people || []).forEach(p => {
+    ensureRecordUids(p);
+    PEOPLE_MERGER.stamp(p, lastSnapshot['people:' + p.id]);
+  });
   const map = buildItemMap();
   const rows = [];
   // changed or new items
@@ -276,28 +283,46 @@ function applyItemRow(item_key, data, isDelete) {
     if (isDelete) {
       if (idx > -1) arr.splice(idx, 1);
     } else if (idx > -1) {
-      // An incoming person row stamped before the last admin reset is a ghost
-      // from someone's stale cache. Take its harmless fields (name, colour,
-      // notebook) but keep OUR scores — admin's numbers win.
-      if (kind === 'people' && isStaleScoreRow(data)) {
-        arr[idx] = mergeKeepingLocalScores(arr[idx], data);
-        staleRowRejected = true;
+      if (kind === 'people') {
+        // An admin reset outranks everything: if the row carries a NEWER
+        // epoch than ours, that person was deliberately rewritten and we
+        // take it whole rather than merging our stale numbers back in.
+        if (rowEpoch(data) > currentEpoch()) {
+          state.scoreEpoch = rowEpoch(data);
+          arr[idx] = ensureRecordUids({ ...data });
+          lastSnapshot[item_key] = snapshotOf(arr[idx]);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+          applyingRemote = false;
+          return;
+        }
+        // A person is not one value — it's a ledger of catches, a set of
+        // streaks, a pile of logs and a handful of scalars, each of which can
+        // be edited on a different device. Replacing the object wholesale
+        // threw away whatever the other device had touched. Merge per field.
+        const merged = PEOPLE_MERGER.merge(arr[idx], data);
+        // if what we ended up with differs from what arrived, the row in the
+        // database is now behind us and needs correcting
+        if (snapshotOf(merged) !== snapshotOf(data)) staleRowRejected = true;
+        arr[idx] = merged;
       } else {
         arr[idx] = data;
       }
     } else {
-      if (kind === 'people' && isStaleScoreRow(data)) {
-        // a person the room already retired, arriving from an old device
-        arr.push(mergeKeepingLocalScores(null, data));
-        staleRowRejected = true;
-      } else {
-        arr.push(data);
-      }
+      arr.push(kind === 'people' ? ensureRecordUids({ ...data }) : data);
     }
   }
   // keep our snapshot in sync so we don't echo this back
-  if (isDelete) delete lastSnapshot[item_key];
-  else lastSnapshot[item_key] = snapshotOf(data);
+  if (isDelete) {
+    delete lastSnapshot[item_key];
+  } else {
+    // record what we NOW hold. After a merge that differs from the incoming
+    // row, this leaves a diff that the corrective push will send back up.
+    const kindNow = item_key.split(':')[0];
+    const held = ITEM_COLLECTIONS.includes(kindNow)
+      ? (state[kindNow] || []).find(el => String(el.id) === item_key.split(':').slice(1).join(':'))
+      : null;
+    lastSnapshot[item_key] = snapshotOf(held || data);
+  }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   applyingRemote = false;
   // We kept our own values over theirs, so the row in the database is still
