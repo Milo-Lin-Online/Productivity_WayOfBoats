@@ -92,13 +92,42 @@ function tasksDueThisWeek(m, pid) {
   const [y, mo, d] = base.split('-').map(Number);
   const end = new Date(y, mo - 1, d + 7);
   const endKey = `${end.getFullYear()}-${String(end.getMonth()+1).padStart(2,'0')}-${String(end.getDate()).padStart(2,'0')}`;
-  return state.tasks
-    .filter(t => t.assigneeId === pid && t.due && t.due >= base && t.due <= endKey)
+  // pull from the per-person index rather than sweeping every task again
+  const pool = (_tasksByPerson && _tasksByPerson.get(String(pid))) ||
+               (state.tasks || []).filter(t => String(t.assigneeId) === String(pid));
+  return pool
+    .filter(t => t.due && t.due >= base && t.due <= endKey)
     .sort((a, b) => (a.due || '').localeCompare(b.due || ''));
+}
+
+// ── per-render caches ─────────────────────────────────────────
+// renderMeetings draws one column per person PER MEETING. With 40 meetings and
+// 12 people that's 480 columns, and each was independently scanning the whole
+// task list and the person's entire log history — measured at 10.5 SECONDS on a
+// full room, on every sync echo. None of that work depends on the meeting, so
+// it's computed once per render and reused.
+let _pieCache = null;
+let _tasksByPerson = null;
+
+function resetMeetingCaches() {
+  _pieCache = new Map();
+  _tasksByPerson = new Map();
+  (state.tasks || []).forEach(t => {
+    const k = String(t.assigneeId || '');
+    if (!_tasksByPerson.has(k)) _tasksByPerson.set(k, []);
+    _tasksByPerson.get(k).push(t);
+  });
 }
 
 /** A small pie of what this person logged in the last 7 days. */
 function weekPieFor(pid, color) {
+  if (_pieCache && _pieCache.has(pid)) return _pieCache.get(pid);
+  const html = buildWeekPie(pid, color);
+  if (_pieCache) _pieCache.set(pid, html);
+  return html;
+}
+
+function buildWeekPie(pid, color) {
   if (typeof personLogs !== 'function') return '';
   const logs = personLogs(pid) || {};
   const today = (typeof estDateKey === 'function') ? estDateKey() : '';
@@ -201,6 +230,7 @@ function renderNextTaskBanner() {
 }
 
 function renderMeetings() {
+  resetMeetingCaches();   // one pass over tasks and logs, not one per column
   renderNextTaskBanner();
   const container = document.getElementById('meeting-notes-container');
   const tabs = document.getElementById('week-tabs');
@@ -250,14 +280,47 @@ function filterWeek(week, btn) {
   renderMeetingCards(filtered);
 }
 
+/**
+ * Which meetings draw their full contents.
+ *
+ * Every meeting used to render every person's column, always. Forty meetings
+ * with twelve people is 480 columns and, in a real room, 28,000 task rows —
+ * measured at 10.5 SECONDS per render, and renderAll fires on every sync echo.
+ * That was the lag.
+ *
+ * The newest few are open; the rest collapse to a header you can click. Nobody
+ * reads the columns of a meeting from three weeks ago, and if they want to,
+ * it's one click.
+ */
+const MEETINGS_OPEN_BY_DEFAULT = 2;
+let expandedMeetings = null;
+
+function meetingIsOpen(m, index) {
+  if (expandedMeetings === null) return index < MEETINGS_OPEN_BY_DEFAULT;
+  return expandedMeetings.has(String(m.id));
+}
+function toggleMeetingOpen(mid, index) {
+  if (expandedMeetings === null) {
+    // first click: start from whatever is currently showing
+    expandedMeetings = new Set(
+      (state.meetings || []).slice(0, MEETINGS_OPEN_BY_DEFAULT).map(x => String(x.id)));
+  }
+  const k = String(mid);
+  if (expandedMeetings.has(k)) expandedMeetings.delete(k); else expandedMeetings.add(k);
+  renderMeetings();
+}
+
 function renderMeetingCards(meetings) {
   const container = document.getElementById('meeting-notes-container');
   const taskCounts = getTaskCountsByPerson();
-  container.innerHTML = meetings.map(m => {
+  container.innerHTML = meetings.map((m, _mi) => {
     const tmpl = getTemplates().find(t => t.id === m.template);
+    const open = meetingIsOpen(m, _mi);
 
     let peopleCols;
-    if (state.people.length === 0) {
+    if (!open) {
+      peopleCols = '';                 // closed: none of the column work runs at all
+    } else if (state.people.length === 0) {
       peopleCols = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-emoji">⚓</div><p>No crew yet!</p><small>Add people in "Edit People" and they'll appear here as columns.</small></div>`;
     } else {
       peopleCols = meetingAttendees(m).map(p => {
@@ -355,6 +418,8 @@ function renderMeetingCards(meetings) {
             </div>
           </div>
 
+          ${(typeof decorLayer === 'function') ? decorLayer(m, p.id) : ''}
+
           ${(p.purchases && p.purchases.length) || p.streakFixers ? `<div class="pc-buys">
             ${p.streakFixers ? `<span class="pc-buy" title="${p.streakFixers} streak fixer(s)">🩹${p.streakFixers}</span>` : ''}
             ${(p.purchases || []).map(x => `<span class="pc-buy" title="${escAttr(x.name)}">${x.image ? `<img src="${escAttr(x.image)}" alt="">` : (x.emoji || '🎁')}</span>`).join('')}
@@ -381,16 +446,27 @@ function renderMeetingCards(meetings) {
           <span class="week-badge" title="Total estimated time across everyone's tasks">⏱️ ${formatMinutes(meetingMins)}</span>
           <span class="week-badge" title="Completed tasks in this meeting">✅ ${meetingDone}/${meetingTotal}</span>
           <span class="week-badge">📅 ${m.date ? new Date(m.date + 'T00:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric'}) : 'No date'}</span>
+          <button class="meeting-fold" onclick="toggleMeetingOpen(${m.id}, ${_mi})"
+            title="${open ? 'Collapse this meeting' : 'Open this meeting'}">${open ? '▾' : '▸'}</button>
+          <button class="decor-toggle ${(typeof decorMode !== 'undefined' && decorMode) ? 'on' : ''}"
+            onclick="toggleDecorMode(${m.id})"
+            title="Stick your stickers and purchases anywhere on this page — yours or anyone else's — then drag and resize them">🎨</button>
           <button class="delete-note-btn" onclick="deleteMeeting(${m.id})" title="Delete meeting">🗑️</button>
         </div>
       </div>
       <div class="meeting-note-body">
+        ${!open ? `<div class="meeting-folded" onclick="toggleMeetingOpen(${m.id}, ${_mi})"
+            title="Click to open">📋 ${state.people.length} crew · ${meetingDone}/${meetingTotal} done — click to open</div>` : ''}
+        ${open && (typeof decorTray === 'function') ? decorTray(m.id) : ''}
         ${(m.absent || []).length ? `<div class="absent-strip">
           <span>Not attending:</span>
           ${(m.absent || []).map(id => { const ap = personById(id); return ap
             ? `<button class="absent-chip" onclick="restoreToMeeting(${m.id}, '${id}')" title="Add ${escAttr(ap.name)} back">${escHtml(ap.name)} ↩</button>` : ''; }).join('')}
         </div>` : ''}
-        <div class="people-grid">${peopleCols}</div>
+        <div class="meeting-canvas" style="${open ? '' : 'display:none'}">
+          ${(typeof decorLayer === 'function') ? decorLayer(m, 'board') : ''}
+          <div class="people-grid">${peopleCols}</div>
+        </div>
       </div>
     </div>`;
   }).join('');

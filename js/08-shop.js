@@ -102,7 +102,7 @@ function renderMarket() {
 
   const myId = myPersonId();
   const me = myId ? personById(myId) : null;
-  const fishCount = me ? (me.fish || []).length : 0;
+  const fishCount = me ? spendableFish(me).length : 0;
   const owned = (me && me.stickers) || [];
   const purchases = (me && me.purchases) || [];
   if (bal) bal.innerHTML = `🎣 ${fishCount} fish` + (me && me.streakFixers ? ` · 🩹 ${me.streakFixers}` : '');
@@ -149,14 +149,21 @@ function buyMarketItem(id) {
     (me.stickers.includes(id) || me.purchases.some(x => x.id === id));
   if (alreadyOwned) { showToast('You already own that one!'); return; }
 
-  const fish = me.fish || [];
+  // ⚠️ Spending must never DELETE from p.fish.
+  //
+  // p.fish is a ledger and the sync engine unions it, so anything removed here
+  // was handed straight back by the next device to sync — buy something, wait,
+  // get your fish back. Free money.
+  //
+  // Instead the spent catches are tombstoned by uid. The union keeps every
+  // catch and keeps every tombstone, so a purchase can never be undone and can
+  // never be double-counted either.
+  const fish = spendableFish(me);
   if (fish.length < item.cost) { showToast(`Not enough fish — need ${item.cost} 🎣`); return; }
-  // spend the fish: remove `cost` fish, preferring plain ones first so the
-  // consistency fish that carry leaderboard weight are spent last
-  const spendOrder = fish.map((f, idx) => ({ f, idx }))
-    .sort((a, b) => (a.f.fromStreak?1:0) - (b.f.fromStreak?1:0));
-  const removeIdx = new Set(spendOrder.slice(0, item.cost).map(o => o.idx));
-  me.fish = fish.filter((f, idx) => !removeIdx.has(idx));
+  // spend plain catches first, so the consistency fish that carry leaderboard
+  // weight are the last to go
+  const order = fish.slice().sort((a, b) => (a.fromStreak ? 1 : 0) - (b.fromStreak ? 1 : 0));
+  spendFish(me, order.slice(0, item.cost), 'shop:' + item.id);
 
   if (item.id === STREAK_FIXER.id) {
     me.streakFixers = (me.streakFixers || 0) + 1;
@@ -170,7 +177,7 @@ function buyMarketItem(id) {
     showToast(`🛍️ Bought ${item.name}! Equip it from your profile.`);
   }
   playSound('ding');
-  save();
+  saveNow();   // money moved — tell the room now
   renderMarket();
   renderLeaderboard();
 }
@@ -215,7 +222,7 @@ function renderWorldCup() {
   const ranked = visiblePeople().map(p => {
     const wc = p.wc || {};
     const cats = getWcCategories(p.id);
-    const total = cats.reduce((s, c) => s + ((wc[c.id] && wc[c.id].streak) || 0), 0);
+    const total = cats.reduce((s, c) => s + wcEffectiveStreak(p, c.id), 0);
     return { p, total, cats };
   }).sort((a,b) => b.total - a.total);
 
@@ -231,7 +238,7 @@ function renderWorldCup() {
         <button class="wc-check ${checkedToday ? 'checked' : ''}" ${isMe ? '' : 'disabled'}
           onclick="wcCheckIn('${c.id}')" title="${isMe ? 'Check in for today' : 'Only ' + escAttr(p.name) + ' can check this'}">${checkedToday ? '✓' : ''}</button>
         <span class="wc-chip-label" style="display:inline-flex;align-items:center;gap:5px;">${wcShapeSvg(c.shape||'circle', c.color||'#3B9BD4', 16)} ${escHtml(c.label)}</span>
-        <span class="wc-streak">${rec.streak || 0}🔥<span style="font-size:9px;color:var(--ink-light);font-weight:700">${nearFish}</span></span>
+        <span class="wc-streak">${wcEffectiveStreak(p, c.id)}🔥<span style="font-size:9px;color:var(--ink-light);font-weight:700">${nearFish}</span></span>
       </div>`;
     }).join('');
     return `<div class="wc-card ${isMe ? 'wc-me' : ''}">

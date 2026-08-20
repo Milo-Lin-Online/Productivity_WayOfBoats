@@ -28,13 +28,20 @@ function getPlanning() {
   return p.planning;
 }
 
+/**
+ * The notebook is the one thing that waits for a button.
+ *
+ * It's long-form typing nobody else is waiting on, and every autosave was
+ * billed to all eighteen connected clients. It writes locally on every
+ * keystroke — nothing can be lost — and reaches the room when you press Save.
+ */
 function savePlanning(obj) {
   const id = myPersonId();
   if (!id) { localStorage.setItem(PLANNING_LOCAL_KEY, JSON.stringify(obj)); return; }
   const p = personById(id);
   if (!p) return;
   p.planning = obj;
-  save();
+  if (typeof saveLocal === 'function') saveLocal(); else save();
 }
 
 // Move a pre-name draft onto the profile once they claim one.

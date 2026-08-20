@@ -35,7 +35,7 @@ function renderLeaderboard() {
       // 🔥 streak stays the consecutive-day count for display, but POINTS now come
       // from how many times you checked in this month, consecutive or not.
       const wc = p.wc || {};
-      const streak = getWcCategories(p.id).reduce((s, c) => s + ((wc[c.id] && wc[c.id].streak) || 0), 0);
+      const streak = getWcCategories(p.id).reduce((s, c) => s + wcEffectiveStreak(p, c.id), 0);
       const monthChecks = wcMonthChecks(p.id);
       const streakPts = monthChecks / 10;
       const stars = p.stars || 0;
@@ -45,13 +45,15 @@ function renderLeaderboard() {
       // Fish are no longer interchangeable: big fish are worth 3, everything
       // else 2, socks 0 (they aren't kept in this array at all). Anything caught
       // before the gacha has no `kind` and still counts as 2.
-      const fishPts = fishArr.reduce((s, f) => s + fishValue(f), 0);
+      // spent catches are tombstoned rather than deleted, so score what's left
+      const liveFish = (typeof spendableFish === 'function') ? spendableFish(p) : fishArr;
+      const fishPts = liveFish.reduce((s, f) => s + fishValue(f), 0);
       // 5+ stickers earns the Sticker Queen badge and a flat bonus
       const stickerCount = (p.stickers || []).length;
       const isQueen = stickerCount >= STICKER_QUEEN_MIN;
       const queenBonus = isQueen ? STICKER_QUEEN_BONUS : 0;
       const points = Math.round(fishPts + ((done/5) + (10 * ratio)) + streakPts + (total / 15) + (stars / 2)) + adjust + queenBonus;
-      return { ...p, done, total, fish, fishPts, focusMinutes, streak, monthChecks, streakPts,
+      return { ...p, done, total, fish: liveFish.length, fishPts, focusMinutes, streak, monthChecks, streakPts,
                stars, adjust, points, stickerCount, isQueen, queenBonus, socks: p.socks || 0 };
     })
     .sort((a, b) => b.points - a.points || b.done - a.done);
@@ -100,7 +102,7 @@ function openPlayerProfile(pid) {
   const done = counts[pid]?.done || 0;
   const total = counts[pid]?.total || 0;
   const wc = p.wc || {};
-  const streak = getWcCategories(pid).reduce((s, c) => s + ((wc[c.id] && wc[c.id].streak) || 0), 0);
+  const streak = wcTotalStreak(pid);
   const stars = p.stars || 0;
   const fishArr = p.fish || [];
   const focusMins = focusMinutesFor(pid);

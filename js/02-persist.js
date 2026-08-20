@@ -16,6 +16,175 @@ let sbConfig = null;      // { url, key, room }
 let applyingRemote = false; // guard so remote writes don't echo back
 let pushTimer = null;
 
+// ═══════════════════════════════════════════════════════════════
+//  EXPLICIT SAVE
+//
+//  Autosave pushed on a debounce, and every push is billed once per connected
+//  client — 18 of them here. Ordinary typing was costing thousands of messages
+//  a day to tell seventeen people about a note they can't see.
+//
+//  save() still writes to localStorage every time, so nothing is ever lost.
+//  What it no longer does is tell the room. That happens when you press Save,
+//  when something touches money or score (those go at once), or after a few
+//  minutes idle as a backstop.
+// ═══════════════════════════════════════════════════════════════
+let pendingPush = false;
+const IDLE_PUSH_MS = 180000;   // 3 minutes — a safety net, not the mechanism
+let idlePushTimer = null;
+
+function markUnsaved() {
+  pendingPush = true;
+  renderSaveButton();
+  clearTimeout(idlePushTimer);
+  idlePushTimer = setTimeout(() => { if (pendingPush) pushNow(true); }, IDLE_PUSH_MS);
+}
+
+/** Send everything that has changed. Called by the Save button and by pushNow. */
+function pushNow(quiet) {
+  clearTimeout(idlePushTimer);
+  clearTimeout(pushTimer);
+  pendingPush = false;
+  renderSaveButton();
+  pushChangedItems();
+  if (!quiet) showToast('☁️ Saved for everyone');
+}
+
+/**
+ * For anything that moves money or score — a catch, a purchase, a check-in, an
+ * admin correction. Waiting on a button for these would be a bug, not a saving.
+ */
+function saveNow() {
+  save();
+  pushNow(true);
+}
+
+function renderSaveButton() {
+  const btn = document.getElementById('save-btn');
+  if (!btn) return;
+  btn.classList.toggle('dirty', pendingPush);
+  btn.textContent = pendingPush ? '☁️ Save changes' : '✓ All saved';
+  btn.title = pendingPush
+    ? 'You have changes only on this device. Press to send them to everyone.'
+    : 'Everything on this device has been shared with the room.';
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  A BACKGROUND TAB COSTS THE WHOLE TEAM
+//
+//  Billing counts one message per LISTENING client. A tab sitting behind
+//  another window, doing nothing, is still a listener — so every edit anyone
+//  makes is billed for it. With nine people on two devices, roughly half the
+//  clients are idle background tabs at any moment, and they were quietly
+//  doubling everyone's bill.
+//
+//  So an idle hidden tab leaves the channel. It stops receiving, stops being
+//  counted, and gives back a concurrent connection. It rejoins and pulls fresh
+//  the moment you look at it again.
+//
+//  A tab running a pomodoro stays connected, because it has a session to
+//  report when the timer ends.
+// ═══════════════════════════════════════════════════════════════
+const IDLE_UNSUB_MS = 60000;   // a minute out of sight before we hang up
+let idleUnsubTimer = null;
+let napping = false;
+
+function tabIsBusy() {
+  try { if (typeof pomoRunning !== 'undefined' && pomoRunning) return true; } catch (e) {}
+  return false;
+}
+
+/** Called when a timer ends, so a hidden tab can report in and then sleep. */
+function releaseTabIfIdle() {
+  if (document.hidden && !tabIsBusy() && sbConfig) {
+    clearTimeout(idleUnsubTimer);
+    idleUnsubTimer = setTimeout(napChannel, 5000);
+  }
+}
+
+async function napChannel() {
+  if (napping || !sbChannel || tabIsBusy()) return;
+  if (pendingPush) { try { pushChangedItems(); } catch (e) {} }  // don't sleep on unsent work
+  napping = true;
+  try { await sb.removeChannel(sbChannel); } catch (e) {}
+  sbChannel = null;
+  renderSyncStatus('napping');
+}
+
+async function wakeChannel() {
+  clearTimeout(idleUnsubTimer);
+  if (!napping) return;
+  napping = false;
+  renderSyncStatus('waking');
+  try {
+    // A hard refresh, not a reconnect.
+    //
+    // Coming back after an hour, this tab may be holding a half-dragged
+    // sticker, an open book that someone has since deleted, a modal over a
+    // meeting that no longer exists. Forgetting what we thought the server had
+    // forces a clean pull, and clearing the transient UI means nothing from
+    // before the nap can survive into the new picture.
+    lastSnapshot = {};
+    resetTransientUI();
+    await startSync();
+    renderAll();
+    renderSyncStatus('');
+    showToast('↻ Caught up');
+  } catch (e) { renderSyncStatus(''); }
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (!sbConfig) return;
+  if (document.hidden) {
+    clearTimeout(idleUnsubTimer);
+    idleUnsubTimer = setTimeout(napChannel, IDLE_UNSUB_MS);
+  } else {
+    wakeChannel();
+  }
+});
+
+/**
+ * Drop anything half-finished before redrawing from fresh data.
+ *
+ * Every one of these is a handle onto something that may no longer exist:
+ * a book that was deleted while we slept, a point being edited, a sticker
+ * mid-drag. Left alone they render as ghosts.
+ */
+function resetTransientUI() {
+  document.querySelectorAll('.modal-overlay').forEach(m => { m.style.display = 'none'; });
+  const safe = fn => { try { fn(); } catch (e) {} };
+  safe(() => { if (typeof bookOpenId !== 'undefined') bookOpenId = null; });
+  safe(() => { if (typeof editingProjectId !== 'undefined') editingProjectId = null; });
+  safe(() => { if (typeof editingPointId !== 'undefined') editingPointId = null; });
+  safe(() => { if (typeof editingTaskId !== 'undefined') editingTaskId = null; });
+  safe(() => { if (typeof armedItem !== 'undefined') armedItem = null; });
+  safe(() => { if (typeof decorDrag !== 'undefined') decorDrag = null; });
+  safe(() => { if (typeof decorMode !== 'undefined') decorMode = false; });
+  safe(() => { if (typeof pendingOffer !== 'undefined') pendingOffer = null; });
+  safe(() => { if (typeof tlPan !== 'undefined') tlPan = null; });
+  safe(() => { if (typeof streakEditPid !== 'undefined') streakEditPid = null; });
+  safe(() => document.querySelectorAll('.remote-cursor').forEach(el => el.remove()));
+  safe(() => document.body.classList.remove('decor-dragging'));
+}
+
+/** Small helper so the sidebar can say what the connection is doing. */
+function renderSyncStatus(mode) {
+  const el = document.getElementById('sync-nap');
+  if (!el) return;
+  el.textContent = mode === 'napping' ? '😴 sleeping (saves messages)'
+                 : mode === 'waking'  ? '↻ reconnecting…' : '';
+  el.style.display = (mode === 'napping' || mode === 'waking') ? 'block' : 'none';
+}
+
+// don't let someone close the tab on unsent work
+window.addEventListener('beforeunload', (e) => {
+  if (!pendingPush) return;
+  try { pushChangedItems(); } catch (err) {}
+});
+// 300ms meant a flurry of typing became a flurry of separate pushes, and every
+// push is fanned out to every connected client. Two seconds coalesces a burst
+// into one message; nobody notices the extra second and a half.
+const PUSH_DEBOUNCE_MS = 2000;
+
 // Collections stored one-row-per-element (keyed by their .id).
 // Bump this string on every deploy — the update checker compares it against the
 // copy sitting on the server to tell a phone its cached build is out of date.
@@ -172,8 +341,51 @@ function save() {
   localStorage.setItem(STORAGE_KEY + '_broadcast', Date.now());
   if (sb && !applyingRemote) {
     clearTimeout(pushTimer);
-    pushTimer = setTimeout(pushChangedItems, 300);
+    pushTimer = setTimeout(pushChangedItems, PUSH_DEBOUNCE_MS);
   }
+}
+
+/**
+ * Write locally but say nothing yet.
+ *
+ * Only the notebook uses this. Planning is long-form typing that nobody else
+ * is waiting on, so telling eighteen clients about every sentence is pure
+ * waste — it waits for the Save button. Everything else still syncs on its own,
+ * because a task or a check-in someone is watching for should just appear.
+ */
+function saveLocal() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  localStorage.setItem(STORAGE_KEY + '_broadcast', Date.now());
+  if (sb && !applyingRemote) markUnsaved();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  PRIVATE ROWS
+//
+//  Books and their timelines are yours alone — nobody else's screen ever shows
+//  them. But they were stored in the shared room, so every edit was delivered
+//  to all eighteen clients, seventeen of which threw it away. Billed all the
+//  same.
+//
+//  Realtime filters run server-side and can only test equality, so there's no
+//  way to say "everything except the private keys". What there IS is the room
+//  value itself: private rows are written under `<room>#<personId>`, and a
+//  client only ever subscribes to the shared room plus its own. Other people's
+//  book edits are never delivered, so they are never counted.
+//
+//  Cost of a book edit, to everyone else: zero.
+// ═══════════════════════════════════════════════════════════════
+const PRIVATE_KEYS = ['single:projects', 'single:tlPoints'];
+
+function isPrivateKey(k) { return PRIVATE_KEYS.includes(k); }
+function privateRoom(pid) {
+  const who = pid || (typeof myPersonId === 'function' ? myPersonId() : null);
+  return who ? sbConfig.room + '#' + who : null;
+}
+/** Which room a given row belongs in. */
+function roomFor(itemKey) {
+  if (!isPrivateKey(itemKey)) return sbConfig.room;
+  return privateRoom() || sbConfig.room;   // no name yet — keep it shared rather than lose it
 }
 
 // Build the map of item_key -> data for the whole state.
@@ -231,7 +443,7 @@ async function pushChangedItems() {
     // else's account could overwrite their real fish and streaks. Only the
     // admin account may write on behalf of others.
     if (!mayWriteRow(k)) continue;
-    rows.push({ room: sbConfig.room, item_key: k, data: map[k], updated_at: now });
+    rows.push({ room: roomFor(k), item_key: k, data: map[k], updated_at: now });
     lastSnapshot[k] = snap;
   }
   // deletions: keys we had before but not now
@@ -242,7 +454,13 @@ async function pushChangedItems() {
   try {
     if (rows.length) await sb.from('boats_items').upsert(rows);
     if (deletions.length) {
-      await sb.from('boats_items').delete().eq('room', sbConfig.room).in('item_key', deletions);
+      // private rows live in a different room, so delete them separately
+      const sharedDel = deletions.filter(k => !isPrivateKey(k));
+      const privDel = deletions.filter(isPrivateKey);
+      if (sharedDel.length)
+        await sb.from('boats_items').delete().eq('room', sbConfig.room).in('item_key', sharedDel);
+      if (privDel.length && privateRoom())
+        await sb.from('boats_items').delete().eq('room', privateRoom()).in('item_key', privDel);
     }
     if (rows.length || deletions.length) saveSyncedKeys();
   } catch (e) { console.error('push failed', e); }
@@ -347,6 +565,13 @@ function applyItemRow(item_key, data, isDelete) {
         // database is now behind us and needs correcting
         if (snapshotOf(merged) !== snapshotOf(data)) staleRowRejected = true;
         arr[idx] = merged;
+      } else if (kind === 'meetings') {
+        // A meeting is a whole row, so two people decorating at once would
+        // overwrite each other. The placements are an id-keyed list, merged
+        // item by item with removals honoured, exactly like projects.
+        const merged = { ...data };
+        merged.decor = mergeIdList('decor', (arr[idx] || {}).decor, data.decor);
+        arr[idx] = merged;
       } else {
         arr[idx] = data;
       }
@@ -397,7 +622,12 @@ document.addEventListener('focusout', () => {
 async function pullAllItems() {
   if (!sb || !sbConfig) return;
   try {
-    const { data, error } = await sb.from('boats_items').select('item_key,data,updated_at').eq('room', sbConfig.room);
+    // read the shared room AND my own private one
+    const rooms = [sbConfig.room];
+    const mine = privateRoom();
+    if (mine) rooms.push(mine);
+    const { data, error } = await sb.from('boats_items')
+      .select('item_key,data,updated_at').in('room', rooms);
     if (error) throw error;
     if (data && data.length) {
       const remoteKeys = new Set(data.map(r => r.item_key));
@@ -457,6 +687,10 @@ function saveSyncedKeys() {
 
 // Drop anything this device is holding that the room no longer has.
 function pruneZombies(remoteKeys, newestRemote) {
+  // Private rows are pulled from a different room; if this device has no name
+  // set yet they simply won't be in the result, and treating that as "the room
+  // deleted them" would throw away someone's books.
+  PRIVATE_KEYS.forEach(k => { if (!remoteKeys.has(k)) remoteKeys.add(k); });
   const known = loadSyncedKeys();
   let removed = 0;
   ITEM_COLLECTIONS.forEach(coll => {
@@ -552,7 +786,25 @@ async function startSync() {
       }
     );
 
+    // My private room. Nobody else subscribes to it, so nobody else is billed
+    // for my books — and I still get my own edits from my other devices.
+    const myRoom = privateRoom();
+    if (myRoom) {
+      sbChannel.on('postgres_changes',
+        { event: '*', schema: 'public', table: 'boats_items', filter: 'room=eq.' + myRoom },
+        (payload) => {
+          const row = payload.new || payload.old;
+          if (!row || !row.item_key) return;
+          applyItemRow(row.item_key, row.data, payload.eventType === 'DELETE');
+          rerenderAfterRemote();
+        }
+      );
+    }
+
     sbChannel.on('broadcast', { event: 'cursor' }, ({ payload }) => {
+      // Ignore incoming cursors when the policy says they're off, so a device
+      // that hasn't reloaded can't put ghosts on everyone else's screen.
+      if (!cursorsOn() || cursorsSilenced()) return;
       if (payload.id !== myUserId) renderRemoteCursor(payload);
     });
 

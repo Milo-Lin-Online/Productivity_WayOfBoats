@@ -17,7 +17,14 @@ try { if (typeof repairAllPeople === 'function') {
   const n = repairAllPeople();
   if (n) { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); console.log('[boats] repaired', n, 'duplicate records'); }
 } } catch (e) {}
+try { if (typeof stripBookCovers === 'function') {
+  const n = stripBookCovers();
+  if (n) { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); console.log('[boats] dropped', n, 'book covers'); }
+} } catch (e) {}
 renderAll();
+// reflect the saved live-cursor choice (off unless it was turned on)
+try { const cb = document.getElementById('cursor-toggle'); if (cb) cb.checked = cursorsOn(); } catch (e) {}
+try { renderSaveButton(); } catch (e) {}
 applyConfigColors();
 initCursors();
 startFish();

@@ -439,6 +439,7 @@ function finishPomoSession(earlyBonus) {
   pomoRunning = false;
   pomoEndTime = null;
   releaseTimerLock();
+  try { releaseTabIfIdle(); } catch (e) {}   // hidden tab: report in, then sleep
   document.getElementById('pomo-toggle').classList.remove('casting');
   document.getElementById('pomodoro').classList.remove('pomo-running');
   document.getElementById('pomo-startbtn').textContent = '🎣 Cast';
@@ -572,7 +573,7 @@ function openCatch(catchId, awardOnly) {
     });
   }
 
-  save();
+  saveNow();   // a catch is score — it goes to the room at once, not on a button
   if (!awardOnly) showCatchReveal(entry, awarded);
   renderPomo();
   renderLeaderboard();

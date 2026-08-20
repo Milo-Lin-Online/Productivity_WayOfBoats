@@ -51,14 +51,70 @@ function ensureWc(p) {
 }
 
 // Called on load and when the WC section opens: apply "missed a day → reset" logic.
+/**
+ * A streak's CURRENT value, worked out from when it was last checked in.
+ *
+ * ⚠️ This must never be written back into the record.
+ *
+ * It used to be: reconcileStreaks() walked the people it was allowed to touch
+ * and wrote `streak = 0` into any record whose last check-in had lapsed. That
+ * made a derived value into stored data, and the moment two devices derived it
+ * differently they fought:
+ *
+ *   · Signed in as Milo, `myPersonId()` finds him, so his lapsed streaks were
+ *     zeroed and pushed.
+ *   · Signed in as adminmilo — who is not a crew member — `myPersonId()` is
+ *     null, nobody was reconciled, and the admin device pushed Milo's
+ *     un-zeroed numbers straight back.
+ *
+ * Two screens open at the same second showed 81 and 88. Deriving it at read
+ * time removes the disagreement entirely: every device computes the same
+ * answer from the same stored fact, and nobody writes anything.
+ */
+function wcEffectiveStreak(p, catId) {
+  const rec = p && p.wc && p.wc[catId];
+  if (!rec || !rec.streak) return 0;
+  const today = estDateKey();
+  if (rec.last === today || rec.last === prevDateKey(today)) return rec.streak;
+  return 0;   // lapsed — shown as zero, but the stored number is left alone
+}
+
+/** Everyone's streaks added up, as displayed. */
+function wcTotalStreak(pid) {
+  const p = personById(pid);
+  if (!p) return 0;
+  return getWcCategories(pid).reduce((s, c) => s + wcEffectiveStreak(p, c.id), 0);
+}
+
 function reconcileStreaks() {
+  // With sync configured but not yet caught up, our copy may be days behind.
+  // Zeroing a streak on that basis is exactly how a live streak gets wiped, so
+  // hold off until the room has been read.
+  if (typeof sbConfig !== 'undefined' && sbConfig && typeof syncReady !== 'undefined' && !syncReady) return;
   const today = estDateKey();
   const yesterday = prevDateKey(today);
   // One-time cleanup: remove fish that were awarded under the OLD rule
   // (first-check-in-of-month fish had no valid month/25-day basis). These are
   // tagged fromStreak but lack a 'month' field, or were granted below threshold.
-  if (!state._streakFishCleaned) {
-    state.people.forEach(p => {
+  // Only ever reconcile YOUR OWN account.
+  //
+  // This used to walk every person on the device. Two problems with that:
+  //
+  //  1. It computed other people's streaks from whatever stale copy this
+  //     device happened to hold — which is why teammates' streaks read zero
+  //     on machines that hadn't caught up yet. It runs at boot, before the
+  //     first pull, so the zeroes were showing from stale localStorage.
+  //  2. It ran before sync had a chance to correct anything, so a device that
+  //     had been closed for a week would zero everyone on sight.
+  //
+  //  Your own streak is the only one this device can judge, because it's the
+  //  only one whose check-ins this device is allowed to write.
+  const mine = (typeof myPersonId === 'function') ? myPersonId() : null;
+  const toCheck = mine ? state.people.filter(p => String(p.id) === String(mine))
+                       : [];
+
+  if (!state._streakFishCleaned && mine) {
+    toCheck.forEach(p => {
       if (Array.isArray(p.fish)) {
         p.fish = p.fish.filter(f => !(f.fromStreak && !f.month));
       }
@@ -67,7 +123,7 @@ function reconcileStreaks() {
     try { save(); } catch(e) {}
   }
   let fixerUsed = null;
-  state.people.forEach(p => {
+  toCheck.forEach(p => {
     const wc = ensureWc(p);
     getWcCategories(p.id).forEach(cat => {
       const rec = wc[cat.id];
@@ -75,14 +131,16 @@ function reconcileStreaks() {
       if (rec.last !== today && rec.last !== yesterday) {
         // A streak fixer buys back exactly one missed day: the streak survives
         // and the chain is treated as unbroken through yesterday.
+        // Spending a fixer IS a real change — a resource is consumed and the
+        // chain is genuinely extended — so it stays a write, and only on the
+        // owner's device. The lapse itself is never written; wcEffectiveStreak
+        // derives that, so no two devices can disagree about it.
         if (rec.streak > 0 && (p.streakFixers || 0) > 0) {
           p.streakFixers -= 1;
           rec.last = yesterday;
           rec.fixedOn = rec.fixedOn || [];
           rec.fixedOn.push(today);
           if (p.id === myPersonId()) fixerUsed = cat.label || 'a habit';
-        } else {
-          rec.streak = 0;
         }
       }
     });
@@ -112,8 +170,10 @@ function wcCheckIn(catId) {
     rec.last = rec.streak > 0 ? yesterday : null;
   } else {
     // check in for today
-    if (rec.last === yesterday) rec.streak += 1;   // continuing streak
-    else rec.streak = 1;                            // fresh start
+    // Build on what the streak actually is right now. After a lapse the
+    // effective value is 0, so checking in again correctly starts at 1 even
+    // though the stored number was never reset.
+    rec.streak = wcEffectiveStreak(p, catId) + 1;
     rec.last = today;
     rec.monthCounts[mk] = (rec.monthCounts[mk] || 0) + 1;
     playSound('ding');
@@ -125,7 +185,7 @@ function wcCheckIn(catId) {
     }
   }
   wc[catId] = rec;
-  save();
+  saveNow();   // a check-in is score — goes at once
   renderWorldCup();
   renderLeaderboard();
 }

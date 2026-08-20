@@ -755,10 +755,9 @@ function renderBookshelf() {
     return `<button class="book ${p.archived ? 'is-archived' : ''}" style="--book:${col};--book-dark:${shade(col, -0.42)}" onclick="openBook('${p.id}')"
         title="${escAttr(p.name + ' · ' + prog.pct + '% done · ' + cd.text + (p.archived ? ' · archived' : ''))}">
       ${p.dueDate ? `<span class="book-days ${cd.cls}">${escHtml(cd.d !== null && cd.d >= 0 ? cd.d + 'd' : Math.abs(cd.d) + 'd!')}</span>` : ''}
-      ${p.cover ? `<span class="book-cover" style="background-image:url('${escAttr(p.cover)}')"></span>` : ''}
       ${p.archived ? '<span class="book-arch">archived</span>' : ''}
       <span class="book-cog" onclick="event.stopPropagation(); openBookEditor('${p.id}')" title="Edit, archive or delete">⋯</span>
-      <span class="book-emoji">${p.cover ? '' : escHtml(p.emoji || '📘')}</span>
+      <span class="book-emoji">${escHtml(p.emoji || '📘')}</span>
       <span class="book-title">${escHtml(p.name || 'Untitled')}</span>
       <span class="book-status" style="background:${statusOf(p.status).color};color:#fff">${escHtml(statusOf(p.status).label)}</span>
       <span class="book-progress"><span style="width:${prog.pct}%"></span></span>
@@ -804,11 +803,6 @@ function openBookEditor(id) {
     osel.value = (p && p.ownerId) || myPersonId() || (crew[0] && crew[0].id) || '';
   }
 
-  pendingCover = null;
-  const prev = document.getElementById('bk-cover-preview');
-  if (prev) prev.innerHTML = (p && p.cover)
-    ? `<img src="${escAttr(p.cover)}" alt=""><button onclick="clearBookCover()">remove</button>`
-    : '<span class="bk-cover-none">no cover</span>';
   const arch = document.getElementById('bk-archive');
   if (arch) {
     arch.style.display = p ? 'inline-flex' : 'none';
@@ -819,35 +813,14 @@ function openBookEditor(id) {
   setTimeout(() => document.getElementById('bk-name').focus(), 60);
 }
 
-let pendingCover = null;
-function onBookCoverPick(input) {
-  const file = input.files && input.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    const img = new Image();
-    img.onload = () => {
-      // crop to the spine's shape and shrink hard — a raw photo would bloat sync
-      const W = 200, H = 280;
-      const c = document.createElement('canvas');
-      c.width = W; c.height = H;
-      const ctx = c.getContext('2d');
-      const scale = Math.max(W / img.width, H / img.height);
-      const dw = img.width * scale, dh = img.height * scale;
-      ctx.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh);
-      pendingCover = c.toDataURL('image/jpeg', 0.78);
-      const prev = document.getElementById('bk-cover-preview');
-      if (prev) prev.innerHTML = `<img src="${pendingCover}" alt=""><button onclick="clearBookCover()">remove</button>`;
-    };
-    img.onerror = () => showToast("Couldn't read that image.");
-    img.src = reader.result;
-  };
-  reader.readAsDataURL(file);
-}
-function clearBookCover() {
-  pendingCover = '';
-  const prev = document.getElementById('bk-cover-preview');
-  if (prev) prev.innerHTML = '<span class="bk-cover-none">no cover</span>';
+// Cover art was removed. Each cover was a base64 JPEG living inside the shared
+// projects row, so every book edit re-sent every image to every connected
+// client — the single largest payload in the app, and billed once per client.
+// Books keep their emoji and colour, which cost nothing.
+function stripBookCovers() {
+  let n = 0;
+  (state.projects || []).forEach(p => { if (p.cover) { delete p.cover; n++; } });
+  return n;
 }
 
 function saveBookFromModal() {
@@ -864,7 +837,6 @@ function saveBookFromModal() {
   p.emoji = document.getElementById('bk-emoji').value;
   p.color = document.getElementById('bk-color').value;
   p.dueDate = document.getElementById('bk-due').value || '';
-  if (pendingCover !== null) p.cover = pendingCover;
   const osel = document.getElementById('bk-owner');
   if (osel && osel.value) p.ownerId = osel.value;
   else if (!p.ownerId) p.ownerId = myPersonId() || '';

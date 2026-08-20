@@ -128,7 +128,8 @@ function pityThreshold(p) {
 //  frees itself up rather than locking someone out forever.
 // ═══════════════════════════════════════════════════════════════
 const LOCK_KEY = 'boats_timer_lock';
-const LOCK_STALE_MS = 45000;
+const LOCK_STALE_MS = 45000;   // how long a LOCAL (same-browser) claim stays fresh
+const LOCK_GRACE_MS = 120000;  // how long past its end a synced claim still counts
 const LOCK_BEAT_MS = 10000;
 const LOCK_SYNC_BEAT_MS = 30000;
 
@@ -163,21 +164,39 @@ function foreignTimerLock() {
   const me = myLockName();
   if (!me) return null;
   const now = Date.now();
-  return readTimerLocks().find(l =>
-    l && l.instance && l.instance !== INSTANCE_ID &&
-    (l.name || '').trim().toLowerCase() === me &&
-    (now - (l.at || 0)) < LOCK_STALE_MS
-  ) || null;
+  return readTimerLocks().find(l => {
+    if (!l || !l.instance || l.instance === INSTANCE_ID) return false;
+    if ((l.name || '').trim().toLowerCase() !== me) return false;
+    // A claim that states its own expiry is judged on that, so it needs no
+    // heartbeat. Older claims fall back to the last-seen window.
+    return l.expires ? (now < l.expires) : ((now - (l.at || 0)) < LOCK_STALE_MS);
+  }) || null;
 }
 
 let lastSyncBeat = 0;
+/**
+ * Claim the timer.
+ *
+ * The heartbeat used to write the person's row to the database every 30
+ * seconds, and every one of those writes is fanned out to every connected
+ * client — roughly 1.5 million realtime messages a month with four people
+ * running timers.
+ *
+ * The database now hears about a timer exactly TWICE: when it starts and when
+ * it stops. The lock carries its own expiry, so another device can tell whether
+ * it is still live without anybody having to keep saying so. The local
+ * heartbeat costs nothing and still covers other tabs in this browser.
+ */
 function claimTimerLock(force) {
   const now = Date.now();
   const lock = { instance: INSTANCE_ID, name: state.myName || '', at: now,
-                 device: navigator.platform || 'a device', minutes: pomoMinutes };
+                 device: navigator.platform || 'a device', minutes: pomoMinutes,
+                 // when this claim stops meaning anything, even if we go silent
+                 expires: now + (pomoMinutes * 60000) + LOCK_GRACE_MS };
   try { localStorage.setItem(LOCK_KEY, JSON.stringify(lock)); } catch (e) {}
   const id = typeof myPersonId === 'function' ? myPersonId() : null;
-  if (id && (force || now - lastSyncBeat > LOCK_SYNC_BEAT_MS)) {
+  // only on an explicit claim — never on a heartbeat
+  if (id && force) {
     const p = personById(id);
     if (p) { p.timerLock = lock; lastSyncBeat = now; save(); }
   }
@@ -200,6 +219,7 @@ function releaseTimerLock() {
 }
 
 let lastLocalBeat = 0;
+/** Local only — writes to localStorage, never to the database. */
 function beatTimerLock() {
   const now = Date.now();
   if (now - lastLocalBeat < LOCK_BEAT_MS) return;

@@ -27,6 +27,8 @@ function visiblePeople() {
 }
 
 function refreshAdminVisibility() {
+  // the Fish Bank tab follows the same rule — visible to "bank tank" or admin
+  try { if (typeof refreshBankVisibility === 'function') refreshBankVisibility(); } catch (e) {}
   const btn = document.getElementById('nav-admin');
   if (btn) btn.style.display = isAdmin() ? 'flex' : 'none';
   // if we're sitting on the admin page and the name changed, bail out
@@ -39,6 +41,207 @@ function refreshAdminVisibility() {
 // ── admin panel ──
 // The drop tables, rendered from the SAME constants the roller uses — so this
 // card can never drift out of date with the actual odds. Admin section only.
+// ══════════════════════════════════════════════
+//  ADMIN: EDIT SOMEONE'S STREAKS
+//  Set a streak, this month's check-in tally, or the date of the last
+//  check-in — per category, per person.
+// ══════════════════════════════════════════════
+let streakEditPid = null;
+
+function openStreakEditor(pid) {
+  if (!isAdmin()) return;
+  streakEditPid = pid;
+  renderStreakEditor();
+  const m = document.getElementById('streak-editor');
+  if (m) m.style.display = 'flex';
+}
+
+function renderStreakEditor() {
+  const box = document.getElementById('sk-list');
+  const who = document.getElementById('sk-who');
+  if (!box || !isAdmin()) return;
+  const p = personById(streakEditPid);
+  if (!p) { box.innerHTML = '<div class="nb-empty">No one selected.</div>'; return; }
+  if (who) who.textContent = p.name;
+
+  const mk = estMonthKey();
+  const today = estDateKey();
+  const yesterday = prevDateKey(today);
+  if (!p.wc) p.wc = {};
+
+  box.innerHTML = getWcCategories(p.id).map(cat => {
+    const rec = p.wc[cat.id] || { streak: 0, last: null, monthCounts: {}, monthFish: {} };
+    const last = rec.last || '';
+    // reconcileStreaks() will zero anything whose last check-in is older than
+    // yesterday, so warn rather than let the admin set a value that evaporates
+    const willReset = (rec.streak > 0) && last && last !== today && last !== yesterday;
+    return `<div class="sk-row">
+      <div class="sk-cat">${escHtml(cat.emoji || '🔥')} <b>${escHtml(cat.label || cat.id)}</b></div>
+      <div class="sk-fields">
+        <label class="sk-f">streak
+          <input type="number" min="0" max="9999" value="${rec.streak || 0}"
+            onchange="adminSetStreak('${p.id}','${cat.id}','streak',this.value)"></label>
+        <label class="sk-f">check-ins this month
+          <input type="number" min="0" max="31" value="${(rec.monthCounts && rec.monthCounts[mk]) || 0}"
+            onchange="adminSetStreak('${p.id}','${cat.id}','count',this.value)"></label>
+        <label class="sk-f">last check-in
+          <input type="date" value="${escAttr(last)}"
+            onchange="adminSetStreak('${p.id}','${cat.id}','last',this.value)"></label>
+      </div>
+      ${willReset ? `<div class="sk-warn">⚠️ Last check-in is older than yesterday, so this streak resets to 0 on next load.
+        <button onclick="adminSetStreak('${p.id}','${cat.id}','last','${today}')">set it to today</button></div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+/**
+ * Write a streak value. Stamps a new score epoch so the change outranks
+ * whatever the person's own devices are holding — otherwise the merge would
+ * take the higher streak back and an admin correction downward wouldn't stick.
+ */
+function adminSetStreak(pid, catId, field, value) {
+  if (!isAdmin()) return;
+  const p = personById(pid);
+  if (!p) return;
+  if (!p.wc) p.wc = {};
+  const rec = p.wc[catId] || { streak: 0, last: null, monthCounts: {}, monthFish: {} };
+  if (!rec.monthCounts) rec.monthCounts = {};
+  if (!rec.monthFish) rec.monthFish = {};
+
+  if (field === 'streak') {
+    rec.streak = clampInt(value, 0, 9999);
+    // A streak is only shown if its last check-in was today or yesterday, so
+    // setting a number against a stale date would silently display as zero.
+    // Anchor it to today whenever the existing date can't carry it.
+    const today = estDateKey(), yesterday = prevDateKey(today);
+    if (rec.streak > 0 && rec.last !== today && rec.last !== yesterday) {
+      rec.last = today;
+      showToast(`Anchored to today so ${rec.streak}🔥 actually shows`);
+    }
+  } else if (field === 'count') {
+    rec.monthCounts[estMonthKey()] = clampInt(value, 0, 31);
+  } else if (field === 'last') {
+    rec.last = value || null;
+    if (!rec.last) rec.streak = 0;
+  }
+  p.wc[catId] = rec;
+
+  bumpScoreEpoch([p]);
+  save();
+  renderStreakEditor();
+  renderLeaderboard();
+  try { renderWorldCup(); } catch (e) {}
+  renderAdmin();
+}
+
+/** Admin: the vault float, the bid range, the exchange rate, and shop prices. */
+function renderAdminBank() {
+  const box = document.getElementById('admin-bank');
+  if (!box || !isAdmin() || typeof bankConfig !== 'function') return;
+  const cfg = bankConfig();
+  const shelf = (typeof getStoreItems === 'function') ? getStoreItems() : [];
+  box.innerHTML = `
+    <div class="bank-admin-row">
+      <label title="What the vault started with. Change it and the balance shifts by the difference.">
+        opening float <input type="number" min="0" value="${cfg.openingFish}"
+          onchange="setBankConfig('openingFish', parseInt(this.value,10)||0)"></label>
+      <label title="The banker never offers less than this">lowest bid
+        <input type="number" min="1" value="${cfg.minBid}"
+          onchange="setBankConfig('minBid', parseInt(this.value,10)||1)"></label>
+      <label title="…nor more than this">highest bid
+        <input type="number" min="1" value="${cfg.maxBid}"
+          onchange="setBankConfig('maxBid', parseInt(this.value,10)||1)"></label>
+      <label title="How many starfish buy one whole fish">⭐ per 🐟
+        <input type="number" min="1" value="${cfg.starfishPerFish}"
+          onchange="setBankConfig('starfishPerFish', parseInt(this.value,10)||1)"></label>
+    </div>
+    <div class="bank-vault-now">Vault right now: <b>${bankBalance()} 🐟</b></div>
+    <div class="bank-admin-row">
+      <button class="btn-secondary" onclick="adminBankAdjust(10)" title="Put fish into the vault">+10 🐟</button>
+      <button class="btn-secondary" onclick="adminBankAdjust(-10)" title="Take fish out of the vault">−10 🐟</button>
+    </div>
+    <div class="bank-vault-now">Shop prices</div>
+    <div class="bank-admin-prices">
+      ${shelf.map(it => `<label title="What ${escAttr(it.name)} costs in fish">
+        <span>${it.emoji || '🎁'} ${escHtml(it.name)}</span>
+        <input type="number" min="0" value="${it.cost}"
+          onchange="adminSetPrice('${escAttr(it.id)}', this.value)"></label>`).join('')
+        || '<div class="nb-empty">Nothing on the shelf.</div>'}
+    </div>`;
+}
+
+/** Move money in or out of the vault — recorded in the ledger, never rewritten. */
+function adminBankAdjust(n) {
+  if (!isAdmin()) return;
+  bankPost('admin', n, 0, '', `admin ${n >= 0 ? 'added' : 'removed'} ${Math.abs(n)} fish`);
+  renderAdminBank();
+  try { renderBank(); } catch (e) {}
+  showToast(`🏦 Vault ${n >= 0 ? '+' : ''}${n} 🐟 — now ${bankBalance()}`);
+}
+
+/** Set what something costs. Overrides live on the synced store item. */
+function adminSetPrice(itemId, value) {
+  if (!isAdmin()) return;
+  const cost = Math.max(0, parseInt(value, 10) || 0);
+  if (!Array.isArray(state.storeItems)) state.storeItems = [];
+  const it = state.storeItems.find(x => String(x.id) === String(itemId));
+  if (it) it.cost = cost;
+  else {
+    // a built-in item being repriced for the first time — keep an override row
+    const base = (typeof catalogItem === 'function') ? catalogItem(itemId) : null;
+    state.storeItems.push(Object.assign({}, base || { id: itemId }, { id: itemId, cost }));
+  }
+  save();
+  renderAdminBank();
+  try { renderMarket(); } catch (e) {}
+  showToast(`💰 Price set to ${cost} 🐟`);
+}
+
+/** Admin: when live cursors are allowed to cost anything. */
+function renderAdminCursors() {
+  const box = document.getElementById('admin-cursors');
+  if (!box || !isAdmin() || typeof cursorPolicy !== 'function') return;
+  const pol = cursorPolicy();
+  box.innerHTML = `
+    <div class="bank-admin-row">
+      <label title="Above this many connected clients, nobody sends a cursor — so nobody receives one either">
+        silent above <input type="number" min="0" max="50" value="${pol.maxOnline}"
+          onchange="setCursorMax(this.value)"> online</label>
+    </div>
+    <div style="font-size:11px;font-weight:800;color:var(--ocean-deep);margin:10px 0 5px">
+      Days cursors are switched off entirely</div>
+    <div class="cursor-days">
+      ${DAY_NAMES.map((d, i) => `
+        <label class="cd-day ${pol.offDays.includes(i) ? 'off' : ''}"
+          title="${pol.offDays.includes(i) ? d + ': cursors off — no messages at all' : d + ': cursors allowed'}">
+          <input type="checkbox" ${pol.offDays.includes(i) ? 'checked' : ''}
+            onchange="toggleCursorDay(${i})"><span>${d}</span></label>`).join('')}
+    </div>
+    <div style="font-size:11.5px;font-weight:700;color:var(--ink-light);margin-top:8px;line-height:1.5">
+      Ticked = off. On an off day nobody broadcasts and nobody renders, so the
+      whole group costs nothing.<br>
+      Right now: <b>${cursorStatusText()}</b>
+    </div>`;
+}
+function setCursorMax(v) {
+  if (!isAdmin()) return;
+  if (!state.cursorPolicy) state.cursorPolicy = {};
+  state.cursorPolicy.maxOnline = Math.max(0, parseInt(v, 10) || 0);
+  saveNow();
+  renderAdminCursors();
+}
+function toggleCursorDay(i) {
+  if (!isAdmin()) return;
+  if (!state.cursorPolicy) state.cursorPolicy = {};
+  const cur = cursorPolicy().offDays.slice();
+  const at = cur.indexOf(i);
+  if (at > -1) cur.splice(at, 1); else cur.push(i);
+  state.cursorPolicy.offDays = cur.sort();
+  saveNow();
+  renderAdminCursors();
+  showToast(`👀 Cursors ${cur.includes(i) ? 'off' : 'on'} for ${DAY_NAMES[i]}s`);
+}
+
 function renderAdminGachaRules() {
   const box = document.getElementById('admin-gacha-rules');
   if (!box || !isAdmin()) return;
@@ -126,6 +329,8 @@ function renderAdmin() {
   renderAdminStore();
   renderAdminGachaRules();
   renderAdminWinners();
+  try { renderAdminBank(); } catch (e) {}
+  try { renderAdminCursors(); } catch (e) {}
 }
 
 function renderAdminMeetings() {
@@ -321,6 +526,7 @@ function renderAdminPlayers() {
       </div>
       <div class="admin-row-acts">
         <span class="admin-hint">${realFish} earned${fish - realFish > 0 ? ` + ${fish - realFish} granted` : ''}</span>
+        <button class="btn-secondary" onclick="openStreakEditor('${p.id}')">🔥 edit streaks</button>
         <button class="btn-secondary" onclick="adminClear('${p.id}','streaks')">clear streaks &amp; check-ins</button>
         <button class="btn-secondary" onclick="adminClear('${p.id}','logs')">clear logs</button>
       </div>
@@ -356,7 +562,7 @@ function totalStreakFor(pid) {
   const p = personById(pid);
   if (!p) return 0;
   const wc = p.wc || {};
-  return getWcCategories(pid).reduce((s, c) => s + ((wc[c.id] && wc[c.id].streak) || 0), 0);
+  return wcTotalStreak(pid);
 }
 
 // Set an exact fish count. Growing adds admin-granted fish (0 minutes, so they

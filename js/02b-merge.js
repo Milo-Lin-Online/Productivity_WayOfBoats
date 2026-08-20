@@ -233,7 +233,12 @@ function mergeWcCategory(a, b) {
   });
   base.monthCounts = counts;
   base.monthFish = { ...(a.monthFish || {}), ...(b.monthFish || {}) };
-  base.streak = Math.max(a.streak || 0, b.streak || 0);
+  // NOT max: after a lapse and a fresh check-in the true streak is legitimately
+  // SMALLER (12 → 1), and taking the bigger number would resurrect the old run.
+  // The record with the more recent check-in is the one that knows.
+  base.streak = (bLast > aLast) ? (b.streak || 0)
+              : (aLast > bLast) ? (a.streak || 0)
+              : Math.max(a.streak || 0, b.streak || 0);
   base.last = bLast > aLast ? bLast : aLast;
   if (Array.isArray(a.fixedOn) || Array.isArray(b.fixedOn)) {
     base.fixedOn = [...new Set([...(a.fixedOn || []), ...(b.fixedOn || [])])];
@@ -301,6 +306,9 @@ const PERSON_POLICY = {
   // ids of catches already reeled in — the tombstones that stop a union from
   // handing an opened catch back
   openedCatches: MergeStrategy.unionSet(),
+  // uids of catches already spent in the shop or sold to the bank. Union, so a
+  // purchase can never be reversed by a device that hasn't heard about it.
+  spentFish:     MergeStrategy.unionSet(),
   wc:          MergeStrategy.byKey(mergeWcCategory),
   logs:        MergeStrategy.byKey(mergeLogDay),
 };
