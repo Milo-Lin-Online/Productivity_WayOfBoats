@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <!-- Stop phones serving a stale copy of the app from cache. The version below is
      also used by the in-app update check. Bump APP_VERSION on every deploy. -->
-<meta name="app-version" content="2026.08.13-1">
+<meta name="app-version" content="2026.08.17-2">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -2696,6 +2696,217 @@
   border: 1.5px solid var(--sunset-deep); background: transparent;
   color: var(--sunset-deep); border-radius: 10px; padding: 1px 8px; margin-left: 5px;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   THE FISH BANK
+   ═══════════════════════════════════════════════════════════════ */
+.bank-top { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-bottom: 14px; }
+.banker { width: 132px; flex-shrink: 0; }
+.banker svg { width: 100%; height: auto; overflow: visible; }
+.bk-shadow { fill: rgba(58,50,38,.14); }
+.bk-suit   { fill: #2E4A5C; stroke: #1B3242; stroke-width: 2.5; }
+.bk-tail   { fill: #3B7FA6; stroke: #1B3242; stroke-width: 2.5; }
+.bk-lapel  { fill: #24real; }
+.bk-lapel  { fill: #243B4A; }
+.bk-tie    { fill: var(--sail-red); stroke: #A5364A; stroke-width: 1.5; }
+.bk-head   { fill: #7FC4E8; stroke: #1B3242; stroke-width: 2.5; }
+.bk-fin    { fill: #5FA9D0; stroke: #1B3242; stroke-width: 2; }
+.bk-brim   { fill: #1B3242; }
+.bk-hat    { fill: #243B4A; stroke: #1B3242; stroke-width: 2; }
+.bk-eyew   { fill: #FFFDF6; stroke: #1B3242; stroke-width: 2; }
+.bk-pupil  { fill: #1B3242; }
+.bk-specs  { stroke: #1B3242; stroke-width: 2; fill: none; }
+.bk-mouth  { stroke: #1B3242; stroke-width: 2.2; fill: none; stroke-linecap: round; }
+
+.bank-vault {
+  flex: 1; min-width: 210px;
+  background: linear-gradient(180deg, var(--butter-light), #FFF6E0);
+  border: 2.5px solid #E9C46A; border-radius: 16px; padding: 12px 16px;
+}
+.vault-label { font-size: 11px; font-weight: 800; color: var(--ink-light); letter-spacing: .05em; text-transform: uppercase; }
+.vault-fish { font-family: 'Kalam', cursive; font-size: 40px; font-weight: 700; color: var(--sunset-deep); line-height: 1.05; }
+.vault-fish span { font-size: 28px; }
+.vault-sub { font-size: 11px; font-weight: 700; color: var(--ink-light); }
+
+.bank-wallet {
+  border: 2.5px solid var(--ocean-light); border-radius: 14px;
+  padding: 10px 14px; margin-bottom: 12px; background: var(--warm-white);
+}
+.wallet-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 6px; }
+.wallet-row > span { font-size: 17px; font-weight: 800; color: var(--ocean-deep); }
+
+.sell-bid { min-height: 66px; display: flex; align-items: center; justify-content: center; }
+.bid-idle { font-size: 12.5px; font-weight: 700; color: var(--ink-light); font-style: italic; }
+.bid-no   { font-size: 12.5px; font-weight: 800; color: var(--sail-red); text-align: center; }
+.bid-yes  { text-align: center; }
+.bid-amount { font-family: 'Kalam', cursive; font-size: 36px; font-weight: 700; color: var(--sunset-deep); line-height: 1; }
+.bid-line { font-size: 13px; font-weight: 700; color: var(--ink); font-family: 'Patrick Hand', cursive; }
+
+.bank-email {
+  background: var(--butter-light); border: 2px solid #E9C46A; border-radius: 12px;
+  padding: 11px 14px; margin-bottom: 12px; font-size: 12.5px; font-weight: 700; color: var(--ink);
+}
+.bank-email b { display: block; font-size: 14px; margin-bottom: 2px; }
+.bank-email a, .bank-email button { margin-top: 8px; margin-right: 6px; display: inline-flex; text-decoration: none; }
+
+.offer-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px; }
+.offer {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  border: 2px solid var(--ocean-pale); border-radius: 10px; padding: 7px 11px;
+  background: var(--warm-white); font-size: 13px;
+}
+.offer.listed { opacity: .62; border-style: dashed; }
+.offer-by { font-size: 11px; font-weight: 700; color: var(--ink-light); margin-left: 8px; }
+.offer-tag { font-size: 11px; font-weight: 800; color: var(--ink-light); }
+
+.ledger { display: flex; flex-direction: column; gap: 2px; max-height: 300px; overflow-y: auto; }
+.led-row {
+  display: grid; grid-template-columns: 84px 1fr auto; gap: 9px; align-items: center;
+  font-size: 12px; font-weight: 700; padding: 4px 8px; border-radius: 7px;
+}
+.led-row:nth-child(odd) { background: var(--warm-white); }
+.led-when { font-size: 10.5px; font-weight: 800; color: var(--ink-light); }
+.led-what { color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.led-amt.in  { color: var(--matcha); font-weight: 800; }
+.led-amt.out { color: var(--sail-red); font-weight: 800; }
+
+.bank-admin-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+.bank-admin-row label { display: flex; flex-direction: column; gap: 3px; font-size: 10px; font-weight: 800; color: var(--ocean-deep); }
+.bank-admin-row input {
+  width: 92px; font-family: inherit; font-size: 12.5px; font-weight: 800; text-align: center;
+  border: 2px solid var(--ocean-pale); border-radius: 8px; padding: 4px 6px; color: var(--ink);
+}
+.bank-vault-now { font-size: 12px; font-weight: 800; color: var(--ocean-deep); margin: 11px 0 5px; }
+.bank-admin-prices { display: flex; flex-direction: column; gap: 5px; max-height: 260px; overflow-y: auto; }
+.bank-admin-prices label {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  font-size: 12.5px; font-weight: 700; color: var(--ink);
+  border: 1.5px solid var(--ocean-pale); border-radius: 8px; padding: 4px 9px;
+}
+.bank-admin-prices input {
+  width: 76px; font-family: inherit; font-size: 12.5px; font-weight: 800; text-align: center;
+  border: 2px solid var(--ocean-pale); border-radius: 7px; padding: 3px 5px; color: var(--ink);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MEETING DECORATIONS — stickers and purchases, placed like a canvas
+   ═══════════════════════════════════════════════════════════════ */
+.decor-toggle {
+  border: 2px solid var(--ocean-light); background: var(--warm-white);
+  border-radius: 9px; font-size: 14px; cursor: pointer; padding: 2px 8px; line-height: 1.4;
+}
+.decor-toggle:hover { background: var(--ocean-pale); }
+.decor-toggle.on { background: var(--sunset); border-color: var(--sunset-deep); }
+
+.decor-tray {
+  border: 2.5px dashed var(--sunset); border-radius: 14px;
+  background: var(--butter-light); padding: 9px 12px; margin-bottom: 11px;
+}
+.dt-label { font-size: 11.5px; font-weight: 800; color: var(--sunset-deep); margin-bottom: 6px; }
+.dt-label span { font-weight: 700; color: var(--ink-light); margin-left: 7px; font-size: 10.5px; }
+.dt-items { display: flex; gap: 7px; flex-wrap: wrap; }
+.dt-item {
+  width: 44px; height: 44px; border-radius: 11px; cursor: pointer;
+  border: 2.5px solid var(--ocean-pale); background: var(--warm-white);
+  display: grid; place-items: center; font-size: 23px; padding: 0;
+}
+.dt-item img { width: 30px; height: 30px; object-fit: contain; }
+.dt-item:hover { border-color: var(--ocean); transform: translateY(-2px); }
+.dt-item.armed {
+  border-color: var(--sunset-deep); background: var(--sunset);
+  box-shadow: 0 0 0 3px rgba(244,162,97,.4);
+}
+.dt-empty { font-size: 12px; font-weight: 700; color: var(--ink-light); font-style: italic; }
+
+/* the board layer sits behind the columns; column layers sit over their block */
+.meeting-canvas { position: relative; }
+.meeting-canvas > .decor-layer { z-index: 0; }
+.person-col { position: relative; }
+.decor-layer { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
+.decor-layer.on { pointer-events: auto; }
+.decor-layer.armed { cursor: copy; background: rgba(244,162,97,.06); border-radius: 12px; }
+
+.decor {
+  position: absolute; transform: translate(-50%, -50%) scale(var(--s, 1));
+  transform-origin: center; pointer-events: auto; user-select: none;
+}
+.decor-art { font-size: 34px; line-height: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,.28)); }
+.decor-art img {
+  width: 46px; height: 46px; object-fit: contain; display: block;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,.28));
+}
+.decor-name {
+  position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+  margin-bottom: 3px; white-space: nowrap;
+  font-size: 8.5px; font-weight: 800; color: #fff; letter-spacing: .02em;
+  background: var(--ocean-deep); border-radius: 7px; padding: 1px 6px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.3);
+}
+.decor.editable { cursor: grab; }
+body.decor-dragging, body.decor-dragging .decor.editable { cursor: grabbing; }
+.decor.editable::after {
+  content: ''; position: absolute; inset: -7px; border-radius: 10px;
+  border: 1.5px dashed rgba(59,155,212,.65); pointer-events: none;
+}
+.decor-x, .decor-up {
+  position: absolute; width: 17px; height: 17px; border-radius: 50%;
+  border: none; cursor: pointer; font-size: 11px; font-weight: 800;
+  line-height: 1; padding: 0; display: grid; place-items: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,.3);
+}
+.decor-x  { top: -12px; right: -12px; background: var(--sail-red); color: #fff; }
+.decor-up { top: -12px; left: -12px; background: var(--ocean); color: #fff; }
+.decor-grip {
+  position: absolute; right: -11px; bottom: -11px;
+  width: 15px; height: 15px; border-radius: 50%; cursor: nwse-resize;
+  background: var(--warm-white); border: 2.5px solid var(--ocean);
+  box-shadow: 0 1px 3px rgba(0,0,0,.28);
+}
+@media (prefers-reduced-motion: reduce) { .dt-item:hover { transform: none; } }
+
+/* ── collapsed meetings ── */
+.meeting-fold {
+  border: 2px solid var(--ocean-light); background: var(--warm-white);
+  color: var(--ocean-deep); border-radius: 9px; font-size: 13px; font-weight: 800;
+  cursor: pointer; padding: 1px 9px; line-height: 1.5;
+}
+.meeting-fold:hover { background: var(--ocean-pale); }
+.meeting-folded {
+  font-size: 12.5px; font-weight: 700; color: var(--ink-light);
+  background: var(--warm-white); border: 2px dashed var(--ocean-pale);
+  border-radius: 11px; padding: 9px 13px; cursor: pointer;
+}
+.meeting-folded:hover { border-color: var(--ocean-light); color: var(--ink); }
+
+/* live-cursor toggle in the sidebar */
+.sync-toggle {
+  display: flex; align-items: center; gap: 6px; margin-top: 7px;
+  font-size: 10.5px; font-weight: 800; color: var(--ink-light); cursor: pointer;
+}
+.sync-toggle input { accent-color: var(--ocean); width: 13px; height: 13px; }
+
+/* save button + connection nap + cursor day toggles */
+.save-btn {
+  display: inline-block; margin-left: auto; align-self: center;
+  font-family: inherit; font-size: 11.5px; font-weight: 800; cursor: pointer;
+  border: 2px solid var(--ocean-pale); background: var(--warm-white);
+  color: var(--ink-light); border-radius: 12px; padding: 6px 10px;
+}
+.save-btn.dirty {
+  border-color: var(--sunset-deep); background: var(--sunset); color: #fff;
+  animation: savePulse 2s ease-in-out infinite;
+}
+@keyframes savePulse { 0%,100% { box-shadow: 0 0 0 0 rgba(244,162,97,.5); } 50% { box-shadow: 0 0 0 6px rgba(244,162,97,0); } }
+.sync-nap { font-size: 10px; font-weight: 800; color: var(--ink-light); margin-top: 5px; text-align: center; }
+.cursor-days { display: flex; gap: 5px; flex-wrap: wrap; }
+.cd-day {
+  display: flex; align-items: center; gap: 4px; cursor: pointer;
+  font-size: 11px; font-weight: 800; color: var(--ink);
+  border: 2px solid var(--ocean-pale); border-radius: 9px; padding: 3px 8px;
+  background: var(--warm-white);
+}
+.cd-day.off { background: var(--strawberry-pale); border-color: var(--sail-red); color: var(--sail-red); }
+.cd-day input { accent-color: var(--sail-red); }
 </style>
 </head>
 <body>
@@ -2867,6 +3078,10 @@
       <button class="nav-btn" onclick="showSection('timeline')" id="nav-timeline">
         <span class="emoji">🕰️</span> <span>Timeline</span>
       </button>
+      <button class="nav-btn" onclick="showSection('bank')" id="nav-bank" style="display:none"
+        title="The Fish Bank — sign in as &quot;bank tank&quot;">
+        <span class="emoji">🏦</span> <span>Fish Bank</span>
+      </button>
       <button class="nav-btn" onclick="showSection('admin')" id="nav-admin" style="display:none">
         <span class="emoji">🛠️</span> <span>Admin</span>
       </button>
@@ -2894,6 +3109,11 @@
       <button class="nav-btn" onclick="forceUpdate()" title="Reload the newest version and clear this device's cache">
         <span class="emoji">⟳</span> <span>Force update</span>
       </button>
+      <div id="sync-nap" class="sync-nap" style="display:none"></div>
+      <label class="sync-toggle" title="Show teammates' cursors moving. This is by far the biggest source of realtime traffic — leave it off if you're near your Supabase limit.">
+        <input type="checkbox" id="cursor-toggle" onchange="setCursorsOn(this.checked)">
+        <span>👀 live cursors</span>
+      </label>
       <div id="app-version" style="font-size:9px; font-weight:700; text-align:center; color:var(--ink-light); opacity:0.7; margin-top:4px;"></div>
       <div id="sync-status" style="font-size:10px; font-weight:800; text-align:center; padding:6px; border-radius:10px; margin-top:6px; background:rgba(0,0,0,0.05); color:var(--ink-light);">
         ⚪ Local only
@@ -3112,6 +3332,8 @@
       </div>
 
       <div class="nb-tabs">
+        <button id="save-btn" class="save-btn" onclick="pushNow()"
+          title="Notebook writing stays on this device until you press this. Everything else — tasks, check-ins, catches — syncs on its own.">✓ All saved</button>
         <button class="nb-tab active" id="nbtab-logs" onclick="showNbTab('logs')">🕑 Logs</button>
         <button class="nb-tab" id="nbtab-notes" onclick="showNbTab('notes')">✍️ Notes to self</button>
       </div>
@@ -3242,6 +3464,15 @@
       </div>
     </div>
 
+    <!-- FISH BANK (reachable as "bank tank", or as admin) -->
+    <div id="section-bank" class="page-section">
+      <div class="page-header">
+        <div class="page-title">🏦 Fish <span>Bank</span></div>
+        <span style="font-size:13px; font-weight:700; color:#E8F1F8;">buys your ideas · holds the takings</span>
+      </div>
+      <div class="paper-card"><div id="bank-body"></div></div>
+    </div>
+
     <!-- ADMIN SECTION (only reachable when your name is adminmilo) -->
     <div id="section-admin" class="page-section">
       <div class="page-header">
@@ -3304,6 +3535,23 @@
           Players never see these numbers. This card only exists inside the admin section.
         </div>
         <div id="admin-gacha-rules"></div>
+      </div>
+
+      <div class="paper-card">
+        <div class="nb-sub"><div class="nb-sub-label">👀 Live cursors &amp; message budget</div></div>
+        <div style="font-size:12px; font-weight:700; color:var(--ink-light); margin-bottom:10px;">
+          Cursors are the most expensive thing the app can do — each one is billed
+          to send and again to every person who receives it. Choose when they're allowed.
+        </div>
+        <div id="admin-cursors"></div>
+      </div>
+
+      <div class="paper-card">
+        <div class="nb-sub"><div class="nb-sub-label">🏦 The Fish Bank</div></div>
+        <div style="font-size:12px; font-weight:700; color:var(--ink-light); margin-bottom:10px;">
+          The vault's opening float, what the banker will pay, the exchange rate, and every shop price.
+        </div>
+        <div id="admin-bank"></div>
       </div>
 
       <div class="paper-card">
@@ -3609,15 +3857,6 @@
       </div>
     </div>
     <div class="form-group">
-      <label class="form-label">Cover art <span style="font-weight:600;color:var(--ink-light)">(optional)</span></label>
-      <div class="bk-cover-row">
-        <div id="bk-cover-preview"><span class="bk-cover-none">no cover</span></div>
-        <label class="btn-secondary" style="cursor:pointer;font-size:12px">
-          🖼️ Upload<input type="file" accept="image/*" onchange="onBookCoverPick(this)" style="display:none">
-        </label>
-      </div>
-    </div>
-    <div class="form-group">
       <label class="form-label">Whose shelf</label>
       <select class="form-input" id="bk-owner"></select>
       <div style="font-size:10.5px;font-weight:600;color:var(--ink-light);margin-top:3px">
@@ -3739,6 +3978,32 @@
     <div id="sk-list" class="sk-list"></div>
     <div class="modal-footer">
       <button class="btn-primary" onclick="closeModal('streak-editor')">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- SELL SOMETHING TO THE STORE -->
+<div class="modal-overlay" id="sell-modal" style="display:none" onclick="if(event.target===this) closeModal('sell-modal')">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-title">🤝 Sell to the store</div>
+    <div style="font-size:12px;font-weight:700;color:var(--ink-light);line-height:1.5;margin-bottom:12px">
+      Describe what you've made. The banker names a price — take it or leave it.
+      If you take it, the fish are yours straight away and the artwork gets sent
+      over to be added to the shop.
+    </div>
+    <div class="form-group">
+      <label class="form-label" title="What the item will be called in the shop">Item name</label>
+      <input class="form-input" id="sell-name" placeholder="e.g. Lucky Anchor Pin" maxlength="40">
+    </div>
+    <div class="form-group">
+      <label class="form-label" title="Anything the shopkeeper should know">Notes <span style="font-weight:600;color:var(--ink-light)">(optional)</span></label>
+      <input class="form-input" id="sell-note" placeholder="transparent PNG, 512×512…" maxlength="90">
+    </div>
+    <div id="sell-bid" class="sell-bid"></div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('sell-modal')">Cancel</button>
+      <button class="btn-secondary" onclick="requestBid()" title="Ask the banker what he'd pay">💬 Get an offer</button>
+      <button class="btn-primary" id="sell-accept" onclick="acceptBid()" style="display:none">Take the deal ✨</button>
     </div>
   </div>
 </div>
@@ -3989,6 +4254,175 @@ let sbConfig = null;      // { url, key, room }
 let applyingRemote = false; // guard so remote writes don't echo back
 let pushTimer = null;
 
+// ═══════════════════════════════════════════════════════════════
+//  EXPLICIT SAVE
+//
+//  Autosave pushed on a debounce, and every push is billed once per connected
+//  client — 18 of them here. Ordinary typing was costing thousands of messages
+//  a day to tell seventeen people about a note they can't see.
+//
+//  save() still writes to localStorage every time, so nothing is ever lost.
+//  What it no longer does is tell the room. That happens when you press Save,
+//  when something touches money or score (those go at once), or after a few
+//  minutes idle as a backstop.
+// ═══════════════════════════════════════════════════════════════
+let pendingPush = false;
+const IDLE_PUSH_MS = 180000;   // 3 minutes — a safety net, not the mechanism
+let idlePushTimer = null;
+
+function markUnsaved() {
+  pendingPush = true;
+  renderSaveButton();
+  clearTimeout(idlePushTimer);
+  idlePushTimer = setTimeout(() => { if (pendingPush) pushNow(true); }, IDLE_PUSH_MS);
+}
+
+/** Send everything that has changed. Called by the Save button and by pushNow. */
+function pushNow(quiet) {
+  clearTimeout(idlePushTimer);
+  clearTimeout(pushTimer);
+  pendingPush = false;
+  renderSaveButton();
+  pushChangedItems();
+  if (!quiet) showToast('☁️ Saved for everyone');
+}
+
+/**
+ * For anything that moves money or score — a catch, a purchase, a check-in, an
+ * admin correction. Waiting on a button for these would be a bug, not a saving.
+ */
+function saveNow() {
+  save();
+  pushNow(true);
+}
+
+function renderSaveButton() {
+  const btn = document.getElementById('save-btn');
+  if (!btn) return;
+  btn.classList.toggle('dirty', pendingPush);
+  btn.textContent = pendingPush ? '☁️ Save changes' : '✓ All saved';
+  btn.title = pendingPush
+    ? 'You have changes only on this device. Press to send them to everyone.'
+    : 'Everything on this device has been shared with the room.';
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  A BACKGROUND TAB COSTS THE WHOLE TEAM
+//
+//  Billing counts one message per LISTENING client. A tab sitting behind
+//  another window, doing nothing, is still a listener — so every edit anyone
+//  makes is billed for it. With nine people on two devices, roughly half the
+//  clients are idle background tabs at any moment, and they were quietly
+//  doubling everyone's bill.
+//
+//  So an idle hidden tab leaves the channel. It stops receiving, stops being
+//  counted, and gives back a concurrent connection. It rejoins and pulls fresh
+//  the moment you look at it again.
+//
+//  A tab running a pomodoro stays connected, because it has a session to
+//  report when the timer ends.
+// ═══════════════════════════════════════════════════════════════
+const IDLE_UNSUB_MS = 60000;   // a minute out of sight before we hang up
+let idleUnsubTimer = null;
+let napping = false;
+
+function tabIsBusy() {
+  try { if (typeof pomoRunning !== 'undefined' && pomoRunning) return true; } catch (e) {}
+  return false;
+}
+
+/** Called when a timer ends, so a hidden tab can report in and then sleep. */
+function releaseTabIfIdle() {
+  if (document.hidden && !tabIsBusy() && sbConfig) {
+    clearTimeout(idleUnsubTimer);
+    idleUnsubTimer = setTimeout(napChannel, 5000);
+  }
+}
+
+async function napChannel() {
+  if (napping || !sbChannel || tabIsBusy()) return;
+  if (pendingPush) { try { pushChangedItems(); } catch (e) {} }  // don't sleep on unsent work
+  napping = true;
+  try { await sb.removeChannel(sbChannel); } catch (e) {}
+  sbChannel = null;
+  renderSyncStatus('napping');
+}
+
+async function wakeChannel() {
+  clearTimeout(idleUnsubTimer);
+  if (!napping) return;
+  napping = false;
+  renderSyncStatus('waking');
+  try {
+    // A hard refresh, not a reconnect.
+    //
+    // Coming back after an hour, this tab may be holding a half-dragged
+    // sticker, an open book that someone has since deleted, a modal over a
+    // meeting that no longer exists. Forgetting what we thought the server had
+    // forces a clean pull, and clearing the transient UI means nothing from
+    // before the nap can survive into the new picture.
+    lastSnapshot = {};
+    resetTransientUI();
+    await startSync();
+    renderAll();
+    renderSyncStatus('');
+    showToast('↻ Caught up');
+  } catch (e) { renderSyncStatus(''); }
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (!sbConfig) return;
+  if (document.hidden) {
+    clearTimeout(idleUnsubTimer);
+    idleUnsubTimer = setTimeout(napChannel, IDLE_UNSUB_MS);
+  } else {
+    wakeChannel();
+  }
+});
+
+/**
+ * Drop anything half-finished before redrawing from fresh data.
+ *
+ * Every one of these is a handle onto something that may no longer exist:
+ * a book that was deleted while we slept, a point being edited, a sticker
+ * mid-drag. Left alone they render as ghosts.
+ */
+function resetTransientUI() {
+  document.querySelectorAll('.modal-overlay').forEach(m => { m.style.display = 'none'; });
+  const safe = fn => { try { fn(); } catch (e) {} };
+  safe(() => { if (typeof bookOpenId !== 'undefined') bookOpenId = null; });
+  safe(() => { if (typeof editingProjectId !== 'undefined') editingProjectId = null; });
+  safe(() => { if (typeof editingPointId !== 'undefined') editingPointId = null; });
+  safe(() => { if (typeof editingTaskId !== 'undefined') editingTaskId = null; });
+  safe(() => { if (typeof armedItem !== 'undefined') armedItem = null; });
+  safe(() => { if (typeof decorDrag !== 'undefined') decorDrag = null; });
+  safe(() => { if (typeof decorMode !== 'undefined') decorMode = false; });
+  safe(() => { if (typeof pendingOffer !== 'undefined') pendingOffer = null; });
+  safe(() => { if (typeof tlPan !== 'undefined') tlPan = null; });
+  safe(() => { if (typeof streakEditPid !== 'undefined') streakEditPid = null; });
+  safe(() => document.querySelectorAll('.remote-cursor').forEach(el => el.remove()));
+  safe(() => document.body.classList.remove('decor-dragging'));
+}
+
+/** Small helper so the sidebar can say what the connection is doing. */
+function renderSyncStatus(mode) {
+  const el = document.getElementById('sync-nap');
+  if (!el) return;
+  el.textContent = mode === 'napping' ? '😴 sleeping (saves messages)'
+                 : mode === 'waking'  ? '↻ reconnecting…' : '';
+  el.style.display = (mode === 'napping' || mode === 'waking') ? 'block' : 'none';
+}
+
+// don't let someone close the tab on unsent work
+window.addEventListener('beforeunload', (e) => {
+  if (!pendingPush) return;
+  try { pushChangedItems(); } catch (err) {}
+});
+// 300ms meant a flurry of typing became a flurry of separate pushes, and every
+// push is fanned out to every connected client. Two seconds coalesces a burst
+// into one message; nobody notices the extra second and a half.
+const PUSH_DEBOUNCE_MS = 2000;
+
 // Collections stored one-row-per-element (keyed by their .id).
 // Bump this string on every deploy — the update checker compares it against the
 // copy sitting on the server to tell a phone its cached build is out of date.
@@ -4145,8 +4579,51 @@ function save() {
   localStorage.setItem(STORAGE_KEY + '_broadcast', Date.now());
   if (sb && !applyingRemote) {
     clearTimeout(pushTimer);
-    pushTimer = setTimeout(pushChangedItems, 300);
+    pushTimer = setTimeout(pushChangedItems, PUSH_DEBOUNCE_MS);
   }
+}
+
+/**
+ * Write locally but say nothing yet.
+ *
+ * Only the notebook uses this. Planning is long-form typing that nobody else
+ * is waiting on, so telling eighteen clients about every sentence is pure
+ * waste — it waits for the Save button. Everything else still syncs on its own,
+ * because a task or a check-in someone is watching for should just appear.
+ */
+function saveLocal() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  localStorage.setItem(STORAGE_KEY + '_broadcast', Date.now());
+  if (sb && !applyingRemote) markUnsaved();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  PRIVATE ROWS
+//
+//  Books and their timelines are yours alone — nobody else's screen ever shows
+//  them. But they were stored in the shared room, so every edit was delivered
+//  to all eighteen clients, seventeen of which threw it away. Billed all the
+//  same.
+//
+//  Realtime filters run server-side and can only test equality, so there's no
+//  way to say "everything except the private keys". What there IS is the room
+//  value itself: private rows are written under `<room>#<personId>`, and a
+//  client only ever subscribes to the shared room plus its own. Other people's
+//  book edits are never delivered, so they are never counted.
+//
+//  Cost of a book edit, to everyone else: zero.
+// ═══════════════════════════════════════════════════════════════
+const PRIVATE_KEYS = ['single:projects', 'single:tlPoints'];
+
+function isPrivateKey(k) { return PRIVATE_KEYS.includes(k); }
+function privateRoom(pid) {
+  const who = pid || (typeof myPersonId === 'function' ? myPersonId() : null);
+  return who ? sbConfig.room + '#' + who : null;
+}
+/** Which room a given row belongs in. */
+function roomFor(itemKey) {
+  if (!isPrivateKey(itemKey)) return sbConfig.room;
+  return privateRoom() || sbConfig.room;   // no name yet — keep it shared rather than lose it
 }
 
 // Build the map of item_key -> data for the whole state.
@@ -4204,7 +4681,7 @@ async function pushChangedItems() {
     // else's account could overwrite their real fish and streaks. Only the
     // admin account may write on behalf of others.
     if (!mayWriteRow(k)) continue;
-    rows.push({ room: sbConfig.room, item_key: k, data: map[k], updated_at: now });
+    rows.push({ room: roomFor(k), item_key: k, data: map[k], updated_at: now });
     lastSnapshot[k] = snap;
   }
   // deletions: keys we had before but not now
@@ -4215,7 +4692,13 @@ async function pushChangedItems() {
   try {
     if (rows.length) await sb.from('boats_items').upsert(rows);
     if (deletions.length) {
-      await sb.from('boats_items').delete().eq('room', sbConfig.room).in('item_key', deletions);
+      // private rows live in a different room, so delete them separately
+      const sharedDel = deletions.filter(k => !isPrivateKey(k));
+      const privDel = deletions.filter(isPrivateKey);
+      if (sharedDel.length)
+        await sb.from('boats_items').delete().eq('room', sbConfig.room).in('item_key', sharedDel);
+      if (privDel.length && privateRoom())
+        await sb.from('boats_items').delete().eq('room', privateRoom()).in('item_key', privDel);
     }
     if (rows.length || deletions.length) saveSyncedKeys();
   } catch (e) { console.error('push failed', e); }
@@ -4320,6 +4803,13 @@ function applyItemRow(item_key, data, isDelete) {
         // database is now behind us and needs correcting
         if (snapshotOf(merged) !== snapshotOf(data)) staleRowRejected = true;
         arr[idx] = merged;
+      } else if (kind === 'meetings') {
+        // A meeting is a whole row, so two people decorating at once would
+        // overwrite each other. The placements are an id-keyed list, merged
+        // item by item with removals honoured, exactly like projects.
+        const merged = { ...data };
+        merged.decor = mergeIdList('decor', (arr[idx] || {}).decor, data.decor);
+        arr[idx] = merged;
       } else {
         arr[idx] = data;
       }
@@ -4370,7 +4860,12 @@ document.addEventListener('focusout', () => {
 async function pullAllItems() {
   if (!sb || !sbConfig) return;
   try {
-    const { data, error } = await sb.from('boats_items').select('item_key,data,updated_at').eq('room', sbConfig.room);
+    // read the shared room AND my own private one
+    const rooms = [sbConfig.room];
+    const mine = privateRoom();
+    if (mine) rooms.push(mine);
+    const { data, error } = await sb.from('boats_items')
+      .select('item_key,data,updated_at').in('room', rooms);
     if (error) throw error;
     if (data && data.length) {
       const remoteKeys = new Set(data.map(r => r.item_key));
@@ -4430,6 +4925,10 @@ function saveSyncedKeys() {
 
 // Drop anything this device is holding that the room no longer has.
 function pruneZombies(remoteKeys, newestRemote) {
+  // Private rows are pulled from a different room; if this device has no name
+  // set yet they simply won't be in the result, and treating that as "the room
+  // deleted them" would throw away someone's books.
+  PRIVATE_KEYS.forEach(k => { if (!remoteKeys.has(k)) remoteKeys.add(k); });
   const known = loadSyncedKeys();
   let removed = 0;
   ITEM_COLLECTIONS.forEach(coll => {
@@ -4525,7 +5024,25 @@ async function startSync() {
       }
     );
 
+    // My private room. Nobody else subscribes to it, so nobody else is billed
+    // for my books — and I still get my own edits from my other devices.
+    const myRoom = privateRoom();
+    if (myRoom) {
+      sbChannel.on('postgres_changes',
+        { event: '*', schema: 'public', table: 'boats_items', filter: 'room=eq.' + myRoom },
+        (payload) => {
+          const row = payload.new || payload.old;
+          if (!row || !row.item_key) return;
+          applyItemRow(row.item_key, row.data, payload.eventType === 'DELETE');
+          rerenderAfterRemote();
+        }
+      );
+    }
+
     sbChannel.on('broadcast', { event: 'cursor' }, ({ payload }) => {
+      // Ignore incoming cursors when the policy says they're off, so a device
+      // that hasn't reloaded can't put ghosts on everyone else's screen.
+      if (!cursorsOn() || cursorsSilenced()) return;
       if (payload.id !== myUserId) renderRemoteCursor(payload);
     });
 
@@ -4807,7 +5324,12 @@ function mergeWcCategory(a, b) {
   });
   base.monthCounts = counts;
   base.monthFish = { ...(a.monthFish || {}), ...(b.monthFish || {}) };
-  base.streak = Math.max(a.streak || 0, b.streak || 0);
+  // NOT max: after a lapse and a fresh check-in the true streak is legitimately
+  // SMALLER (12 → 1), and taking the bigger number would resurrect the old run.
+  // The record with the more recent check-in is the one that knows.
+  base.streak = (bLast > aLast) ? (b.streak || 0)
+              : (aLast > bLast) ? (a.streak || 0)
+              : Math.max(a.streak || 0, b.streak || 0);
   base.last = bLast > aLast ? bLast : aLast;
   if (Array.isArray(a.fixedOn) || Array.isArray(b.fixedOn)) {
     base.fixedOn = [...new Set([...(a.fixedOn || []), ...(b.fixedOn || [])])];
@@ -4875,6 +5397,9 @@ const PERSON_POLICY = {
   // ids of catches already reeled in — the tombstones that stop a union from
   // handing an opened catch back
   openedCatches: MergeStrategy.unionSet(),
+  // uids of catches already spent in the shop or sold to the bank. Union, so a
+  // purchase can never be reversed by a device that hasn't heard about it.
+  spentFish:     MergeStrategy.unionSet(),
   wc:          MergeStrategy.byKey(mergeWcCategory),
   logs:        MergeStrategy.byKey(mergeLogDay),
 };
@@ -5072,6 +5597,7 @@ function showSection(name) {
   if (name === 'planning') renderPlanning();
   if (name === 'admin') renderAdmin();
   if (name === 'timeline') renderTimelineSection();
+  if (name === 'bank') renderBank();
   if (name === 'tasks') { try { renderPie(); } catch(e) {} }
 }
 
@@ -5090,19 +5616,91 @@ function boatCursorSvg(color) {
   </svg>`;
 }
 
-let lastCursorSend = 0;
+// ═══════════════════════════════════════════════════════════════
+//  LIVE CURSORS — the expensive one
+//
+//  This used to broadcast every 60ms while the mouse moved: 16.7 messages a
+//  second, per person. Nine people moving for 45 minutes a day is roughly
+//  12 million messages a month against a 2 million free-tier cap — about 87%
+//  of everything the app sent, for a decoration.
+//
+//  It is now OFF unless someone turns it on, and when on it is throttled hard,
+//  stays quiet unless the pointer has actually travelled, sleeps when the tab
+//  is hidden, and says nothing at all when nobody else is in the room.
+// ═══════════════════════════════════════════════════════════════
+const CURSOR_MS = 250;        // 4/sec at most, down from ~17
+const CURSOR_MIN_MOVE = 0.02; // must have moved 2% of the screen to be worth sending
+
+// ── when cursors are allowed to cost anything ────────────────
+// Every cursor broadcast is billed once to send plus once per receiving
+// client, so the cost climbs with the square of how many people are on. The
+// policy below is what keeps that in a box; admin can retune it without a
+// code change.
+const CURSOR_DEFAULTS = {
+  maxOnline: 3,              // silent once MORE than this many are connected
+  offDays: [0, 2, 3, 4],     // Sun, Tue, Wed, Thu — your heaviest days
+};
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function cursorPolicy() {
+  const p = (state && state.cursorPolicy) || {};
+  return {
+    maxOnline: Number.isFinite(p.maxOnline) ? p.maxOnline : CURSOR_DEFAULTS.maxOnline,
+    offDays: Array.isArray(p.offDays) ? p.offDays : CURSOR_DEFAULTS.offDays,
+  };
+}
+function onlineCount() {
+  try { return Object.keys(state.online || {}).length || 1; } catch (e) { return 1; }
+}
+/** An off day means nobody sends anything — so nobody receives anything either. */
+function cursorsBlockedToday() {
+  return cursorPolicy().offDays.includes(new Date().getDay());
+}
+function cursorsSilenced() {
+  return cursorsBlockedToday() || onlineCount() > cursorPolicy().maxOnline;
+}
+/** Why cursors aren't showing, in words, for the sidebar. */
+function cursorStatusText() {
+  if (!cursorsOn()) return 'off';
+  if (cursorsBlockedToday()) return `off on ${DAY_NAMES[new Date().getDay()]}s`;
+  const n = onlineCount(), max = cursorPolicy().maxOnline;
+  if (n > max) return `silent — ${n} online, limit ${max}`;
+  return `live (${n}/${max})`;
+}
+
+function cursorsOn() { return localStorage.getItem('boats_cursors') === '1'; }
+function setCursorsOn(on) {
+  localStorage.setItem('boats_cursors', on ? '1' : '0');
+  if (!on) document.querySelectorAll('.remote-cursor').forEach(el => el.remove());
+  showToast(on
+    ? '👀 Live cursors on — this is the app\'s biggest source of realtime traffic'
+    : '👀 Live cursors off');
+  const cb = document.getElementById('cursor-toggle');
+  if (cb) cb.checked = on;
+}
+
+let lastCursorSend = 0, lastCx = -1, lastCy = -1;
 function initCursors() {
   document.addEventListener('mousemove', (e) => {
-    updateMyLabel(e.clientX, e.clientY);
-    // broadcast my cursor (throttled) when connected
-    if (sbChannel && Date.now() - lastCursorSend > 60) {
-      lastCursorSend = Date.now();
-      sbChannel.send({
-        type: 'broadcast', event: 'cursor',
-        payload: { id: myUserId, name: state.myName || 'Anonymous', color: myColor,
-                   xr: e.clientX / window.innerWidth, yr: e.clientY / window.innerHeight }
-      });
-    }
+    updateMyLabel(e.clientX, e.clientY);          // my own label is local, always free
+    if (!sbChannel || !cursorsOn()) return;
+    if (document.hidden) return;                  // nobody can see it anyway
+    // An off day, or too many people connected: send nothing. Since nobody
+    // sends, nobody receives — the whole group costs zero, which is what makes
+    // an off day actually worth having.
+    if (cursorsSilenced()) return;
+    if (onlineCount() <= 1) return;               // alone; nobody to send to
+
+    const xr = e.clientX / window.innerWidth, yr = e.clientY / window.innerHeight;
+    if (Math.abs(xr - lastCx) < CURSOR_MIN_MOVE && Math.abs(yr - lastCy) < CURSOR_MIN_MOVE) return;
+    const now = Date.now();
+    if (now - lastCursorSend < CURSOR_MS) return;
+
+    lastCursorSend = now; lastCx = xr; lastCy = yr;
+    sbChannel.send({
+      type: 'broadcast', event: 'cursor',
+      payload: { id: myUserId, name: state.myName || 'Anonymous', color: myColor, xr, yr }
+    });
   });
 }
 
@@ -5237,13 +5835,42 @@ function tasksDueThisWeek(m, pid) {
   const [y, mo, d] = base.split('-').map(Number);
   const end = new Date(y, mo - 1, d + 7);
   const endKey = `${end.getFullYear()}-${String(end.getMonth()+1).padStart(2,'0')}-${String(end.getDate()).padStart(2,'0')}`;
-  return state.tasks
-    .filter(t => t.assigneeId === pid && t.due && t.due >= base && t.due <= endKey)
+  // pull from the per-person index rather than sweeping every task again
+  const pool = (_tasksByPerson && _tasksByPerson.get(String(pid))) ||
+               (state.tasks || []).filter(t => String(t.assigneeId) === String(pid));
+  return pool
+    .filter(t => t.due && t.due >= base && t.due <= endKey)
     .sort((a, b) => (a.due || '').localeCompare(b.due || ''));
+}
+
+// ── per-render caches ─────────────────────────────────────────
+// renderMeetings draws one column per person PER MEETING. With 40 meetings and
+// 12 people that's 480 columns, and each was independently scanning the whole
+// task list and the person's entire log history — measured at 10.5 SECONDS on a
+// full room, on every sync echo. None of that work depends on the meeting, so
+// it's computed once per render and reused.
+let _pieCache = null;
+let _tasksByPerson = null;
+
+function resetMeetingCaches() {
+  _pieCache = new Map();
+  _tasksByPerson = new Map();
+  (state.tasks || []).forEach(t => {
+    const k = String(t.assigneeId || '');
+    if (!_tasksByPerson.has(k)) _tasksByPerson.set(k, []);
+    _tasksByPerson.get(k).push(t);
+  });
 }
 
 /** A small pie of what this person logged in the last 7 days. */
 function weekPieFor(pid, color) {
+  if (_pieCache && _pieCache.has(pid)) return _pieCache.get(pid);
+  const html = buildWeekPie(pid, color);
+  if (_pieCache) _pieCache.set(pid, html);
+  return html;
+}
+
+function buildWeekPie(pid, color) {
   if (typeof personLogs !== 'function') return '';
   const logs = personLogs(pid) || {};
   const today = (typeof estDateKey === 'function') ? estDateKey() : '';
@@ -5346,6 +5973,7 @@ function renderNextTaskBanner() {
 }
 
 function renderMeetings() {
+  resetMeetingCaches();   // one pass over tasks and logs, not one per column
   renderNextTaskBanner();
   const container = document.getElementById('meeting-notes-container');
   const tabs = document.getElementById('week-tabs');
@@ -5395,14 +6023,47 @@ function filterWeek(week, btn) {
   renderMeetingCards(filtered);
 }
 
+/**
+ * Which meetings draw their full contents.
+ *
+ * Every meeting used to render every person's column, always. Forty meetings
+ * with twelve people is 480 columns and, in a real room, 28,000 task rows —
+ * measured at 10.5 SECONDS per render, and renderAll fires on every sync echo.
+ * That was the lag.
+ *
+ * The newest few are open; the rest collapse to a header you can click. Nobody
+ * reads the columns of a meeting from three weeks ago, and if they want to,
+ * it's one click.
+ */
+const MEETINGS_OPEN_BY_DEFAULT = 2;
+let expandedMeetings = null;
+
+function meetingIsOpen(m, index) {
+  if (expandedMeetings === null) return index < MEETINGS_OPEN_BY_DEFAULT;
+  return expandedMeetings.has(String(m.id));
+}
+function toggleMeetingOpen(mid, index) {
+  if (expandedMeetings === null) {
+    // first click: start from whatever is currently showing
+    expandedMeetings = new Set(
+      (state.meetings || []).slice(0, MEETINGS_OPEN_BY_DEFAULT).map(x => String(x.id)));
+  }
+  const k = String(mid);
+  if (expandedMeetings.has(k)) expandedMeetings.delete(k); else expandedMeetings.add(k);
+  renderMeetings();
+}
+
 function renderMeetingCards(meetings) {
   const container = document.getElementById('meeting-notes-container');
   const taskCounts = getTaskCountsByPerson();
-  container.innerHTML = meetings.map(m => {
+  container.innerHTML = meetings.map((m, _mi) => {
     const tmpl = getTemplates().find(t => t.id === m.template);
+    const open = meetingIsOpen(m, _mi);
 
     let peopleCols;
-    if (state.people.length === 0) {
+    if (!open) {
+      peopleCols = '';                 // closed: none of the column work runs at all
+    } else if (state.people.length === 0) {
       peopleCols = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-emoji">⚓</div><p>No crew yet!</p><small>Add people in "Edit People" and they'll appear here as columns.</small></div>`;
     } else {
       peopleCols = meetingAttendees(m).map(p => {
@@ -5500,6 +6161,8 @@ function renderMeetingCards(meetings) {
             </div>
           </div>
 
+          ${(typeof decorLayer === 'function') ? decorLayer(m, p.id) : ''}
+
           ${(p.purchases && p.purchases.length) || p.streakFixers ? `<div class="pc-buys">
             ${p.streakFixers ? `<span class="pc-buy" title="${p.streakFixers} streak fixer(s)">🩹${p.streakFixers}</span>` : ''}
             ${(p.purchases || []).map(x => `<span class="pc-buy" title="${escAttr(x.name)}">${x.image ? `<img src="${escAttr(x.image)}" alt="">` : (x.emoji || '🎁')}</span>`).join('')}
@@ -5526,16 +6189,27 @@ function renderMeetingCards(meetings) {
           <span class="week-badge" title="Total estimated time across everyone's tasks">⏱️ ${formatMinutes(meetingMins)}</span>
           <span class="week-badge" title="Completed tasks in this meeting">✅ ${meetingDone}/${meetingTotal}</span>
           <span class="week-badge">📅 ${m.date ? new Date(m.date + 'T00:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric'}) : 'No date'}</span>
+          <button class="meeting-fold" onclick="toggleMeetingOpen(${m.id}, ${_mi})"
+            title="${open ? 'Collapse this meeting' : 'Open this meeting'}">${open ? '▾' : '▸'}</button>
+          <button class="decor-toggle ${(typeof decorMode !== 'undefined' && decorMode) ? 'on' : ''}"
+            onclick="toggleDecorMode(${m.id})"
+            title="Stick your stickers and purchases anywhere on this page — yours or anyone else's — then drag and resize them">🎨</button>
           <button class="delete-note-btn" onclick="deleteMeeting(${m.id})" title="Delete meeting">🗑️</button>
         </div>
       </div>
       <div class="meeting-note-body">
+        ${!open ? `<div class="meeting-folded" onclick="toggleMeetingOpen(${m.id}, ${_mi})"
+            title="Click to open">📋 ${state.people.length} crew · ${meetingDone}/${meetingTotal} done — click to open</div>` : ''}
+        ${open && (typeof decorTray === 'function') ? decorTray(m.id) : ''}
         ${(m.absent || []).length ? `<div class="absent-strip">
           <span>Not attending:</span>
           ${(m.absent || []).map(id => { const ap = personById(id); return ap
             ? `<button class="absent-chip" onclick="restoreToMeeting(${m.id}, '${id}')" title="Add ${escAttr(ap.name)} back">${escHtml(ap.name)} ↩</button>` : ''; }).join('')}
         </div>` : ''}
-        <div class="people-grid">${peopleCols}</div>
+        <div class="meeting-canvas" style="${open ? '' : 'display:none'}">
+          ${(typeof decorLayer === 'function') ? decorLayer(m, 'board') : ''}
+          <div class="people-grid">${peopleCols}</div>
+        </div>
       </div>
     </div>`;
   }).join('');
@@ -6207,6 +6881,8 @@ function visiblePeople() {
 }
 
 function refreshAdminVisibility() {
+  // the Fish Bank tab follows the same rule — visible to "bank tank" or admin
+  try { if (typeof refreshBankVisibility === 'function') refreshBankVisibility(); } catch (e) {}
   const btn = document.getElementById('nav-admin');
   if (btn) btn.style.display = isAdmin() ? 'flex' : 'none';
   // if we're sitting on the admin page and the name changed, bail out
@@ -6288,8 +6964,14 @@ function adminSetStreak(pid, catId, field, value) {
 
   if (field === 'streak') {
     rec.streak = clampInt(value, 0, 9999);
-    // a streak with no recent check-in gets wiped on next load, so anchor it
-    if (rec.streak > 0 && !rec.last) rec.last = estDateKey();
+    // A streak is only shown if its last check-in was today or yesterday, so
+    // setting a number against a stale date would silently display as zero.
+    // Anchor it to today whenever the existing date can't carry it.
+    const today = estDateKey(), yesterday = prevDateKey(today);
+    if (rec.streak > 0 && rec.last !== today && rec.last !== yesterday) {
+      rec.last = today;
+      showToast(`Anchored to today so ${rec.streak}🔥 actually shows`);
+    }
   } else if (field === 'count') {
     rec.monthCounts[estMonthKey()] = clampInt(value, 0, 31);
   } else if (field === 'last') {
@@ -6304,6 +6986,114 @@ function adminSetStreak(pid, catId, field, value) {
   renderLeaderboard();
   try { renderWorldCup(); } catch (e) {}
   renderAdmin();
+}
+
+/** Admin: the vault float, the bid range, the exchange rate, and shop prices. */
+function renderAdminBank() {
+  const box = document.getElementById('admin-bank');
+  if (!box || !isAdmin() || typeof bankConfig !== 'function') return;
+  const cfg = bankConfig();
+  const shelf = (typeof getStoreItems === 'function') ? getStoreItems() : [];
+  box.innerHTML = `
+    <div class="bank-admin-row">
+      <label title="What the vault started with. Change it and the balance shifts by the difference.">
+        opening float <input type="number" min="0" value="${cfg.openingFish}"
+          onchange="setBankConfig('openingFish', parseInt(this.value,10)||0)"></label>
+      <label title="The banker never offers less than this">lowest bid
+        <input type="number" min="1" value="${cfg.minBid}"
+          onchange="setBankConfig('minBid', parseInt(this.value,10)||1)"></label>
+      <label title="…nor more than this">highest bid
+        <input type="number" min="1" value="${cfg.maxBid}"
+          onchange="setBankConfig('maxBid', parseInt(this.value,10)||1)"></label>
+      <label title="How many starfish buy one whole fish">⭐ per 🐟
+        <input type="number" min="1" value="${cfg.starfishPerFish}"
+          onchange="setBankConfig('starfishPerFish', parseInt(this.value,10)||1)"></label>
+    </div>
+    <div class="bank-vault-now">Vault right now: <b>${bankBalance()} 🐟</b></div>
+    <div class="bank-admin-row">
+      <button class="btn-secondary" onclick="adminBankAdjust(10)" title="Put fish into the vault">+10 🐟</button>
+      <button class="btn-secondary" onclick="adminBankAdjust(-10)" title="Take fish out of the vault">−10 🐟</button>
+    </div>
+    <div class="bank-vault-now">Shop prices</div>
+    <div class="bank-admin-prices">
+      ${shelf.map(it => `<label title="What ${escAttr(it.name)} costs in fish">
+        <span>${it.emoji || '🎁'} ${escHtml(it.name)}</span>
+        <input type="number" min="0" value="${it.cost}"
+          onchange="adminSetPrice('${escAttr(it.id)}', this.value)"></label>`).join('')
+        || '<div class="nb-empty">Nothing on the shelf.</div>'}
+    </div>`;
+}
+
+/** Move money in or out of the vault — recorded in the ledger, never rewritten. */
+function adminBankAdjust(n) {
+  if (!isAdmin()) return;
+  bankPost('admin', n, 0, '', `admin ${n >= 0 ? 'added' : 'removed'} ${Math.abs(n)} fish`);
+  renderAdminBank();
+  try { renderBank(); } catch (e) {}
+  showToast(`🏦 Vault ${n >= 0 ? '+' : ''}${n} 🐟 — now ${bankBalance()}`);
+}
+
+/** Set what something costs. Overrides live on the synced store item. */
+function adminSetPrice(itemId, value) {
+  if (!isAdmin()) return;
+  const cost = Math.max(0, parseInt(value, 10) || 0);
+  if (!Array.isArray(state.storeItems)) state.storeItems = [];
+  const it = state.storeItems.find(x => String(x.id) === String(itemId));
+  if (it) it.cost = cost;
+  else {
+    // a built-in item being repriced for the first time — keep an override row
+    const base = (typeof catalogItem === 'function') ? catalogItem(itemId) : null;
+    state.storeItems.push(Object.assign({}, base || { id: itemId }, { id: itemId, cost }));
+  }
+  save();
+  renderAdminBank();
+  try { renderMarket(); } catch (e) {}
+  showToast(`💰 Price set to ${cost} 🐟`);
+}
+
+/** Admin: when live cursors are allowed to cost anything. */
+function renderAdminCursors() {
+  const box = document.getElementById('admin-cursors');
+  if (!box || !isAdmin() || typeof cursorPolicy !== 'function') return;
+  const pol = cursorPolicy();
+  box.innerHTML = `
+    <div class="bank-admin-row">
+      <label title="Above this many connected clients, nobody sends a cursor — so nobody receives one either">
+        silent above <input type="number" min="0" max="50" value="${pol.maxOnline}"
+          onchange="setCursorMax(this.value)"> online</label>
+    </div>
+    <div style="font-size:11px;font-weight:800;color:var(--ocean-deep);margin:10px 0 5px">
+      Days cursors are switched off entirely</div>
+    <div class="cursor-days">
+      ${DAY_NAMES.map((d, i) => `
+        <label class="cd-day ${pol.offDays.includes(i) ? 'off' : ''}"
+          title="${pol.offDays.includes(i) ? d + ': cursors off — no messages at all' : d + ': cursors allowed'}">
+          <input type="checkbox" ${pol.offDays.includes(i) ? 'checked' : ''}
+            onchange="toggleCursorDay(${i})"><span>${d}</span></label>`).join('')}
+    </div>
+    <div style="font-size:11.5px;font-weight:700;color:var(--ink-light);margin-top:8px;line-height:1.5">
+      Ticked = off. On an off day nobody broadcasts and nobody renders, so the
+      whole group costs nothing.<br>
+      Right now: <b>${cursorStatusText()}</b>
+    </div>`;
+}
+function setCursorMax(v) {
+  if (!isAdmin()) return;
+  if (!state.cursorPolicy) state.cursorPolicy = {};
+  state.cursorPolicy.maxOnline = Math.max(0, parseInt(v, 10) || 0);
+  saveNow();
+  renderAdminCursors();
+}
+function toggleCursorDay(i) {
+  if (!isAdmin()) return;
+  if (!state.cursorPolicy) state.cursorPolicy = {};
+  const cur = cursorPolicy().offDays.slice();
+  const at = cur.indexOf(i);
+  if (at > -1) cur.splice(at, 1); else cur.push(i);
+  state.cursorPolicy.offDays = cur.sort();
+  saveNow();
+  renderAdminCursors();
+  showToast(`👀 Cursors ${cur.includes(i) ? 'off' : 'on'} for ${DAY_NAMES[i]}s`);
 }
 
 function renderAdminGachaRules() {
@@ -6393,6 +7183,8 @@ function renderAdmin() {
   renderAdminStore();
   renderAdminGachaRules();
   renderAdminWinners();
+  try { renderAdminBank(); } catch (e) {}
+  try { renderAdminCursors(); } catch (e) {}
 }
 
 function renderAdminMeetings() {
@@ -6624,7 +7416,7 @@ function totalStreakFor(pid) {
   const p = personById(pid);
   if (!p) return 0;
   const wc = p.wc || {};
-  return getWcCategories(pid).reduce((s, c) => s + ((wc[c.id] && wc[c.id].streak) || 0), 0);
+  return wcTotalStreak(pid);
 }
 
 // Set an exact fish count. Growing adds admin-granted fish (0 minutes, so they
@@ -7185,6 +7977,41 @@ function ensureWc(p) {
 }
 
 // Called on load and when the WC section opens: apply "missed a day → reset" logic.
+/**
+ * A streak's CURRENT value, worked out from when it was last checked in.
+ *
+ * ⚠️ This must never be written back into the record.
+ *
+ * It used to be: reconcileStreaks() walked the people it was allowed to touch
+ * and wrote `streak = 0` into any record whose last check-in had lapsed. That
+ * made a derived value into stored data, and the moment two devices derived it
+ * differently they fought:
+ *
+ *   · Signed in as Milo, `myPersonId()` finds him, so his lapsed streaks were
+ *     zeroed and pushed.
+ *   · Signed in as adminmilo — who is not a crew member — `myPersonId()` is
+ *     null, nobody was reconciled, and the admin device pushed Milo's
+ *     un-zeroed numbers straight back.
+ *
+ * Two screens open at the same second showed 81 and 88. Deriving it at read
+ * time removes the disagreement entirely: every device computes the same
+ * answer from the same stored fact, and nobody writes anything.
+ */
+function wcEffectiveStreak(p, catId) {
+  const rec = p && p.wc && p.wc[catId];
+  if (!rec || !rec.streak) return 0;
+  const today = estDateKey();
+  if (rec.last === today || rec.last === prevDateKey(today)) return rec.streak;
+  return 0;   // lapsed — shown as zero, but the stored number is left alone
+}
+
+/** Everyone's streaks added up, as displayed. */
+function wcTotalStreak(pid) {
+  const p = personById(pid);
+  if (!p) return 0;
+  return getWcCategories(pid).reduce((s, c) => s + wcEffectiveStreak(p, c.id), 0);
+}
+
 function reconcileStreaks() {
   // With sync configured but not yet caught up, our copy may be days behind.
   // Zeroing a streak on that basis is exactly how a live streak gets wiped, so
@@ -7230,14 +8057,16 @@ function reconcileStreaks() {
       if (rec.last !== today && rec.last !== yesterday) {
         // A streak fixer buys back exactly one missed day: the streak survives
         // and the chain is treated as unbroken through yesterday.
+        // Spending a fixer IS a real change — a resource is consumed and the
+        // chain is genuinely extended — so it stays a write, and only on the
+        // owner's device. The lapse itself is never written; wcEffectiveStreak
+        // derives that, so no two devices can disagree about it.
         if (rec.streak > 0 && (p.streakFixers || 0) > 0) {
           p.streakFixers -= 1;
           rec.last = yesterday;
           rec.fixedOn = rec.fixedOn || [];
           rec.fixedOn.push(today);
           if (p.id === myPersonId()) fixerUsed = cat.label || 'a habit';
-        } else {
-          rec.streak = 0;
         }
       }
     });
@@ -7267,8 +8096,10 @@ function wcCheckIn(catId) {
     rec.last = rec.streak > 0 ? yesterday : null;
   } else {
     // check in for today
-    if (rec.last === yesterday) rec.streak += 1;   // continuing streak
-    else rec.streak = 1;                            // fresh start
+    // Build on what the streak actually is right now. After a lapse the
+    // effective value is 0, so checking in again correctly starts at 1 even
+    // though the stored number was never reset.
+    rec.streak = wcEffectiveStreak(p, catId) + 1;
     rec.last = today;
     rec.monthCounts[mk] = (rec.monthCounts[mk] || 0) + 1;
     playSound('ding');
@@ -7280,7 +8111,7 @@ function wcCheckIn(catId) {
     }
   }
   wc[catId] = rec;
-  save();
+  saveNow();   // a check-in is score — goes at once
   renderWorldCup();
   renderLeaderboard();
 }
@@ -7420,7 +8251,7 @@ function renderMarket() {
 
   const myId = myPersonId();
   const me = myId ? personById(myId) : null;
-  const fishCount = me ? (me.fish || []).length : 0;
+  const fishCount = me ? spendableFish(me).length : 0;
   const owned = (me && me.stickers) || [];
   const purchases = (me && me.purchases) || [];
   if (bal) bal.innerHTML = `🎣 ${fishCount} fish` + (me && me.streakFixers ? ` · 🩹 ${me.streakFixers}` : '');
@@ -7467,14 +8298,21 @@ function buyMarketItem(id) {
     (me.stickers.includes(id) || me.purchases.some(x => x.id === id));
   if (alreadyOwned) { showToast('You already own that one!'); return; }
 
-  const fish = me.fish || [];
+  // ⚠️ Spending must never DELETE from p.fish.
+  //
+  // p.fish is a ledger and the sync engine unions it, so anything removed here
+  // was handed straight back by the next device to sync — buy something, wait,
+  // get your fish back. Free money.
+  //
+  // Instead the spent catches are tombstoned by uid. The union keeps every
+  // catch and keeps every tombstone, so a purchase can never be undone and can
+  // never be double-counted either.
+  const fish = spendableFish(me);
   if (fish.length < item.cost) { showToast(`Not enough fish — need ${item.cost} 🎣`); return; }
-  // spend the fish: remove `cost` fish, preferring plain ones first so the
-  // consistency fish that carry leaderboard weight are spent last
-  const spendOrder = fish.map((f, idx) => ({ f, idx }))
-    .sort((a, b) => (a.f.fromStreak?1:0) - (b.f.fromStreak?1:0));
-  const removeIdx = new Set(spendOrder.slice(0, item.cost).map(o => o.idx));
-  me.fish = fish.filter((f, idx) => !removeIdx.has(idx));
+  // spend plain catches first, so the consistency fish that carry leaderboard
+  // weight are the last to go
+  const order = fish.slice().sort((a, b) => (a.fromStreak ? 1 : 0) - (b.fromStreak ? 1 : 0));
+  spendFish(me, order.slice(0, item.cost), 'shop:' + item.id);
 
   if (item.id === STREAK_FIXER.id) {
     me.streakFixers = (me.streakFixers || 0) + 1;
@@ -7488,7 +8326,7 @@ function buyMarketItem(id) {
     showToast(`🛍️ Bought ${item.name}! Equip it from your profile.`);
   }
   playSound('ding');
-  save();
+  saveNow();   // money moved — tell the room now
   renderMarket();
   renderLeaderboard();
 }
@@ -7533,7 +8371,7 @@ function renderWorldCup() {
   const ranked = visiblePeople().map(p => {
     const wc = p.wc || {};
     const cats = getWcCategories(p.id);
-    const total = cats.reduce((s, c) => s + ((wc[c.id] && wc[c.id].streak) || 0), 0);
+    const total = cats.reduce((s, c) => s + wcEffectiveStreak(p, c.id), 0);
     return { p, total, cats };
   }).sort((a,b) => b.total - a.total);
 
@@ -7549,7 +8387,7 @@ function renderWorldCup() {
         <button class="wc-check ${checkedToday ? 'checked' : ''}" ${isMe ? '' : 'disabled'}
           onclick="wcCheckIn('${c.id}')" title="${isMe ? 'Check in for today' : 'Only ' + escAttr(p.name) + ' can check this'}">${checkedToday ? '✓' : ''}</button>
         <span class="wc-chip-label" style="display:inline-flex;align-items:center;gap:5px;">${wcShapeSvg(c.shape||'circle', c.color||'#3B9BD4', 16)} ${escHtml(c.label)}</span>
-        <span class="wc-streak">${rec.streak || 0}🔥<span style="font-size:9px;color:var(--ink-light);font-weight:700">${nearFish}</span></span>
+        <span class="wc-streak">${wcEffectiveStreak(p, c.id)}🔥<span style="font-size:9px;color:var(--ink-light);font-weight:700">${nearFish}</span></span>
       </div>`;
     }).join('');
     return `<div class="wc-card ${isMe ? 'wc-me' : ''}">
@@ -7679,7 +8517,7 @@ function renderLeaderboard() {
       // 🔥 streak stays the consecutive-day count for display, but POINTS now come
       // from how many times you checked in this month, consecutive or not.
       const wc = p.wc || {};
-      const streak = getWcCategories(p.id).reduce((s, c) => s + ((wc[c.id] && wc[c.id].streak) || 0), 0);
+      const streak = getWcCategories(p.id).reduce((s, c) => s + wcEffectiveStreak(p, c.id), 0);
       const monthChecks = wcMonthChecks(p.id);
       const streakPts = monthChecks / 10;
       const stars = p.stars || 0;
@@ -7689,13 +8527,15 @@ function renderLeaderboard() {
       // Fish are no longer interchangeable: big fish are worth 3, everything
       // else 2, socks 0 (they aren't kept in this array at all). Anything caught
       // before the gacha has no `kind` and still counts as 2.
-      const fishPts = fishArr.reduce((s, f) => s + fishValue(f), 0);
+      // spent catches are tombstoned rather than deleted, so score what's left
+      const liveFish = (typeof spendableFish === 'function') ? spendableFish(p) : fishArr;
+      const fishPts = liveFish.reduce((s, f) => s + fishValue(f), 0);
       // 5+ stickers earns the Sticker Queen badge and a flat bonus
       const stickerCount = (p.stickers || []).length;
       const isQueen = stickerCount >= STICKER_QUEEN_MIN;
       const queenBonus = isQueen ? STICKER_QUEEN_BONUS : 0;
       const points = Math.round(fishPts + ((done/5) + (10 * ratio)) + streakPts + (total / 15) + (stars / 2)) + adjust + queenBonus;
-      return { ...p, done, total, fish, fishPts, focusMinutes, streak, monthChecks, streakPts,
+      return { ...p, done, total, fish: liveFish.length, fishPts, focusMinutes, streak, monthChecks, streakPts,
                stars, adjust, points, stickerCount, isQueen, queenBonus, socks: p.socks || 0 };
     })
     .sort((a, b) => b.points - a.points || b.done - a.done);
@@ -7744,7 +8584,7 @@ function openPlayerProfile(pid) {
   const done = counts[pid]?.done || 0;
   const total = counts[pid]?.total || 0;
   const wc = p.wc || {};
-  const streak = getWcCategories(pid).reduce((s, c) => s + ((wc[c.id] && wc[c.id].streak) || 0), 0);
+  const streak = wcTotalStreak(pid);
   const stars = p.stars || 0;
   const fishArr = p.fish || [];
   const focusMins = focusMinutesFor(pid);
@@ -8622,7 +9462,8 @@ function pityThreshold(p) {
 //  frees itself up rather than locking someone out forever.
 // ═══════════════════════════════════════════════════════════════
 const LOCK_KEY = 'boats_timer_lock';
-const LOCK_STALE_MS = 45000;
+const LOCK_STALE_MS = 45000;   // how long a LOCAL (same-browser) claim stays fresh
+const LOCK_GRACE_MS = 120000;  // how long past its end a synced claim still counts
 const LOCK_BEAT_MS = 10000;
 const LOCK_SYNC_BEAT_MS = 30000;
 
@@ -8657,21 +9498,39 @@ function foreignTimerLock() {
   const me = myLockName();
   if (!me) return null;
   const now = Date.now();
-  return readTimerLocks().find(l =>
-    l && l.instance && l.instance !== INSTANCE_ID &&
-    (l.name || '').trim().toLowerCase() === me &&
-    (now - (l.at || 0)) < LOCK_STALE_MS
-  ) || null;
+  return readTimerLocks().find(l => {
+    if (!l || !l.instance || l.instance === INSTANCE_ID) return false;
+    if ((l.name || '').trim().toLowerCase() !== me) return false;
+    // A claim that states its own expiry is judged on that, so it needs no
+    // heartbeat. Older claims fall back to the last-seen window.
+    return l.expires ? (now < l.expires) : ((now - (l.at || 0)) < LOCK_STALE_MS);
+  }) || null;
 }
 
 let lastSyncBeat = 0;
+/**
+ * Claim the timer.
+ *
+ * The heartbeat used to write the person's row to the database every 30
+ * seconds, and every one of those writes is fanned out to every connected
+ * client — roughly 1.5 million realtime messages a month with four people
+ * running timers.
+ *
+ * The database now hears about a timer exactly TWICE: when it starts and when
+ * it stops. The lock carries its own expiry, so another device can tell whether
+ * it is still live without anybody having to keep saying so. The local
+ * heartbeat costs nothing and still covers other tabs in this browser.
+ */
 function claimTimerLock(force) {
   const now = Date.now();
   const lock = { instance: INSTANCE_ID, name: state.myName || '', at: now,
-                 device: navigator.platform || 'a device', minutes: pomoMinutes };
+                 device: navigator.platform || 'a device', minutes: pomoMinutes,
+                 // when this claim stops meaning anything, even if we go silent
+                 expires: now + (pomoMinutes * 60000) + LOCK_GRACE_MS };
   try { localStorage.setItem(LOCK_KEY, JSON.stringify(lock)); } catch (e) {}
   const id = typeof myPersonId === 'function' ? myPersonId() : null;
-  if (id && (force || now - lastSyncBeat > LOCK_SYNC_BEAT_MS)) {
+  // only on an explicit claim — never on a heartbeat
+  if (id && force) {
     const p = personById(id);
     if (p) { p.timerLock = lock; lastSyncBeat = now; save(); }
   }
@@ -8694,6 +9553,7 @@ function releaseTimerLock() {
 }
 
 let lastLocalBeat = 0;
+/** Local only — writes to localStorage, never to the database. */
 function beatTimerLock() {
   const now = Date.now();
   if (now - lastLocalBeat < LOCK_BEAT_MS) return;
@@ -8768,13 +9628,20 @@ function getPlanning() {
   return p.planning;
 }
 
+/**
+ * The notebook is the one thing that waits for a button.
+ *
+ * It's long-form typing nobody else is waiting on, and every autosave was
+ * billed to all eighteen connected clients. It writes locally on every
+ * keystroke — nothing can be lost — and reaches the room when you press Save.
+ */
 function savePlanning(obj) {
   const id = myPersonId();
   if (!id) { localStorage.setItem(PLANNING_LOCAL_KEY, JSON.stringify(obj)); return; }
   const p = personById(id);
   if (!p) return;
   p.planning = obj;
-  save();
+  if (typeof saveLocal === 'function') saveLocal(); else save();
 }
 
 // Move a pre-name draft onto the profile once they claim one.
@@ -10138,6 +11005,7 @@ function finishPomoSession(earlyBonus) {
   pomoRunning = false;
   pomoEndTime = null;
   releaseTimerLock();
+  try { releaseTabIfIdle(); } catch (e) {}   // hidden tab: report in, then sleep
   document.getElementById('pomo-toggle').classList.remove('casting');
   document.getElementById('pomodoro').classList.remove('pomo-running');
   document.getElementById('pomo-startbtn').textContent = '🎣 Cast';
@@ -10271,7 +11139,7 @@ function openCatch(catchId, awardOnly) {
     });
   }
 
-  save();
+  saveNow();   // a catch is score — it goes to the room at once, not on a button
   if (!awardOnly) showCatchReveal(entry, awarded);
   renderPomo();
   renderLeaderboard();
@@ -11488,10 +12356,9 @@ function renderBookshelf() {
     return `<button class="book ${p.archived ? 'is-archived' : ''}" style="--book:${col};--book-dark:${shade(col, -0.42)}" onclick="openBook('${p.id}')"
         title="${escAttr(p.name + ' · ' + prog.pct + '% done · ' + cd.text + (p.archived ? ' · archived' : ''))}">
       ${p.dueDate ? `<span class="book-days ${cd.cls}">${escHtml(cd.d !== null && cd.d >= 0 ? cd.d + 'd' : Math.abs(cd.d) + 'd!')}</span>` : ''}
-      ${p.cover ? `<span class="book-cover" style="background-image:url('${escAttr(p.cover)}')"></span>` : ''}
       ${p.archived ? '<span class="book-arch">archived</span>' : ''}
       <span class="book-cog" onclick="event.stopPropagation(); openBookEditor('${p.id}')" title="Edit, archive or delete">⋯</span>
-      <span class="book-emoji">${p.cover ? '' : escHtml(p.emoji || '📘')}</span>
+      <span class="book-emoji">${escHtml(p.emoji || '📘')}</span>
       <span class="book-title">${escHtml(p.name || 'Untitled')}</span>
       <span class="book-status" style="background:${statusOf(p.status).color};color:#fff">${escHtml(statusOf(p.status).label)}</span>
       <span class="book-progress"><span style="width:${prog.pct}%"></span></span>
@@ -11537,11 +12404,6 @@ function openBookEditor(id) {
     osel.value = (p && p.ownerId) || myPersonId() || (crew[0] && crew[0].id) || '';
   }
 
-  pendingCover = null;
-  const prev = document.getElementById('bk-cover-preview');
-  if (prev) prev.innerHTML = (p && p.cover)
-    ? `<img src="${escAttr(p.cover)}" alt=""><button onclick="clearBookCover()">remove</button>`
-    : '<span class="bk-cover-none">no cover</span>';
   const arch = document.getElementById('bk-archive');
   if (arch) {
     arch.style.display = p ? 'inline-flex' : 'none';
@@ -11552,35 +12414,14 @@ function openBookEditor(id) {
   setTimeout(() => document.getElementById('bk-name').focus(), 60);
 }
 
-let pendingCover = null;
-function onBookCoverPick(input) {
-  const file = input.files && input.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    const img = new Image();
-    img.onload = () => {
-      // crop to the spine's shape and shrink hard — a raw photo would bloat sync
-      const W = 200, H = 280;
-      const c = document.createElement('canvas');
-      c.width = W; c.height = H;
-      const ctx = c.getContext('2d');
-      const scale = Math.max(W / img.width, H / img.height);
-      const dw = img.width * scale, dh = img.height * scale;
-      ctx.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh);
-      pendingCover = c.toDataURL('image/jpeg', 0.78);
-      const prev = document.getElementById('bk-cover-preview');
-      if (prev) prev.innerHTML = `<img src="${pendingCover}" alt=""><button onclick="clearBookCover()">remove</button>`;
-    };
-    img.onerror = () => showToast("Couldn't read that image.");
-    img.src = reader.result;
-  };
-  reader.readAsDataURL(file);
-}
-function clearBookCover() {
-  pendingCover = '';
-  const prev = document.getElementById('bk-cover-preview');
-  if (prev) prev.innerHTML = '<span class="bk-cover-none">no cover</span>';
+// Cover art was removed. Each cover was a base64 JPEG living inside the shared
+// projects row, so every book edit re-sent every image to every connected
+// client — the single largest payload in the app, and billed once per client.
+// Books keep their emoji and colour, which cost nothing.
+function stripBookCovers() {
+  let n = 0;
+  (state.projects || []).forEach(p => { if (p.cover) { delete p.cover; n++; } });
+  return n;
 }
 
 function saveBookFromModal() {
@@ -11597,7 +12438,6 @@ function saveBookFromModal() {
   p.emoji = document.getElementById('bk-emoji').value;
   p.color = document.getElementById('bk-color').value;
   p.dueDate = document.getElementById('bk-due').value || '';
-  if (pendingCover !== null) p.cover = pendingCover;
   const osel = document.getElementById('bk-owner');
   if (osel && osel.value) p.ownerId = osel.value;
   else if (!p.ownerId) p.ownerId = myPersonId() || '';
@@ -12225,7 +13065,14 @@ try { if (typeof repairAllPeople === 'function') {
   const n = repairAllPeople();
   if (n) { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); console.log('[boats] repaired', n, 'duplicate records'); }
 } } catch (e) {}
+try { if (typeof stripBookCovers === 'function') {
+  const n = stripBookCovers();
+  if (n) { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); console.log('[boats] dropped', n, 'book covers'); }
+} } catch (e) {}
 renderAll();
+// reflect the saved live-cursor choice (off unless it was turned on)
+try { const cb = document.getElementById('cursor-toggle'); if (cb) cb.checked = cursorsOn(); } catch (e) {}
+try { renderSaveButton(); } catch (e) {}
 applyConfigColors();
 initCursors();
 startFish();
@@ -12261,6 +13108,622 @@ if (!state.myName) {
 if (sbConfig && typeof window.supabase !== 'undefined') {
   setSyncStatus('🟡 Connecting…', 'var(--peach)');
   startSync();
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+//  WAY OF BOATS — 20-bank.js
+//  THE FISH BANK  ·  sign in as "bank tank"
+//
+//  WHY A LEDGER AND NOT A BALANCE
+//  ------------------------------
+//  A single `bank.fish` number is the worst possible shape for this app.
+//  Two people buying something at the same moment both read 100, both write
+//  their own answer, and one purchase silently evaporates — the same class of
+//  bug that cost everyone their fish counts earlier.
+//
+//  So the bank has no balance field. It has an append-only ledger of
+//  transactions, each with its own id, and the balance is derived by adding
+//  them up. Appends union cleanly across devices, in any order, however many
+//  times they arrive. Two simultaneous purchases produce two entries and both
+//  survive.
+//
+//  The same trick gives every player a spendable starfish balance: what they
+//  have earned, minus what the ledger says they have spent.
+// ═══════════════════════════════════════════════════════════════
+
+if (typeof SINGLETONS !== 'undefined') {
+  ['bankLedger', 'bankConfig', 'bankOffers'].forEach(k => {
+    if (!SINGLETONS.includes(k)) SINGLETONS.push(k);
+  });
+}
+// ledgers and offers are id-keyed lists, so they merge item by item
+if (typeof ID_LIST_SINGLETONS !== 'undefined') {
+  ID_LIST_SINGLETONS.bankLedger = true;
+  ID_LIST_SINGLETONS.bankOffers = true;
+}
+
+const BANK_LOGIN = 'bank tank';
+
+const BANK_DEFAULTS = {
+  openingFish: 100,   // what the bank started the world with
+  minBid: 8,          // the banker never offers less than this
+  maxBid: 17,         // …nor more than this
+  starfishPerFish: 10,// coins to the dollar
+  contact: 'lin.milo@northeastern.edu',
+};
+
+function bankConfig() {
+  if (!state.bankConfig || typeof state.bankConfig !== 'object') state.bankConfig = {};
+  return Object.assign({}, BANK_DEFAULTS, state.bankConfig);
+}
+function setBankConfig(key, value) {
+  if (!isAdmin()) return;
+  if (!state.bankConfig || typeof state.bankConfig !== 'object') state.bankConfig = {};
+  state.bankConfig[key] = value;
+  save();
+  renderBank();
+  renderAdmin();
+}
+
+function bankLedger() {
+  if (!Array.isArray(state.bankLedger)) state.bankLedger = [];
+  return state.bankLedger;
+}
+
+/**
+ * Record one movement of money. Positive `fish` means the bank GAINED it.
+ * Never edit an entry after the fact — write a correcting one instead, the way
+ * a real ledger works, so history stays merge-safe.
+ */
+function bankPost(kind, fish, starfish, personId, note) {
+  bankLedger().push({
+    id: 'bk' + Date.now() + Math.floor(Math.random() * 9999),
+    at: Date.now(), kind,
+    fish: Number(fish) || 0,
+    starfish: Number(starfish) || 0,
+    personId: personId || '',
+    note: note || '',
+  });
+  save();
+}
+
+/** What the bank holds right now: its opening float plus everything since. */
+function bankBalance() {
+  const cfg = bankConfig();
+  return bankLedger().reduce((s, e) => s + (e.fish || 0), cfg.openingFish);
+}
+function bankStarfish() {
+  return bankLedger().reduce((s, e) => s + (e.starfish || 0), 0);
+}
+
+// ── a player's spendable money ────────────────────────────────
+/** Catches not yet spent. Spending tombstones a uid; it never deletes. */
+function spendableFish(p) {
+  if (!p || !Array.isArray(p.fish)) return [];
+  const spent = new Set((p.spentFish || []).map(String));
+  return p.fish.filter(f => f && !spent.has(String(f.uid || fishIdentity(f))));
+}
+
+/** Tombstone these catches as spent, and tell the bank it took the money. */
+function spendFish(p, catches, note) {
+  if (!p) return;
+  if (!Array.isArray(p.spentFish)) p.spentFish = [];
+  catches.forEach(f => {
+    const uid = String((f && f.uid) || fishIdentity(f));
+    if (!p.spentFish.includes(uid)) p.spentFish.push(uid);
+  });
+  bankPost('sale', catches.length, 0, p.id, note || 'shop purchase');
+}
+
+/**
+ * Starfish are earned by finishing tasks early and spent as small change.
+ * Earnings live on the person; spending lives in the ledger, so the balance is
+ * the difference. That keeps it depletable without a scalar that two devices
+ * can fight over.
+ */
+function starfishEarned(p) { return Math.max(0, Number(p && p.stars) || 0); }
+function starfishSpent(pid) {
+  return bankLedger().reduce((s, e) =>
+    (String(e.personId) === String(pid) ? s + (e.starfish || 0) : s), 0);
+}
+function starfishBalance(p) {
+  return p ? Math.max(0, starfishEarned(p) - starfishSpent(p.id)) : 0;
+}
+
+/** Trade small change up into a whole fish. */
+function cashInStarfish() {
+  const me = personById(myPersonId());
+  if (!me) { showToast('Set your name to a crew member first! 🪪'); return; }
+  const cfg = bankConfig();
+  const bal = starfishBalance(me);
+  if (bal < cfg.starfishPerFish) {
+    showToast(`Need ${cfg.starfishPerFish} ⭐ for one 🐟 — you have ${bal}`); return;
+  }
+  if (bankBalance() < 1) { showToast("The bank is out of fish right now."); return; }
+  if (!Array.isArray(me.fish)) me.fish = [];
+  const caught = { emoji: '🐟', name: 'Fish (cashed in)', kind: 'small',
+                   minutes: 0, at: Date.now() };
+  caught.uid = fishIdentity(caught);
+  me.fish.push(caught);
+  bankPost('exchange', -1, cfg.starfishPerFish, me.id,
+           `cashed ${cfg.starfishPerFish} starfish for 1 fish`);
+  save(); renderBank(); renderLeaderboard();
+  showToast(`💱 ${cfg.starfishPerFish} ⭐ → 1 🐟`);
+}
+
+// ══════════════════════════════════════════════
+//  SELLING AN IDEA TO THE STORE
+//  A player offers artwork; the banker names a price between minBid and
+//  maxBid. Accept and the fish are paid out, the offer is logged, and an
+//  email is drafted so the PNG can be added to the shop by hand.
+// ══════════════════════════════════════════════
+function bankOffers() {
+  if (!Array.isArray(state.bankOffers)) state.bankOffers = [];
+  return state.bankOffers;
+}
+
+let pendingOffer = null;
+
+function openSellModal() {
+  const me = personById(myPersonId());
+  if (!me) { showToast('Set your name to a crew member first! 🪪'); return; }
+  pendingOffer = null;
+  document.getElementById('sell-name').value = '';
+  document.getElementById('sell-note').value = '';
+  document.getElementById('sell-bid').innerHTML =
+    '<div class="bid-idle">Describe it, then let the banker look it over.</div>';
+  document.getElementById('sell-accept').style.display = 'none';
+  document.getElementById('sell-modal').style.display = 'flex';
+}
+
+/** The banker sizes it up. Random, within the admin-set range. */
+function requestBid() {
+  const name = document.getElementById('sell-name').value.trim();
+  if (!name) { showToast('Give the item a name first ✍️'); return; }
+  // Clear any previous offer FIRST. Without this a refusal left the last
+  // accepted-looking offer sitting in the variable, so a stale deal could still
+  // be taken even though the banker had just said no.
+  pendingOffer = null;
+  const cfg = bankConfig();
+  const lo = Math.max(1, Math.min(cfg.minBid, cfg.maxBid));
+  const hi = Math.max(cfg.minBid, cfg.maxBid);
+  const bid = lo + Math.floor(Math.random() * (hi - lo + 1));
+
+  if (bankBalance() < bid) {
+    document.getElementById('sell-bid').innerHTML =
+      `<div class="bid-no">The bank only holds ${bankBalance()} 🐟 — it can't cover a ${bid} 🐟 offer today.</div>`;
+    document.getElementById('sell-accept').style.display = 'none';
+    return;
+  }
+  pendingOffer = { name, bid, note: document.getElementById('sell-note').value.trim() };
+  document.getElementById('sell-bid').innerHTML = `
+    <div class="bid-yes">
+      <div class="bid-amount">${bid} 🐟</div>
+      <div class="bid-line">“I'll take <b>${escHtml(name)}</b> off your hands for ${bid} fish. Fair?”</div>
+    </div>`;
+  document.getElementById('sell-accept').style.display = 'inline-flex';
+  playSound('ding');
+}
+
+function acceptBid() {
+  if (!pendingOffer) return;
+  const me = personById(myPersonId());
+  if (!me) return;
+  const cfg = bankConfig();
+  const { name, bid, note } = pendingOffer;
+  if (bankBalance() < bid) { showToast("The bank can't cover that any more."); return; }
+
+  if (!Array.isArray(me.fish)) me.fish = [];
+  for (let i = 0; i < bid; i++) {
+    const f = { emoji: '🐟', name: `Fish (sold ${name})`, kind: 'small', minutes: 0, at: Date.now() + i };
+    f.uid = fishIdentity(f);
+    me.fish.push(f);
+  }
+  bankPost('buy-in', -bid, 0, me.id, `bought "${name}" from ${me.name}`);
+
+  bankOffers().push({
+    id: 'of' + Date.now() + Math.floor(Math.random() * 9999),
+    at: Date.now(), name, note, bid, personId: me.id, seller: me.name, listed: false,
+  });
+
+  save();
+  closeModal('sell-modal');
+  renderBank();
+  renderLeaderboard();
+  showToast(`🤝 Sold “${name}” for ${bid} 🐟`);
+  // draft the note straight away rather than on a timer — the seller should
+  // never be able to navigate away before it exists
+  openStoreEmail(name, bid, me.name, note, cfg.contact);
+}
+
+/**
+ * Draft the "please add this to the store" email.
+ *
+ * A mailto: link, so it opens in whatever mail app the person already uses and
+ * nothing has to be sent from the page itself.
+ */
+function openStoreEmail(name, bid, seller, note, to) {
+  const subject = `Way of Boats — new store item: ${name}`;
+  const body =
+`A new item has been bought by the Fish Bank and needs adding to the store.
+
+  Item:    ${name}
+  Seller:  ${seller}
+  Paid:    ${bid} fish
+  Notes:   ${note || '(none)'}
+
+Attach the PNG and add it in the admin panel under Shop.
+
+Bank balance after this purchase: ${bankBalance()} fish.`;
+  lastStoreEmail = body;
+  const href = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  const box = document.getElementById('bank-email-box');
+  if (box) {
+    box.innerHTML = `
+      <div class="bank-email">
+        <b>📧 One last step</b>
+        <div>Send the artwork over so it can go in the shop.</div>
+        <a class="btn-primary" href="${href}">Open the email</a>
+        <button class="btn-secondary" onclick="copyStoreEmail()" title="Copy the whole note to the clipboard">Copy the text</button>
+      </div>`;
+    box.style.display = 'block';
+  }
+}
+/**
+ * Hold the drafted note here rather than inlining it into an onclick — a
+ * multi-line JSON blob inside an HTML attribute breaks the moment the text
+ * contains a quote, and it made the handler checker choke too.
+ */
+let lastStoreEmail = '';
+function copyStoreEmail() {
+  if (!lastStoreEmail) return;
+  try { navigator.clipboard.writeText(lastStoreEmail); showToast('📋 Copied'); }
+  catch (e) { showToast('Clipboard blocked — select the text and copy it by hand.'); }
+}
+
+/** Admin marks an offer as listed once the PNG is in the shop. */
+function markOfferListed(id) {
+  if (!isAdmin()) return;
+  const o = bankOffers().find(x => String(x.id) === String(id));
+  if (!o) return;
+  o.listed = !o.listed;
+  save();
+  renderBank();
+}
+
+// ══════════════════════════════════════════════
+//  THE BANK SCREEN
+// ══════════════════════════════════════════════
+function isBanker() {
+  return (state.myName || '').trim().toLowerCase() === BANK_LOGIN;
+}
+/** The bank tab shows for the banker and for admin; everyone else sells from the shop. */
+function refreshBankVisibility() {
+  const nav = document.getElementById('nav-bank');
+  if (nav) nav.style.display = (isBanker() || isAdmin()) ? '' : 'none';
+}
+
+function renderBank() {
+  const host = document.getElementById('bank-body');
+  if (!host) return;
+  const cfg = bankConfig();
+  const me = personById(myPersonId());
+  const ledger = bankLedger().slice().sort((a, b) => b.at - a.at);
+
+  host.innerHTML = `
+    <div class="bank-top">
+      ${bankerArt()}
+      <div class="bank-vault">
+        <div class="vault-label">The vault holds</div>
+        <div class="vault-fish">${bankBalance()} <span>🐟</span></div>
+        <div class="vault-sub">opening float ${cfg.openingFish} · bids ${cfg.minBid}–${cfg.maxBid} 🐟
+          · ${cfg.starfishPerFish} ⭐ to the 🐟</div>
+      </div>
+    </div>
+
+    ${me ? `<div class="bank-wallet">
+      <div><b>${escHtml(me.name)}'s wallet</b></div>
+      <div class="wallet-row">
+        <span title="Catches you haven't spent">${spendableFish(me).length} 🐟</span>
+        <span title="Starfish earned for finishing tasks early, minus what you've spent">${starfishBalance(me)} ⭐</span>
+        <button class="btn-secondary" onclick="cashInStarfish()"
+          title="Trade ${cfg.starfishPerFish} starfish for one fish">💱 Cash in ${cfg.starfishPerFish} ⭐</button>
+        <button class="btn-primary" onclick="openSellModal()"
+          title="Offer artwork to the bank and it'll name a price">🤝 Sell something to the store</button>
+      </div>
+    </div>` : ''}
+
+    <div id="bank-email-box" style="display:none"></div>
+
+    <div class="nb-sub"><div class="nb-sub-label">🧾 Items bought from the crew</div></div>
+    ${bankOffers().length ? `<div class="offer-list">${bankOffers().slice().reverse().map(o => `
+      <div class="offer ${o.listed ? 'listed' : ''}">
+        <div><b>${escHtml(o.name)}</b><span class="offer-by">from ${escHtml(o.seller || '')} · ${o.bid} 🐟</span></div>
+        ${isAdmin()
+          ? `<button class="btn-secondary" onclick="markOfferListed('${o.id}')">${o.listed ? '✓ in the shop' : 'mark as listed'}</button>`
+          : `<span class="offer-tag">${o.listed ? '✓ in the shop' : 'waiting to be added'}</span>`}
+      </div>`).join('')}</div>`
+      : `<div class="nb-empty">Nothing bought yet.</div>`}
+
+    <div class="nb-sub"><div class="nb-sub-label">📖 Ledger</div>
+      <span style="font-size:11px;font-weight:700;color:var(--ink-light)">every movement, oldest at the bottom</span></div>
+    ${ledger.length ? `<div class="ledger">${ledger.slice(0, 60).map(e => `
+      <div class="led-row">
+        <span class="led-when">${new Date(e.at).toLocaleDateString()}</span>
+        <span class="led-what">${escHtml(e.note || e.kind)}</span>
+        <span class="led-amt ${e.fish >= 0 ? 'in' : 'out'}">${e.fish >= 0 ? '+' : ''}${e.fish} 🐟</span>
+      </div>`).join('')}</div>`
+      : `<div class="nb-empty">No transactions yet.</div>`}`;
+}
+
+/** The banker: a fish in a suit, drawn rather than downloaded. */
+function bankerArt() {
+  return `<div class="banker" title="The bank's buyer. He names a price; you can always walk away.">
+    <svg viewBox="0 0 150 170" aria-hidden="true">
+      <ellipse cx="75" cy="160" rx="46" ry="7" class="bk-shadow"/>
+      <path d="M112 96 L140 78 L140 126 Z" class="bk-tail"/>
+      <path d="M30 96 q45 -34 84 0 q-39 34 -84 0 z" class="bk-suit"/>
+      <path d="M72 74 q22 6 34 22 l-34 8 z" class="bk-lapel"/>
+      <path d="M78 74 q-22 6 -30 22 l30 8 z" class="bk-lapel"/>
+      <path d="M75 78 l9 9 -9 26 -9 -26 z" class="bk-tie"/>
+      <ellipse cx="75" cy="52" rx="38" ry="31" class="bk-head"/>
+      <path d="M37 30 h76 l-6 -9 h-64 z" class="bk-brim"/>
+      <path d="M45 21 q30 -20 60 0 z" class="bk-hat"/>
+      <circle cx="60" cy="50" r="10" class="bk-eyew"/>
+      <circle cx="92" cy="50" r="10" class="bk-eyew"/>
+      <circle cx="62" cy="51" r="4.5" class="bk-pupil"/>
+      <circle cx="90" cy="51" r="4.5" class="bk-pupil"/>
+      <path d="M50 50 h-9 M100 50 h9 M70 50 h10" class="bk-specs"/>
+      <path d="M66 66 q9 7 18 0" class="bk-mouth"/>
+      <path d="M40 62 q-12 6 -2 16 q9 -4 10 -12 z" class="bk-fin"/>
+    </svg>
+  </div>`;
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+//  WAY OF BOATS — 21-decor.js
+//  DECORATING THE MEETING PAGE
+//
+//  Stickers and shop purchases can be stuck anywhere on a meeting — your own
+//  block, someone else's, or the open board between them — then dragged and
+//  scaled like objects on a Miro canvas.
+//
+//  Two things shape the data model:
+//
+//  1. Several people own the same item. A crown bought by Milo and a crown
+//     bought by Tiana are different objects, so every placement records who
+//     owns THAT copy, and the name shown above it is the owner's, not the
+//     person whose column it happens to be sitting in.
+//
+//  2. Meetings sync as whole rows, so two people decorating at once would
+//     normally clobber each other. Placements are therefore an id-keyed list
+//     merged item by item, with removals recorded as graves — the same rule
+//     the projects and timeline points use.
+//
+//  Positions are stored as PERCENTAGES of the block they live in, so a sticker
+//  stays where it was put when the window is resized or a column reflows.
+// ═══════════════════════════════════════════════════════════════
+
+const DECOR_MIN_SCALE = 0.4;
+const DECOR_MAX_SCALE = 4;
+
+let decorMode = false;        // is the tray open?
+let armedItem = null;         // an item picked up, waiting for somewhere to go
+let decorDrag = null;         // in-flight move or resize
+
+function decorList(m) {
+  if (!m) return [];
+  if (!Array.isArray(m.decor)) m.decor = [];
+  return m.decor;
+}
+
+/** Everything the signed-in person owns and could stick on the page. */
+function myDecorables() {
+  const me = personById(myPersonId());
+  if (!me) return [];
+  const out = [];
+  (me.stickers || []).forEach(id => {
+    const it = (typeof catalogItem === 'function') ? catalogItem(id) : null;
+    out.push({ itemId: id, emoji: (it && it.emoji) || '⭐', image: (it && it.image) || '',
+               name: (it && it.name) || id });
+  });
+  (me.purchases || []).forEach(x => {
+    out.push({ itemId: x.id, emoji: x.emoji || '🎁', image: x.image || '', name: x.name || x.id });
+  });
+  return out;
+}
+
+function toggleDecorMode(mid) {
+  decorMode = !decorMode;
+  armedItem = null;
+  renderMeetings();
+  showToast(decorMode
+    ? '🎨 Pick something from the tray, then click where it should go'
+    : '🎨 Decorating off');
+}
+
+function armDecorItem(itemId) {
+  const found = myDecorables().find(d => String(d.itemId) === String(itemId));
+  armedItem = (armedItem && armedItem.itemId === itemId) ? null : found || null;
+  renderMeetings();
+  if (armedItem) showToast(`Now click where “${armedItem.name}” should go`);
+}
+
+/**
+ * Drop the armed item. `target` is a person's id, or 'board' for the open area,
+ * and the click position becomes a percentage of that block.
+ */
+function placeDecor(ev, mid, target) {
+  if (!decorMode || !armedItem) return;
+  ev.stopPropagation();
+  const m = state.meetings.find(x => String(x.id) === String(mid));
+  const me = personById(myPersonId());
+  if (!m || !me) return;
+  const box = ev.currentTarget.getBoundingClientRect();
+  const x = ((ev.clientX - box.left) / Math.max(1, box.width)) * 100;
+  const y = ((ev.clientY - box.top) / Math.max(1, box.height)) * 100;
+
+  decorList(m).push({
+    id: 'dc' + Date.now() + Math.floor(Math.random() * 9999),
+    itemId: armedItem.itemId,
+    emoji: armedItem.emoji,
+    image: armedItem.image,
+    name: armedItem.name,
+    ownerId: me.id,                 // whose copy this is — drives the label
+    target: String(target),
+    x: Math.max(0, Math.min(100, x)),
+    y: Math.max(0, Math.min(100, y)),
+    scale: 1,
+    z: decorList(m).length + 1,
+    at: Date.now(),
+    _ts: Date.now(),
+  });
+  armedItem = null;
+  save();
+  renderMeetings();
+  playSound('ding');
+}
+
+/** Only the person who placed it, or admin, may move or remove it. */
+function mayEditDecor(d) {
+  if (!d) return false;
+  if (typeof isAdmin === 'function' && isAdmin()) return true;
+  return String(d.ownerId) === String(myPersonId());
+}
+
+function removeDecor(mid, decorId) {
+  const m = state.meetings.find(x => String(x.id) === String(mid));
+  if (!m) return;
+  const d = decorList(m).find(x => String(x.id) === String(decorId));
+  if (!d || !mayEditDecor(d)) { showToast("That's not yours to move."); return; }
+  // record the grave, or a union merge will put it straight back
+  if (typeof markDeleted === 'function') markDeleted('decor', d.id);
+  m.decor = decorList(m).filter(x => String(x.id) !== String(decorId));
+  save();
+  renderMeetings();
+}
+
+function bumpDecorZ(mid, decorId) {
+  const m = state.meetings.find(x => String(x.id) === String(mid));
+  if (!m) return;
+  const list = decorList(m);
+  const d = list.find(x => String(x.id) === String(decorId));
+  if (!d || !mayEditDecor(d)) return;
+  d.z = Math.max(...list.map(x => x.z || 0)) + 1;
+  d._ts = Date.now();
+  save();
+  renderMeetings();
+}
+
+// ── moving and scaling ────────────────────────────────────────
+function startDecorDrag(ev, mid, decorId, mode) {
+  const m = state.meetings.find(x => String(x.id) === String(mid));
+  if (!m) return;
+  const d = decorList(m).find(x => String(x.id) === String(decorId));
+  if (!d || !mayEditDecor(d)) return;
+  ev.preventDefault();
+  ev.stopPropagation();
+  const layer = ev.currentTarget.closest('.decor-layer');
+  if (!layer) return;
+  const box = layer.getBoundingClientRect();
+  decorDrag = {
+    mid, decorId, mode, box,
+    startX: ev.clientX, startY: ev.clientY,
+    x0: d.x, y0: d.y, s0: d.scale || 1,
+    el: ev.currentTarget.closest('.decor'),
+  };
+  document.body.classList.add('decor-dragging');
+}
+
+function moveDecorDrag(ev) {
+  if (!decorDrag) return;
+  const m = state.meetings.find(x => String(x.id) === String(decorDrag.mid));
+  if (!m) return;
+  const d = decorList(m).find(x => String(x.id) === String(decorDrag.decorId));
+  if (!d) return;
+
+  if (decorDrag.mode === 'move') {
+    const dx = ((ev.clientX - decorDrag.startX) / Math.max(1, decorDrag.box.width)) * 100;
+    const dy = ((ev.clientY - decorDrag.startY) / Math.max(1, decorDrag.box.height)) * 100;
+    d.x = Math.max(0, Math.min(100, decorDrag.x0 + dx));
+    d.y = Math.max(0, Math.min(100, decorDrag.y0 + dy));
+  } else {
+    // scale from how far the corner is dragged, in pixels, so it feels the same
+    // whatever size the block is
+    const dist = (ev.clientX - decorDrag.startX) + (ev.clientY - decorDrag.startY);
+    d.scale = Math.max(DECOR_MIN_SCALE, Math.min(DECOR_MAX_SCALE, decorDrag.s0 + dist / 90));
+  }
+  // paint straight onto the element mid-drag; committing to state on every
+  // pointermove would re-render the whole meeting sixty times a second
+  if (decorDrag.el) {
+    decorDrag.el.style.left = d.x + '%';
+    decorDrag.el.style.top = d.y + '%';
+    decorDrag.el.style.setProperty('--s', d.scale);
+  }
+}
+
+function endDecorDrag() {
+  if (!decorDrag) return;
+  const m = state.meetings.find(x => String(x.id) === String(decorDrag.mid));
+  const d = m && decorList(m).find(x => String(x.id) === String(decorDrag.decorId));
+  decorDrag = null;
+  document.body.classList.remove('decor-dragging');
+  if (d) { d._ts = Date.now(); save(); }
+}
+document.addEventListener('pointermove', moveDecorDrag);
+document.addEventListener('pointerup', endDecorDrag);
+document.addEventListener('pointercancel', endDecorDrag);
+
+// ── drawing ───────────────────────────────────────────────────
+/** The tray of things you own, shown while decorating is switched on. */
+function decorTray(mid) {
+  if (!decorMode) return '';
+  const mine = myDecorables();
+  return `<div class="decor-tray">
+    <div class="dt-label">🎨 Your stickers &amp; purchases
+      <span>click one, then click where it goes</span></div>
+    ${mine.length ? `<div class="dt-items">${mine.map(d => `
+      <button class="dt-item ${armedItem && armedItem.itemId === d.itemId ? 'armed' : ''}"
+        onclick="armDecorItem('${escAttr(d.itemId)}')" title="${escAttr(d.name)}">
+        ${d.image ? `<img src="${escAttr(d.image)}" alt="">` : `<span>${d.emoji}</span>`}
+      </button>`).join('')}</div>`
+      : `<div class="dt-empty">Nothing to place yet — buy something from the shop.</div>`}
+  </div>`;
+}
+
+/**
+ * One positioned layer's worth of decorations. Called for each person column
+ * and once for the board, with `target` naming which.
+ */
+function decorLayer(m, target) {
+  const items = decorList(m).filter(d => String(d.target) === String(target));
+  const armed = decorMode && armedItem;
+  return `<div class="decor-layer ${armed ? 'armed' : ''} ${decorMode ? 'on' : ''}"
+      onclick="placeDecor(event, ${m.id}, '${escAttr(String(target))}')">
+    ${items.map(d => {
+      const owner = personById(d.ownerId);
+      const mine = mayEditDecor(d);
+      return `<div class="decor ${mine && decorMode ? 'editable' : ''}"
+          style="left:${d.x}%;top:${d.y}%;--s:${d.scale || 1};z-index:${d.z || 1}"
+          onpointerdown="${mine && decorMode ? `startDecorDrag(event, ${m.id}, '${d.id}', 'move')` : ''}"
+          title="${escAttr(d.name + (owner ? ' — ' + owner.name + "'s" : ''))}">
+        <div class="decor-name" style="${owner && owner.color ? 'background:' + owner.color : ''}">
+          ${escHtml(owner ? owner.name : 'someone')}</div>
+        <div class="decor-art">${d.image
+          ? `<img src="${escAttr(d.image)}" alt="${escAttr(d.name)}">`
+          : `<span>${d.emoji || '🎁'}</span>`}</div>
+        ${mine && decorMode ? `
+          <button class="decor-x" onclick="event.stopPropagation(); removeDecor(${m.id}, '${d.id}')"
+            title="Remove this">×</button>
+          <button class="decor-up" onclick="event.stopPropagation(); bumpDecorZ(${m.id}, '${d.id}')"
+            title="Bring to the front">↑</button>
+          <div class="decor-grip" onpointerdown="startDecorDrag(event, ${m.id}, '${d.id}', 'scale')"
+            title="Drag to resize"></div>` : ''}
+      </div>`;
+    }).join('')}
+  </div>`;
 }
 
 </script>
