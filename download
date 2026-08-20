@@ -1,0 +1,6 @@
+# Apache (cPanel, most shared hosting)
+<IfModule mod_headers.c>
+  Header set Cache-Control "no-cache, must-revalidate"
+  Header unset Expires
+  Header unset Pragma
+</IfModule>
