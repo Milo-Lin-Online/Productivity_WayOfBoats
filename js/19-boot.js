@@ -21,25 +21,34 @@ try { if (typeof stripBookCovers === 'function') {
   const n = stripBookCovers();
   if (n) { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); console.log('[boats] dropped', n, 'book covers'); }
 } } catch (e) {}
+// ⚠️ ORDER MATTERS.
+//
+// These three used to sit BELOW renderAll(), so any throw while drawing left
+// the app with no version number, no build check and — worst — no sync, because
+// startSync() at the bottom of this file never ran. Boot the essentials first;
+// drawing can fail without taking the connection down with it.
+renderAppVersion();
+try { checkBuildIntegrity(); } catch (e) {}
+if (sbConfig && typeof window.supabase !== 'undefined') {
+  setSyncStatus('🟡 Connecting…', 'var(--peach)');
+  startSync();
+}
+
 renderAll();
 // reflect the saved live-cursor choice (off unless it was turned on)
 try { const cb = document.getElementById('cursor-toggle'); if (cb) cb.checked = cursorsOn(); } catch (e) {}
 try { renderSaveButton(); } catch (e) {}
-applyConfigColors();
-initCursors();
-startFish();
-wireBoats();
-wireWaterSplash();
-renderPomo();
-renderPomoTodos();
-renderBoard();
+try { applyConfigColors(); } catch (e) { console.error("[boats] boot step failed:", 'applyConfigColors()', e); }
+try { initCursors(); } catch (e) { console.error("[boats] boot step failed:", 'initCursors()', e); }
+try { startFish(); } catch (e) { console.error("[boats] boot step failed:", 'startFish()', e); }
+try { wireBoats(); } catch (e) { console.error("[boats] boot step failed:", 'wireBoats()', e); }
+try { wireWaterSplash(); } catch (e) { console.error("[boats] boot step failed:", 'wireWaterSplash()', e); }
+try { renderPomo(); } catch (e) { console.error("[boats] boot step failed:", 'renderPomo()', e); }
+try { renderPomoTodos(); } catch (e) { console.error("[boats] boot step failed:", 'renderPomoTodos()', e); }
+try { renderBoard(); } catch (e) { console.error("[boats] boot step failed:", 'renderBoard()', e); }
 // initialize content calendar view toggle + task-board reminders
-if (state.calView === 'week') setCalView('week'); else setCalView('month');
-renderPostReminders();
-
-renderAppVersion();
-// shout if index.html's loader list and the js/ folder disagree
-try { checkBuildIntegrity(); } catch (e) {}
+try { if (state.calView === 'week') setCalView('week'); else setCalView('month'); } catch (e) {}
+try { renderPostReminders(); } catch (e) { console.error("[boats] boot step failed:", 'renderPostReminders()', e); }
 
 // Check for a newer build: on load, when the tab is reopened (how phones
 // usually come back), and hourly for tabs left open all day.
@@ -58,8 +67,4 @@ if (!state.myName) {
   setTimeout(() => openMyNameModal(), 800);
 }
 
-// Auto-reconnect to live sync if previously configured
-if (sbConfig && typeof window.supabase !== 'undefined') {
-  setSyncStatus('🟡 Connecting…', 'var(--peach)');
-  startSync();
-}
+// (sync now starts near the top of boot, before any drawing)

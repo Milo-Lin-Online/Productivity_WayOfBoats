@@ -118,19 +118,60 @@ function hexToHsl(hex) {
   return [Math.round(h*360), Math.round(s*100), Math.round(l*100)];
 }
 
+/**
+ * Draw everything — and never let one broken section take down the app.
+ *
+ * The first five of these used to run unguarded. A single throw in any of them
+ * aborted renderAll, which aborted BOOT — so renderAppVersion(), the build
+ * check, initCursors() and startSync() at the bottom of 19-boot.js never ran.
+ *
+ * That one fault produced three unrelated-looking symptoms at once: no version
+ * number, never connecting to sync, and meetings that drew and then vanished as
+ * the throw cut the render short. Each section is now isolated, and anything
+ * that fails is named on screen instead of silently killing the page.
+ */
+const RENDER_STEPS = [
+  ['workspace names', () => applyWorkspaceNames()],
+  ['meetings',        () => renderMeetings()],
+  ['tasks',           () => renderTasks()],
+  ['leaderboard',     () => renderLeaderboard()],
+  ['online list',     () => renderOnlineUsers()],
+  ['assignee picker', () => renderAssigneeSelect()],
+  ['calendar',        () => renderCalendar()],
+  ['planning',        () => renderPlanning()],
+  ['activity pie',    () => renderPie()],
+  ['pomodoro size',   () => loadPomoSize()],
+  ['admin visibility',() => refreshAdminVisibility()],
+  ['admin panel',     () => renderAdmin()],
+];
+
+let lastRenderFailures = [];
+
 function renderAll() {
-  applyWorkspaceNames();
-  renderMeetings();
-  renderTasks();
-  renderLeaderboard();
-  renderOnlineUsers();
-  renderAssigneeSelect();
-  // these two read from tasks/people too, so keep them fresh after remote syncs.
-  // Both guard against overwriting a field you're actively typing in.
-  try { renderCalendar(); } catch(e) {}
-  try { renderPlanning(); } catch(e) {}
-  try { renderPie(); } catch(e) {}
-  try { loadPomoSize(); } catch(e) {}
-  try { refreshAdminVisibility(); } catch(e) {}
-  try { renderAdmin(); } catch(e) {}
+  const failed = [];
+  RENDER_STEPS.forEach(([name, fn]) => {
+    try { fn(); }
+    catch (e) { failed.push(name); console.error('[boats] render failed:', name, e); }
+  });
+  lastRenderFailures = failed;
+  showRenderFailures(failed);
+}
+
+/** Put a broken section on screen rather than leaving a blank one. */
+function showRenderFailures(failed) {
+  let el = document.getElementById('render-fail');
+  if (!failed.length) { if (el) el.remove(); return; }
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'render-fail';
+    el.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:400;' +
+      'background:var(--sail-red);color:#fff;font:800 12px Nunito,sans-serif;' +
+      'padding:8px 14px;text-align:center;box-shadow:0 -2px 10px rgba(0,0,0,.3)';
+    document.body.appendChild(el);
+  }
+  el.innerHTML = `⚠️ ${failed.length} section(s) failed to draw: <b>${failed.join(', ')}</b>
+    — open the console for the reason. Everything else still works.
+    <button onclick="this.parentElement.remove()"
+      style="margin-left:10px;border:2px solid #fff;background:transparent;color:#fff;
+             border-radius:14px;padding:2px 10px;font:800 11px Nunito;cursor:pointer">dismiss</button>`;
 }
