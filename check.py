@@ -19,7 +19,8 @@ for src in (js, html):
 
 IGNORE = {'if','for','while','return','typeof','parseInt','parseFloat','Math','JSON','String','Number',
           'event','this','alert','confirm','Date','Array','Object','blur','preventDefault',
-          'stopPropagation','getElementById','dispatchEvent','Event','focus','select','padStart'}
+          'stopPropagation','getElementById','dispatchEvent','Event','focus','select','padStart',
+          'remove','add','toggle','contains','closest','querySelector'}
 missing = sorted(called - defined - IGNORE)
 
 dupes = {}

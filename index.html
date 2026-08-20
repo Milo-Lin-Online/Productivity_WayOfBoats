@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <!-- Stop phones serving a stale copy of the app from cache. The version below is
      also used by the in-app update check. Bump APP_VERSION on every deploy. -->
-<meta name="app-version" content="2026.08.18-2">
+<meta name="app-version" content="2026.08.19-1">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -9176,21 +9176,62 @@ function hexToHsl(hex) {
   return [Math.round(h*360), Math.round(s*100), Math.round(l*100)];
 }
 
+/**
+ * Draw everything — and never let one broken section take down the app.
+ *
+ * The first five of these used to run unguarded. A single throw in any of them
+ * aborted renderAll, which aborted BOOT — so renderAppVersion(), the build
+ * check, initCursors() and startSync() at the bottom of 19-boot.js never ran.
+ *
+ * That one fault produced three unrelated-looking symptoms at once: no version
+ * number, never connecting to sync, and meetings that drew and then vanished as
+ * the throw cut the render short. Each section is now isolated, and anything
+ * that fails is named on screen instead of silently killing the page.
+ */
+const RENDER_STEPS = [
+  ['workspace names', () => applyWorkspaceNames()],
+  ['meetings',        () => renderMeetings()],
+  ['tasks',           () => renderTasks()],
+  ['leaderboard',     () => renderLeaderboard()],
+  ['online list',     () => renderOnlineUsers()],
+  ['assignee picker', () => renderAssigneeSelect()],
+  ['calendar',        () => renderCalendar()],
+  ['planning',        () => renderPlanning()],
+  ['activity pie',    () => renderPie()],
+  ['pomodoro size',   () => loadPomoSize()],
+  ['admin visibility',() => refreshAdminVisibility()],
+  ['admin panel',     () => renderAdmin()],
+];
+
+let lastRenderFailures = [];
+
 function renderAll() {
-  applyWorkspaceNames();
-  renderMeetings();
-  renderTasks();
-  renderLeaderboard();
-  renderOnlineUsers();
-  renderAssigneeSelect();
-  // these two read from tasks/people too, so keep them fresh after remote syncs.
-  // Both guard against overwriting a field you're actively typing in.
-  try { renderCalendar(); } catch(e) {}
-  try { renderPlanning(); } catch(e) {}
-  try { renderPie(); } catch(e) {}
-  try { loadPomoSize(); } catch(e) {}
-  try { refreshAdminVisibility(); } catch(e) {}
-  try { renderAdmin(); } catch(e) {}
+  const failed = [];
+  RENDER_STEPS.forEach(([name, fn]) => {
+    try { fn(); }
+    catch (e) { failed.push(name); console.error('[boats] render failed:', name, e); }
+  });
+  lastRenderFailures = failed;
+  showRenderFailures(failed);
+}
+
+/** Put a broken section on screen rather than leaving a blank one. */
+function showRenderFailures(failed) {
+  let el = document.getElementById('render-fail');
+  if (!failed.length) { if (el) el.remove(); return; }
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'render-fail';
+    el.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:400;' +
+      'background:var(--sail-red);color:#fff;font:800 12px Nunito,sans-serif;' +
+      'padding:8px 14px;text-align:center;box-shadow:0 -2px 10px rgba(0,0,0,.3)';
+    document.body.appendChild(el);
+  }
+  el.innerHTML = `⚠️ ${failed.length} section(s) failed to draw: <b>${failed.join(', ')}</b>
+    — open the console for the reason. Everything else still works.
+    <button onclick="this.parentElement.remove()"
+      style="margin-left:10px;border:2px solid #fff;background:transparent;color:#fff;
+             border-radius:14px;padding:2px 10px;font:800 11px Nunito;cursor:pointer">dismiss</button>`;
 }
 
 
@@ -13219,25 +13260,34 @@ try { if (typeof stripBookCovers === 'function') {
   const n = stripBookCovers();
   if (n) { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); console.log('[boats] dropped', n, 'book covers'); }
 } } catch (e) {}
+// ⚠️ ORDER MATTERS.
+//
+// These three used to sit BELOW renderAll(), so any throw while drawing left
+// the app with no version number, no build check and — worst — no sync, because
+// startSync() at the bottom of this file never ran. Boot the essentials first;
+// drawing can fail without taking the connection down with it.
+renderAppVersion();
+try { checkBuildIntegrity(); } catch (e) {}
+if (sbConfig && typeof window.supabase !== 'undefined') {
+  setSyncStatus('🟡 Connecting…', 'var(--peach)');
+  startSync();
+}
+
 renderAll();
 // reflect the saved live-cursor choice (off unless it was turned on)
 try { const cb = document.getElementById('cursor-toggle'); if (cb) cb.checked = cursorsOn(); } catch (e) {}
 try { renderSaveButton(); } catch (e) {}
-applyConfigColors();
-initCursors();
-startFish();
-wireBoats();
-wireWaterSplash();
-renderPomo();
-renderPomoTodos();
-renderBoard();
+try { applyConfigColors(); } catch (e) { console.error("[boats] boot step failed:", 'applyConfigColors()', e); }
+try { initCursors(); } catch (e) { console.error("[boats] boot step failed:", 'initCursors()', e); }
+try { startFish(); } catch (e) { console.error("[boats] boot step failed:", 'startFish()', e); }
+try { wireBoats(); } catch (e) { console.error("[boats] boot step failed:", 'wireBoats()', e); }
+try { wireWaterSplash(); } catch (e) { console.error("[boats] boot step failed:", 'wireWaterSplash()', e); }
+try { renderPomo(); } catch (e) { console.error("[boats] boot step failed:", 'renderPomo()', e); }
+try { renderPomoTodos(); } catch (e) { console.error("[boats] boot step failed:", 'renderPomoTodos()', e); }
+try { renderBoard(); } catch (e) { console.error("[boats] boot step failed:", 'renderBoard()', e); }
 // initialize content calendar view toggle + task-board reminders
-if (state.calView === 'week') setCalView('week'); else setCalView('month');
-renderPostReminders();
-
-renderAppVersion();
-// shout if index.html's loader list and the js/ folder disagree
-try { checkBuildIntegrity(); } catch (e) {}
+try { if (state.calView === 'week') setCalView('week'); else setCalView('month'); } catch (e) {}
+try { renderPostReminders(); } catch (e) { console.error("[boats] boot step failed:", 'renderPostReminders()', e); }
 
 // Check for a newer build: on load, when the tab is reopened (how phones
 // usually come back), and hourly for tabs left open all day.
@@ -13256,11 +13306,7 @@ if (!state.myName) {
   setTimeout(() => openMyNameModal(), 800);
 }
 
-// Auto-reconnect to live sync if previously configured
-if (sbConfig && typeof window.supabase !== 'undefined') {
-  setSyncStatus('🟡 Connecting…', 'var(--peach)');
-  startSync();
-}
+// (sync now starts near the top of boot, before any drawing)
 
 
 // ═══════════════════════════════════════════════════════════════
