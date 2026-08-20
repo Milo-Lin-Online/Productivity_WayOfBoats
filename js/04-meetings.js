@@ -292,21 +292,19 @@ function filterWeek(week, btn) {
  * reads the columns of a meeting from three weeks ago, and if they want to,
  * it's one click.
  */
-const MEETINGS_OPEN_BY_DEFAULT = 2;
-let expandedMeetings = null;
+// Collapsing by default hid people's notes and read as data loss, which is a
+// far worse outcome than a slow render. Everything opens; the ▾ button folds a
+// meeting away when someone wants the room quieter, and that choice sticks.
+let collapsedMeetings = null;
 
-function meetingIsOpen(m, index) {
-  if (expandedMeetings === null) return index < MEETINGS_OPEN_BY_DEFAULT;
-  return expandedMeetings.has(String(m.id));
+function meetingIsOpen(m) {
+  if (collapsedMeetings === null) return true;
+  return !collapsedMeetings.has(String(m.id));
 }
-function toggleMeetingOpen(mid, index) {
-  if (expandedMeetings === null) {
-    // first click: start from whatever is currently showing
-    expandedMeetings = new Set(
-      (state.meetings || []).slice(0, MEETINGS_OPEN_BY_DEFAULT).map(x => String(x.id)));
-  }
+function toggleMeetingOpen(mid) {
+  if (collapsedMeetings === null) collapsedMeetings = new Set();
   const k = String(mid);
-  if (expandedMeetings.has(k)) expandedMeetings.delete(k); else expandedMeetings.add(k);
+  if (collapsedMeetings.has(k)) collapsedMeetings.delete(k); else collapsedMeetings.add(k);
   renderMeetings();
 }
 
@@ -315,7 +313,7 @@ function renderMeetingCards(meetings) {
   const taskCounts = getTaskCountsByPerson();
   container.innerHTML = meetings.map((m, _mi) => {
     const tmpl = getTemplates().find(t => t.id === m.template);
-    const open = meetingIsOpen(m, _mi);
+    const open = meetingIsOpen(m);
 
     let peopleCols;
     if (!open) {
@@ -446,7 +444,7 @@ function renderMeetingCards(meetings) {
           <span class="week-badge" title="Total estimated time across everyone's tasks">⏱️ ${formatMinutes(meetingMins)}</span>
           <span class="week-badge" title="Completed tasks in this meeting">✅ ${meetingDone}/${meetingTotal}</span>
           <span class="week-badge">📅 ${m.date ? new Date(m.date + 'T00:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric'}) : 'No date'}</span>
-          <button class="meeting-fold" onclick="toggleMeetingOpen(${m.id}, ${_mi})"
+          <button class="meeting-fold" onclick="toggleMeetingOpen(${m.id})"
             title="${open ? 'Collapse this meeting' : 'Open this meeting'}">${open ? '▾' : '▸'}</button>
           <button class="decor-toggle ${(typeof decorMode !== 'undefined' && decorMode) ? 'on' : ''}"
             onclick="toggleDecorMode(${m.id})"
@@ -455,7 +453,7 @@ function renderMeetingCards(meetings) {
         </div>
       </div>
       <div class="meeting-note-body">
-        ${!open ? `<div class="meeting-folded" onclick="toggleMeetingOpen(${m.id}, ${_mi})"
+        ${!open ? `<div class="meeting-folded" onclick="toggleMeetingOpen(${m.id})"
             title="Click to open">📋 ${state.people.length} crew · ${meetingDone}/${meetingTotal} done — click to open</div>` : ''}
         ${open && (typeof decorTray === 'function') ? decorTray(m.id) : ''}
         ${(m.absent || []).length ? `<div class="absent-strip">

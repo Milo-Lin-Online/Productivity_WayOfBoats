@@ -162,7 +162,11 @@ function resetTransientUI() {
   safe(() => { if (typeof pendingOffer !== 'undefined') pendingOffer = null; });
   safe(() => { if (typeof tlPan !== 'undefined') tlPan = null; });
   safe(() => { if (typeof streakEditPid !== 'undefined') streakEditPid = null; });
-  safe(() => document.querySelectorAll('.remote-cursor').forEach(el => el.remove()));
+  // ⚠️ NOT every .remote-cursor — my own boat uses that class too, and wiping
+  // it left people unable to see their own pointer. Drop other people's only.
+  safe(() => document.querySelectorAll('.remote-cursor').forEach(el => {
+    if (el !== (typeof myLabelEl !== 'undefined' ? myLabelEl : null)) el.remove();
+  }));
   safe(() => document.body.classList.remove('decor-dragging'));
 }
 
@@ -276,7 +280,16 @@ async function forceUpdate() {
 }
 
 function renderAppVersion() {
-  const el = document.getElementById('app-version');
+  // ⚠️ Do not remove or gate this. It is how anyone tells which build a device
+  // is actually running, which has settled more arguments in this project than
+  // any other single line. If the sidebar element is missing it is recreated.
+  let el = document.getElementById('app-version');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'app-version';
+    el.style.cssText = 'font-size:9px;font-weight:700;text-align:center;color:var(--ink-light);opacity:.7;margin-top:4px';
+    (document.querySelector('.sidebar') || document.body).appendChild(el);
+  }
   if (el) el.textContent = 'v' + APP_VERSION;
 }
 
@@ -380,7 +393,11 @@ const PRIVATE_KEYS = ['single:projects', 'single:tlPoints'];
 function isPrivateKey(k) { return PRIVATE_KEYS.includes(k); }
 function privateRoom(pid) {
   const who = pid || (typeof myPersonId === 'function' ? myPersonId() : null);
-  return who ? sbConfig.room + '#' + who : null;
+  // ⚠️ NOT '#'. A hash is a URL fragment delimiter, so
+  // `?room=in.(ourcrew,ourcrew#p1)` was silently truncated to
+  // `?room=in.(ourcrew` — the query failed, sync fell back to local-only, and
+  // every refresh looked like the connection had been lost.
+  return who ? sbConfig.room + '__' + who : null;
 }
 /** Which room a given row belongs in. */
 function roomFor(itemKey) {
@@ -633,7 +650,23 @@ async function pullAllItems() {
       const remoteKeys = new Set(data.map(r => r.item_key));
       const newestRemote = data.reduce((m, r) => Math.max(m, r.updated_at || 0), 0);
       data.forEach(row => applyItemRow(row.item_key, row.data, false));
-      const dropped = pruneZombies(remoteKeys, newestRemote);   // the room is the source of truth
+      // ⚠️ Only prune when the answer looks like the whole room.
+      //
+      // A malformed query or a half-delivered response reads as "the room has
+      // deleted everything", and this device would then helpfully throw away
+      // real work. That is how meeting notes disappeared: a broken URL returned
+      // a short list, and pruning believed it.
+      //
+      // The rule is deliberately blunt — if the room is holding far less than
+      // we are, assume the answer is wrong, keep everything, and say so.
+      const localKeys = Object.keys(buildItemMap()).length;
+      const shortfall = localKeys ? (localKeys - remoteKeys.size) / localKeys : 0;
+      const trustworthy = shortfall < 0.3;
+      const dropped = trustworthy ? pruneZombies(remoteKeys, newestRemote) : 0;
+      if (!trustworthy) {
+        console.warn(`[boats] room returned ${remoteKeys.size} of ${localKeys} items — pruning skipped`);
+        showToast('⚠️ Partial sync — nothing removed. Everything is still here.');
+      }
       seedSnapshot(remoteKeys);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       syncReady = true;

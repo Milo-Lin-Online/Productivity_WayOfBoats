@@ -108,6 +108,8 @@ let lastCursorSend = 0, lastCx = -1, lastCy = -1;
 function initCursors() {
   document.addEventListener('mousemove', (e) => {
     updateMyLabel(e.clientX, e.clientY);          // my own label is local, always free
+    // Admin never broadcasts a position — not throttled, not reduced: never.
+    if (typeof isAdmin === 'function' && isAdmin()) return;
     if (!sbChannel || !cursorsOn()) return;
     if (document.hidden) return;                  // nobody can see it anyway
     // An off day, or too many people connected: send nothing. Since nobody
@@ -153,8 +155,21 @@ function renderRemoteCursor(p) {
 }
 
 let myLabelEl = null;
+/**
+ * My own boat and name, drawn locally.
+ *
+ * This costs nothing — it never leaves the browser — so it is on whatever the
+ * message budget says. Only the BROADCAST is rationed.
+ *
+ * The one exception is the admin account, which stays invisible: it isn't a
+ * crew member and shouldn't appear on anyone's screen, including its own.
+ */
 function updateMyLabel(x, y) {
   if (!state.myName) return;
+  if (typeof isAdmin === 'function' && isAdmin()) {
+    if (myLabelEl) { myLabelEl.remove(); myLabelEl = null; }
+    return;
+  }
   if (!myLabelEl) {
     myLabelEl = document.createElement('div');
     myLabelEl.className = 'remote-cursor';
