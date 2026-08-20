@@ -38,6 +38,8 @@ if (state.calView === 'week') setCalView('week'); else setCalView('month');
 renderPostReminders();
 
 renderAppVersion();
+// shout if index.html's loader list and the js/ folder disagree
+try { checkBuildIntegrity(); } catch (e) {}
 
 // Check for a newer build: on load, when the tab is reopened (how phones
 // usually come back), and hourly for tabs left open all day.

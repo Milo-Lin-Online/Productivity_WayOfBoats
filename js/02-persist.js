@@ -279,6 +279,55 @@ async function forceUpdate() {
   setTimeout(() => { location.replace(base + '?v=' + Date.now()); }, 250);
 }
 
+/**
+ * Every module this build expects. If one is missing the loader list in
+ * index.html is out of step with the js/ folder — which breaks features in
+ * confusing, scattered ways rather than failing loudly.
+ */
+// Sentinels must be FUNCTION declarations — those land on `window`. A
+// top-level `const` lives in script scope and would look missing when it isn't.
+const REQUIRED_GLOBALS = {
+  '02b-merge': 'repairAllPeople', '04-meetings': 'renderMeetings',
+  '07-worldcup': 'wcEffectiveStreak', '13-pomodoro': 'rollGacha',
+  '17-focus-bank': 'openCatch', '18b-timeline': 'renderTlBoard',
+  '20-bank': 'bankBalance', '21-decor': 'decorLayer',
+};
+function checkBuildIntegrity() {
+  const missing = Object.entries(REQUIRED_GLOBALS)
+    .filter(([, fn]) => typeof window[fn] === 'undefined')
+    .map(([mod]) => mod);
+  if (missing.length) {
+    console.error('[boats] MODULES MISSING:', missing.join(', '),
+      '\n  index.html\'s loader list does not match the js/ folder.');
+    const el = document.getElementById('app-version');
+    if (el) {
+      el.innerHTML += `<div style="color:var(--sail-red);font-weight:800;margin-top:2px">
+        ⚠️ ${missing.length} module(s) missing</div>`;
+      el.title = 'Missing: ' + missing.join(', ');
+    }
+  }
+  return missing;
+}
+
+/** What this device is actually running. Paste-able, for diagnosing remotely. */
+function buildReport() {
+  const r = {
+    version: APP_VERSION,
+    missingModules: checkBuildIntegrity(),
+    meetingsLocal: (state.meetings || []).length,
+    peopleLocal: (state.people || []).length,
+    syncConfigured: !!sbConfig,
+    syncReady: typeof syncReady !== 'undefined' ? syncReady : null,
+    channel: sbChannel ? 'connected' : 'none',
+    room: sbConfig ? sbConfig.room : null,
+    privateRoom: sbConfig ? (typeof privateRoom === 'function' ? privateRoom() : 'n/a') : null,
+    snapshotKeys: Object.keys(lastSnapshot).length,
+    localStorageKB: Math.round((localStorage.getItem(STORAGE_KEY) || '').length / 1024),
+  };
+  console.log('%c[boats] build report', 'font-weight:bold', r);
+  return JSON.stringify(r, null, 2);
+}
+
 function renderAppVersion() {
   // ⚠️ Do not remove or gate this. It is how anyone tells which build a device
   // is actually running, which has settled more arguments in this project than
@@ -441,15 +490,20 @@ async function pushChangedItems() {
   // Note WHEN each scalar last changed on our copy, before we diff. Doing it
   // in one place means no mutation site anywhere else has to remember to, and
   // it's what lets the other end tell a newer value from an older one.
-  (state.people || []).forEach(p => {
-    ensureRecordUids(p);
-    PEOPLE_MERGER.stamp(p, lastSnapshot['people:' + p.id]);
-  });
-  // Same idea for the id-keyed lists: note which items changed so the far end
-  // can pick the newer edit rather than the last one to arrive.
-  Object.keys(ID_LIST_SINGLETONS).forEach(k => {
-    if (Array.isArray(state[k])) stampIdList(k, state[k], lastSnapshot['single:' + k]);
-  });
+  // These helpers live in 02b-merge.js. If that module isn't loaded — a loader
+  // list out of step with the js/ folder — the whole push used to throw here,
+  // silently, on every save. Degrade instead: sync plainly rather than not at all.
+  if (typeof PEOPLE_MERGER !== 'undefined' && typeof ensureRecordUids === 'function') {
+    (state.people || []).forEach(p => {
+      ensureRecordUids(p);
+      PEOPLE_MERGER.stamp(p, lastSnapshot['people:' + p.id]);
+    });
+  }
+  if (typeof ID_LIST_SINGLETONS !== 'undefined' && typeof stampIdList === 'function') {
+    Object.keys(ID_LIST_SINGLETONS).forEach(k => {
+      if (Array.isArray(state[k])) stampIdList(k, state[k], lastSnapshot['single:' + k]);
+    });
+  }
   const map = buildItemMap();
   const rows = [];
   for (const k in map) {
@@ -464,9 +518,34 @@ async function pushChangedItems() {
     lastSnapshot[k] = snap;
   }
   // deletions: keys we had before but not now
+  // ⚠️ A deletion here removes the row from Supabase for everybody.
+  //
+  // If this device's state failed to load — a bad build, a cleared cache, a
+  // module that didn't arrive — then `map` is empty and EVERY key in the
+  // snapshot looks deleted. That is how a working room gets emptied by one
+  // broken tab, and it is almost certainly what has been happening: meetings
+  // appear from the pull, then this runs and wipes them.
+  //
+  // So: a collection may never be emptied wholesale. Losing every meeting at
+  // once is not an edit anyone makes.
   const deletions = [];
+  const remainingByKind = {};
+  Object.keys(map).forEach(k => {
+    const kind = k.split(':')[0];
+    remainingByKind[kind] = (remainingByKind[kind] || 0) + 1;
+  });
+  const blocked = [];
   for (const k in lastSnapshot) {
-    if (!(k in map)) { deletions.push(k); delete lastSnapshot[k]; }
+    if (k in map) continue;
+    const kind = k.split(':')[0];
+    if (kind !== 'single' && !remainingByKind[kind]) { blocked.push(k); continue; }
+    deletions.push(k);
+    delete lastSnapshot[k];
+  }
+  if (blocked.length) {
+    console.error('[boats] refusing to delete', blocked.length,
+      'rows — this device holds none of that kind, which means it failed to load, not that you deleted them:', blocked);
+    showToast('⚠️ Something looked wrong locally — nothing was deleted from the room.');
   }
   try {
     if (rows.length) await sb.from('boats_items').upsert(rows);
@@ -529,6 +608,25 @@ function setSyncStatus(text, color) {
 // Apply a single incoming row (from realtime or initial pull) into state.
 let staleRowRejected = false;
 function applyItemRow(item_key, data, isDelete) {
+  // ⚠️ Everything below runs inside try/finally.
+  //
+  // If one row throws — a merge helper missing because 02b-merge.js didn't
+  // load, a malformed payload — the old code left `applyingRemote` stuck at
+  // true FOREVER. save() checks that flag before pushing, so the device went
+  // permanently silent, the pull loop abandoned the remaining rows, and the
+  // half-applied state got written to localStorage. That is the shape of
+  // "meetings appear for a second and then they're gone".
+  try {
+    return applyItemRowInner(item_key, data, isDelete);
+  } catch (err) {
+    console.error('[boats] failed to apply', item_key, err);
+    return;
+  } finally {
+    applyingRemote = false;
+  }
+}
+
+function applyItemRowInner(item_key, data, isDelete) {
   applyingRemote = true;
   staleRowRejected = false;
   const [kind, ...rest] = item_key.split(':');
@@ -539,10 +637,11 @@ function applyItemRow(item_key, data, isDelete) {
       //   · per-person maps  — merge key by key, each person owns their entry
       //   · id-keyed lists   — merge item by item, newest edit wins, deletions stick
       //   · plain values     — last write wins, which is right for a name or a flag
-      if (idPart === '_graves')                     state._graves = mergeTombstones(state._graves, data);
-      else if (PERSON_KEYED_SINGLETONS[idPart])     state[idPart] = mergePersonKeyedMap(state[idPart], data);
-      else if (ID_LIST_SINGLETONS[idPart])          state[idPart] = mergeIdList(idPart, state[idPart], data);
-      else                                          state[idPart] = data;
+      const hasMerge = typeof mergeIdList === 'function';
+      if (hasMerge && idPart === '_graves')                 state._graves = mergeTombstones(state._graves, data);
+      else if (hasMerge && PERSON_KEYED_SINGLETONS[idPart]) state[idPart] = mergePersonKeyedMap(state[idPart], data);
+      else if (hasMerge && ID_LIST_SINGLETONS[idPart])      state[idPart] = mergeIdList(idPart, state[idPart], data);
+      else                                                  state[idPart] = data;
     }
   } else if (ITEM_COLLECTIONS.includes(kind)) {
     if (!state[kind]) state[kind] = [];
@@ -562,7 +661,7 @@ function applyItemRow(item_key, data, isDelete) {
         // stayed broken on some machines however many times they synced.
         if (rowEpoch(data) > rowEpoch(arr[idx])) {
           state.scoreEpoch = Math.max(currentEpoch(), rowEpoch(data));
-          arr[idx] = ensureRecordUids({ ...data });
+          arr[idx] = (typeof ensureRecordUids === 'function') ? ensureRecordUids({ ...data }) : { ...data };
           lastSnapshot[item_key] = snapshotOf(arr[idx]);
           localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
           applyingRemote = false;
@@ -576,8 +675,10 @@ function applyItemRow(item_key, data, isDelete) {
         // A row older than ours has missed an admin correction, so its scores
         // are not to be trusted; take only its personal fields.
         const stale = rowEpoch(data) < rowEpoch(arr[idx]);
-        const merged = stale ? PEOPLE_MERGER.mergeStale(arr[idx], data)
-                             : PEOPLE_MERGER.merge(arr[idx], data);
+        const merged = (typeof PEOPLE_MERGER === 'undefined')
+          ? { ...arr[idx], ...data }                       // no merger loaded — plain overlay
+          : stale ? PEOPLE_MERGER.mergeStale(arr[idx], data)
+                  : PEOPLE_MERGER.merge(arr[idx], data);
         // if what we ended up with differs from what arrived, the row in the
         // database is now behind us and needs correcting
         if (snapshotOf(merged) !== snapshotOf(data)) staleRowRejected = true;
@@ -587,13 +688,16 @@ function applyItemRow(item_key, data, isDelete) {
         // overwrite each other. The placements are an id-keyed list, merged
         // item by item with removals honoured, exactly like projects.
         const merged = { ...data };
-        merged.decor = mergeIdList('decor', (arr[idx] || {}).decor, data.decor);
+        merged.decor = (typeof mergeIdList === 'function')
+          ? mergeIdList('decor', (arr[idx] || {}).decor, data.decor)
+          : (data.decor || (arr[idx] || {}).decor || []);
         arr[idx] = merged;
       } else {
         arr[idx] = data;
       }
     } else {
-      arr.push(kind === 'people' ? ensureRecordUids({ ...data }) : data);
+      arr.push((kind === 'people' && typeof ensureRecordUids === 'function')
+        ? ensureRecordUids({ ...data }) : data);
     }
   }
   // keep our snapshot in sync so we don't echo this back
