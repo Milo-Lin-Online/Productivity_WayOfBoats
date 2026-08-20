@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <!-- Stop phones serving a stale copy of the app from cache. The version below is
      also used by the in-app update check. Bump APP_VERSION on every deploy. -->
-<meta name="app-version" content="2026.08.13-1">
+<meta name="app-version" content="2026.08.18-1">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -196,6 +196,10 @@
       <button class="nav-btn" onclick="showSection('timeline')" id="nav-timeline">
         <span class="emoji">🕰️</span> <span>Timeline</span>
       </button>
+      <button class="nav-btn" onclick="showSection('bank')" id="nav-bank" style="display:none"
+        title="The Fish Bank — sign in as &quot;bank tank&quot;">
+        <span class="emoji">🏦</span> <span>Fish Bank</span>
+      </button>
       <button class="nav-btn" onclick="showSection('admin')" id="nav-admin" style="display:none">
         <span class="emoji">🛠️</span> <span>Admin</span>
       </button>
@@ -223,6 +227,11 @@
       <button class="nav-btn" onclick="forceUpdate()" title="Reload the newest version and clear this device's cache">
         <span class="emoji">⟳</span> <span>Force update</span>
       </button>
+      <div id="sync-nap" class="sync-nap" style="display:none"></div>
+      <label class="sync-toggle" title="Show teammates' cursors moving. This is by far the biggest source of realtime traffic — leave it off if you're near your Supabase limit.">
+        <input type="checkbox" id="cursor-toggle" onchange="setCursorsOn(this.checked)">
+        <span>👀 live cursors</span>
+      </label>
       <div id="app-version" style="font-size:9px; font-weight:700; text-align:center; color:var(--ink-light); opacity:0.7; margin-top:4px;"></div>
       <div id="sync-status" style="font-size:10px; font-weight:800; text-align:center; padding:6px; border-radius:10px; margin-top:6px; background:rgba(0,0,0,0.05); color:var(--ink-light);">
         ⚪ Local only
@@ -441,6 +450,8 @@
       </div>
 
       <div class="nb-tabs">
+        <button id="save-btn" class="save-btn" onclick="pushNow()"
+          title="Notebook writing stays on this device until you press this. Everything else — tasks, check-ins, catches — syncs on its own.">✓ All saved</button>
         <button class="nb-tab active" id="nbtab-logs" onclick="showNbTab('logs')">🕑 Logs</button>
         <button class="nb-tab" id="nbtab-notes" onclick="showNbTab('notes')">✍️ Notes to self</button>
       </div>
@@ -571,6 +582,15 @@
       </div>
     </div>
 
+    <!-- FISH BANK (reachable as "bank tank", or as admin) -->
+    <div id="section-bank" class="page-section">
+      <div class="page-header">
+        <div class="page-title">🏦 Fish <span>Bank</span></div>
+        <span style="font-size:13px; font-weight:700; color:#E8F1F8;">buys your ideas · holds the takings</span>
+      </div>
+      <div class="paper-card"><div id="bank-body"></div></div>
+    </div>
+
     <!-- ADMIN SECTION (only reachable when your name is adminmilo) -->
     <div id="section-admin" class="page-section">
       <div class="page-header">
@@ -633,6 +653,23 @@
           Players never see these numbers. This card only exists inside the admin section.
         </div>
         <div id="admin-gacha-rules"></div>
+      </div>
+
+      <div class="paper-card">
+        <div class="nb-sub"><div class="nb-sub-label">👀 Live cursors &amp; message budget</div></div>
+        <div style="font-size:12px; font-weight:700; color:var(--ink-light); margin-bottom:10px;">
+          Cursors are the most expensive thing the app can do — each one is billed
+          to send and again to every person who receives it. Choose when they're allowed.
+        </div>
+        <div id="admin-cursors"></div>
+      </div>
+
+      <div class="paper-card">
+        <div class="nb-sub"><div class="nb-sub-label">🏦 The Fish Bank</div></div>
+        <div style="font-size:12px; font-weight:700; color:var(--ink-light); margin-bottom:10px;">
+          The vault's opening float, what the banker will pay, the exchange rate, and every shop price.
+        </div>
+        <div id="admin-bank"></div>
       </div>
 
       <div class="paper-card">
@@ -938,15 +975,6 @@
       </div>
     </div>
     <div class="form-group">
-      <label class="form-label">Cover art <span style="font-weight:600;color:var(--ink-light)">(optional)</span></label>
-      <div class="bk-cover-row">
-        <div id="bk-cover-preview"><span class="bk-cover-none">no cover</span></div>
-        <label class="btn-secondary" style="cursor:pointer;font-size:12px">
-          🖼️ Upload<input type="file" accept="image/*" onchange="onBookCoverPick(this)" style="display:none">
-        </label>
-      </div>
-    </div>
-    <div class="form-group">
       <label class="form-label">Whose shelf</label>
       <select class="form-input" id="bk-owner"></select>
       <div style="font-size:10.5px;font-weight:600;color:var(--ink-light);margin-top:3px">
@@ -1068,6 +1096,32 @@
     <div id="sk-list" class="sk-list"></div>
     <div class="modal-footer">
       <button class="btn-primary" onclick="closeModal('streak-editor')">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- SELL SOMETHING TO THE STORE -->
+<div class="modal-overlay" id="sell-modal" style="display:none" onclick="if(event.target===this) closeModal('sell-modal')">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-title">🤝 Sell to the store</div>
+    <div style="font-size:12px;font-weight:700;color:var(--ink-light);line-height:1.5;margin-bottom:12px">
+      Describe what you've made. The banker names a price — take it or leave it.
+      If you take it, the fish are yours straight away and the artwork gets sent
+      over to be added to the shop.
+    </div>
+    <div class="form-group">
+      <label class="form-label" title="What the item will be called in the shop">Item name</label>
+      <input class="form-input" id="sell-name" placeholder="e.g. Lucky Anchor Pin" maxlength="40">
+    </div>
+    <div class="form-group">
+      <label class="form-label" title="Anything the shopkeeper should know">Notes <span style="font-weight:600;color:var(--ink-light)">(optional)</span></label>
+      <input class="form-input" id="sell-note" placeholder="transparent PNG, 512×512…" maxlength="90">
+    </div>
+    <div id="sell-bid" class="sell-bid"></div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('sell-modal')">Cancel</button>
+      <button class="btn-secondary" onclick="requestBid()" title="Ask the banker what he'd pay">💬 Get an offer</button>
+      <button class="btn-primary" id="sell-accept" onclick="acceptBid()" style="display:none">Take the deal ✨</button>
     </div>
   </div>
 </div>
@@ -1212,6 +1266,8 @@
     '17-focus-bank',
     '18-calendar',
     '18b-timeline',
+    '20-bank',
+    '21-decor',
     '19-boot'
   ];
   modules.forEach(function (name) {
