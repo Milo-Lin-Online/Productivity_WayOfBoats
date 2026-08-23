@@ -1020,6 +1020,11 @@
   }
   #pomodoro:not(.pomo-collapsed) #pomo-panel { display: block; }
   .pomo-title { font-family:'Kalam',cursive; font-size:16px; font-weight:700; color:var(--ocean-deep); margin-bottom:10px; }
+  .pomo-popout { position:absolute; top:6px; right:6px; width:28px; height:28px; padding:0;
+    border:2px solid var(--ocean-light); border-radius:9px; background:var(--ocean-pale); color:var(--ocean-deep);
+    font-size:15px; line-height:1; cursor:pointer; box-shadow:0 2px 0 var(--ocean-light); transition:all .12s; }
+  .pomo-popout:hover { background:var(--ocean); color:#fff; border-color:var(--ocean); }
+  .pomo-popout:active { transform:translateY(2px); box-shadow:none; }
   .pomo-goal {
     width: 100%; padding: 8px 10px; margin-bottom: 10px;
     border: 2px solid var(--ocean-light); border-radius: 12px;

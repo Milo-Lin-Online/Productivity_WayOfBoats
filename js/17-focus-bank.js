@@ -379,6 +379,7 @@ function startPausePomo() {
     stopPomoTick();
     pomoInterval = setInterval(pomoTick, 250); // finer tick; real time comes from the clock
   }
+  updatePipView();
 }
 function showTimerConflict(lock) {
   const m = document.getElementById('timer-conflict');
@@ -724,6 +725,74 @@ function renderPomo() {
   if (auto) auto.checked = autoOpenCatches();
 
   updateTabTitle();
+  updatePipView();
+}
+
+// ══════════════════════════════════════════════
+// FLOAT-ON-TOP TIMER  (Document Picture-in-Picture)
+// A tiny always-on-top window that mirrors the real timer so you can watch it
+// while you're on another tab or app entirely (YouTube, Google, …). It owns NO
+// state: the buttons call the same startPausePomo()/resetPomo() the panel does,
+// and renderPomo() pushes every change back here through updatePipView().
+// Chrome/Edge only — documentPictureInPicture is Chromium-only for now.
+// ══════════════════════════════════════════════
+let pipWindow = null;
+
+async function popOutPomo() {
+  if (!('documentPictureInPicture' in window)) {
+    showToast('Floating timer needs Chrome or Edge — Safari and Firefox don\'t support it yet.');
+    return;
+  }
+  if (pipWindow) { try { pipWindow.focus(); } catch (e) {} return; }
+  try {
+    const pw = await documentPictureInPicture.requestWindow({ width: 240, height: 260 });
+    pw.document.head.insertAdjacentHTML('beforeend', `<style>
+      @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Kalam:wght@400;700&display=swap');
+      *{box-sizing:border-box;margin:0}
+      body{font-family:'Nunito',sans-serif;background:#FFFEF9;color:#2876B0;height:100vh;
+           display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+           padding:16px;border:3px solid #8FD0F0;user-select:none}
+      #pip-goal{font-size:12px;font-weight:800;color:#2876B0;text-align:center;min-height:15px;
+                max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      #pip-time{font-family:'Kalam',cursive;font-size:54px;font-weight:700;line-height:1;color:#2876B0}
+      body.running #pip-time{color:#E85F22}
+      .pip-row{display:flex;gap:8px;width:100%;margin-top:4px}
+      .pip-btn{flex:1;padding:10px 0;border:0;border-radius:30px;font-family:'Nunito',sans-serif;
+               font-size:14px;font-weight:800;cursor:pointer;background:#FF7A3C;color:#fff;
+               box-shadow:0 3px 0 #E85F22;transition:all .1s}
+      .pip-btn:active{transform:translateY(2px);box-shadow:none}
+      .pip-btn.ghost{flex:0 0 46px;background:#fff;color:#3B9BD4;border:2px solid #8FD0F0;box-shadow:none}
+    </style>`);
+    pw.document.body.innerHTML = `
+      <div id="pip-goal"></div>
+      <div id="pip-time">--:--</div>
+      <div class="pip-row">
+        <button class="pip-btn" id="pip-start">🎣 Cast</button>
+        <button class="pip-btn ghost" id="pip-reset" title="Reset">↺</button>
+      </div>`;
+    pw.document.getElementById('pip-start').addEventListener('click', () => startPausePomo());
+    pw.document.getElementById('pip-reset').addEventListener('click', () => resetPomo());
+    pw.addEventListener('pagehide', () => { pipWindow = null; });
+    pipWindow = pw;
+    updatePipView();
+  } catch (e) {
+    showToast('Could not open the floating timer.');
+  }
+}
+
+function updatePipView() {
+  if (!pipWindow) return;
+  const doc = pipWindow.document;
+  const m = Math.floor(pomoRemaining / 60);
+  const s = pomoRemaining % 60;
+  const t = doc.getElementById('pip-time');
+  if (t) t.textContent = `${m}:${String(s).padStart(2, '0')}`;
+  const g = doc.getElementById('pip-goal');
+  if (g) g.textContent = pomoGoal ? '🎯 ' + pomoGoal : '';
+  const b = doc.getElementById('pip-start');
+  if (b) b.textContent = pomoRunning ? '⏸ Pause'
+        : (pomoRemaining < pomoMinutes * 60 ? '🎣 Resume' : '🎣 Cast');
+  doc.body.classList.toggle('running', pomoRunning);
 }
 // When returning to the tab, immediately re-sync the display.
 document.addEventListener('visibilitychange', () => {
