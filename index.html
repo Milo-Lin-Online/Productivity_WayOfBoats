@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <!-- Stop phones serving a stale copy of the app from cache. The version below is
      also used by the in-app update check. Bump APP_VERSION on every deploy. -->
-<meta name="app-version" content="2026.08.30-1">
+<meta name="app-version" content="2026.08.20-2">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -1036,11 +1036,6 @@
   }
   #pomodoro:not(.pomo-collapsed) #pomo-panel { display: block; }
   .pomo-title { font-family:'Kalam',cursive; font-size:16px; font-weight:700; color:var(--ocean-deep); margin-bottom:10px; }
-  .pomo-popout { position:absolute; top:6px; right:6px; width:28px; height:28px; padding:0;
-    border:2px solid var(--ocean-light); border-radius:9px; background:var(--ocean-pale); color:var(--ocean-deep);
-    font-size:15px; line-height:1; cursor:pointer; box-shadow:0 2px 0 var(--ocean-light); transition:all .12s; }
-  .pomo-popout:hover { background:var(--ocean); color:#fff; border-color:var(--ocean); }
-  .pomo-popout:active { transform:translateY(2px); box-shadow:none; }
   .pomo-goal {
     width: 100%; padding: 8px 10px; margin-bottom: 10px;
     border: 2px solid var(--ocean-light); border-radius: 12px;
@@ -2912,6 +2907,45 @@ body.decor-dragging, body.decor-dragging .decor.editable { cursor: grabbing; }
 }
 .cd-day.off { background: var(--strawberry-pale); border-color: var(--sail-red); color: var(--sail-red); }
 .cd-day input { accent-color: var(--sail-red); }
+
+/* admin: restore a deleted record */
+.grave-row {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  border: 2px solid var(--ocean-pale); border-radius: 9px;
+  padding: 6px 10px; margin-bottom: 5px; background: var(--warm-white);
+  font-size: 12px; font-weight: 700; color: var(--ink);
+}
+.grave-row > span:first-child { flex: 1; font-family: monospace; font-size: 11.5px; }
+.grave-when { font-size: 10px; font-weight: 800; color: var(--ink-light); }
+.grave-row .btn-secondary { font-size: 11px; padding: 3px 10px; }
+
+/* ── "it's just you aboard" nudge ── */
+#crew-prompt {
+  position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
+  z-index: 180; display: flex; align-items: flex-start; gap: 12px;
+  max-width: min(420px, 92vw);
+  background: var(--warm-white);
+  border: 2.5px solid var(--ocean-light); border-radius: 18px;
+  box-shadow: 4px 6px 0 var(--ocean-light), 0 6px 22px rgba(0,0,0,.18);
+  padding: 14px 16px 14px 14px;
+  animation: cpRise .4s cubic-bezier(.2,1.3,.4,1);
+}
+@keyframes cpRise { from { opacity: 0; transform: translateX(-50%) translateY(16px); }
+                    to   { opacity: 1; transform: translateX(-50%) translateY(0); } }
+.cp-boat { font-size: 30px; line-height: 1; animation: bob 4s ease-in-out infinite; flex-shrink: 0; }
+.cp-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cp-body b { font-family: 'Kalam', cursive; font-size: 17px; color: var(--ocean-deep); }
+.cp-body > span { font-size: 12.5px; font-weight: 700; color: var(--ink-light); line-height: 1.4; }
+.cp-acts { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 9px; }
+.cp-acts button { font-size: 12px; padding: 6px 13px; }
+.cp-x {
+  position: absolute; top: 6px; right: 9px;
+  border: none; background: transparent; cursor: pointer;
+  font-size: 17px; font-weight: 800; color: var(--ink-light); line-height: 1; padding: 2px 4px;
+}
+.cp-x:hover { color: var(--sail-red); }
+@media (max-width: 700px) { #crew-prompt { bottom: 150px; left: 50%; } }
+@media (prefers-reduced-motion: reduce) { #crew-prompt { animation: none; } .cp-boat { animation: none; } }
 </style>
 </head>
 <body>
@@ -2980,7 +3014,6 @@ body.decor-dragging, body.decor-dragging .decor.editable { cursor: grabbing; }
     <div class="pomo-rs top"    onpointerdown="pomoResizeDown(event,'top')"    ondblclick="resetPomoSize()" title="Drag to grow taller · double-click to reset"></div>
     <div class="pomo-rs corner" onpointerdown="pomoResizeDown(event,'corner')" ondblclick="resetPomoSize()" title="Drag to resize · double-click to reset"></div>
     <div class="pomo-title">🎣 Cast a Focus Line</div>
-    <button id="pomo-popout" class="pomo-popout" onclick="popOutPomo()" title="Float the timer on top of other tabs &amp; apps">⧉</button>
 
     <!-- goal -->
     <input id="pomo-goal" class="pomo-goal" placeholder="What are you fishing for? (your goal)" maxlength="80">
@@ -3550,6 +3583,11 @@ body.decor-dragging, body.decor-dragging .decor.editable { cursor: grabbing; }
           to send and again to every person who receives it. Choose when they're allowed.
         </div>
         <div id="admin-cursors"></div>
+      </div>
+
+      <div class="paper-card">
+        <div class="nb-sub"><div class="nb-sub-label">🪦 Deleted things</div></div>
+        <div id="admin-graves"></div>
       </div>
 
       <div class="paper-card">
@@ -4641,10 +4679,25 @@ function scheduleCorrectivePush() {
   correctiveTimer = setTimeout(() => { pushChangedItems(); }, 600);
 }
 
+let storageFull = false;
 function save() {
-  // always keep a local copy (full state)
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  localStorage.setItem(STORAGE_KEY + '_broadcast', Date.now());
+  // Keep a local copy. If the browser's storage is full this THROWS, and the
+  // throw used to travel up through addTask() — so the task existed in memory,
+  // was never written, and vanished on the next reload. That is what "new
+  // tasks get cleared once a lot have built up" looks like.
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(STORAGE_KEY + '_broadcast', Date.now());
+    storageFull = false;
+  } catch (err) {
+    if (!storageFull) {
+      storageFull = true;
+      console.error('[boats] localStorage is full — saving to the room only', err);
+      showToast('⚠️ This device is out of storage. Changes are being sent to the room but not cached here.');
+    }
+    // push immediately: the room is now the only safe copy
+    try { pushChangedItems(); } catch (e) {}
+  }
   if (sb && !applyingRemote) {
     clearTimeout(pushTimer);
     pushTimer = setTimeout(pushChangedItems, PUSH_DEBOUNCE_MS);
@@ -4772,24 +4825,36 @@ async function pushChangedItems() {
   //
   // So: a collection may never be emptied wholesale. Losing every meeting at
   // once is not an edit anyone makes.
+  // ══════════════════════════════════════════════
+  //  DELETION IS EXPLICIT. NOTHING IS EVER INFERRED.
+  //
+  //  This used to say: "any key I had before and don't have now must have been
+  //  deleted — remove it from the room." That is only true if this device is
+  //  perfectly up to date, and it never reliably is.
+  //
+  //  Hold 8 of 9 people because one row failed to apply? The ninth was deleted
+  //  for everybody. Hold 40 of 45 tasks because the pull was cut short? Five
+  //  tasks gone. My previous guard only caught the case where a device held
+  //  NONE of a kind, so losing a single person sailed straight through it.
+  //
+  //  Now a row is only ever deleted if somebody pressed the ✕. Those get a
+  //  tombstone in state._graves, and this is the only thing that can remove a
+  //  row from the room. A device that is behind, broken or half-loaded can no
+  //  longer delete anything.
+  // ══════════════════════════════════════════════
+  const graves = (typeof tombstones === 'function') ? tombstones() : (state._graves || {});
   const deletions = [];
-  const remainingByKind = {};
-  Object.keys(map).forEach(k => {
-    const kind = k.split(':')[0];
-    remainingByKind[kind] = (remainingByKind[kind] || 0) + 1;
-  });
-  const blocked = [];
   for (const k in lastSnapshot) {
-    if (k in map) continue;
-    const kind = k.split(':')[0];
-    if (kind !== 'single' && !remainingByKind[kind]) { blocked.push(k); continue; }
+    if (k in map) continue;                   // still here — nothing to do
+    const parts = k.split(':');
+    const graveKey = parts[0] + ':' + parts.slice(1).join(':');
+    if (!Object.prototype.hasOwnProperty.call(graves, graveKey)) {
+      // Missing locally but nobody deleted it. That is a gap in THIS device,
+      // not an instruction. Leave the room alone and re-learn it on next pull.
+      continue;
+    }
     deletions.push(k);
     delete lastSnapshot[k];
-  }
-  if (blocked.length) {
-    console.error('[boats] refusing to delete', blocked.length,
-      'rows — this device holds none of that kind, which means it failed to load, not that you deleted them:', blocked);
-    showToast('⚠️ Something looked wrong locally — nothing was deleted from the room.');
   }
   try {
     if (rows.length) await sb.from('boats_items').upsert(rows);
@@ -5067,7 +5132,30 @@ function saveSyncedKeys() {
 }
 
 // Drop anything this device is holding that the room no longer has.
+/**
+ * Remove local items the room no longer has.
+ *
+ * Same rule as pushing: only things somebody actually deleted. A row missing
+ * from a pull is far more often a short answer than a deletion, and acting on
+ * it is how people lose work.
+ */
 function pruneZombies(remoteKeys, newestRemote) {
+  const graves = (typeof tombstones === 'function') ? tombstones() : (state._graves || {});
+  let removed = 0;
+  ITEM_COLLECTIONS.forEach(coll => {
+    const before = (state[coll] || []).length;
+    state[coll] = (state[coll] || []).filter(el => {
+      if (!el || el.id == null) return true;
+      const key = coll + ':' + el.id;
+      if (remoteKeys.has(key)) return true;                 // the room has it
+      return !Object.prototype.hasOwnProperty.call(graves, key);  // keep unless buried
+    });
+    removed += before - state[coll].length;
+  });
+  return removed;
+}
+
+function pruneZombiesOld(remoteKeys, newestRemote) {
   // Private rows are pulled from a different room; if this device has no name
   // set yet they simply won't be in the result, and treating that as "the room
   // deleted them" would throw away someone's books.
@@ -5790,6 +5878,7 @@ function cursorPolicy() {
   return {
     maxOnline: Number.isFinite(p.maxOnline) ? p.maxOnline : CURSOR_DEFAULTS.maxOnline,
     offDays: Array.isArray(p.offDays) ? p.offDays : CURSOR_DEFAULTS.offDays,
+    forceOn: !!p.forceOn,
   };
 }
 function onlineCount() {
@@ -5797,13 +5886,18 @@ function onlineCount() {
 }
 /** An off day means nobody sends anything — so nobody receives anything either. */
 function cursorsBlockedToday() {
+  if (cursorPolicy().forceOn) return false;   // admin has overridden the calendar
   return cursorPolicy().offDays.includes(new Date().getDay());
 }
 function cursorsSilenced() {
+  // Admin's "all cursors" switch ignores the day and the headcount. It costs
+  // real messages, so it is deliberately a thing someone has to turn on.
+  if (cursorPolicy().forceOn) return false;
   return cursorsBlockedToday() || onlineCount() > cursorPolicy().maxOnline;
 }
 /** Why cursors aren't showing, in words, for the sidebar. */
 function cursorStatusText() {
+  if (cursorPolicy().forceOn) return 'ALL ON (admin override)';
   if (!cursorsOn()) return 'off';
   if (cursorsBlockedToday()) return `off on ${DAY_NAMES[new Date().getDay()]}s`;
   const n = onlineCount(), max = cursorPolicy().maxOnline;
@@ -5811,7 +5905,11 @@ function cursorStatusText() {
   return `live (${n}/${max})`;
 }
 
-function cursorsOn() { return localStorage.getItem('boats_cursors') === '1'; }
+function cursorsOn() {
+  // the admin override turns them on for everyone, not just permits them
+  if (typeof cursorPolicy === 'function' && cursorPolicy().forceOn) return true;
+  return localStorage.getItem('boats_cursors') === '1';
+}
 function setCursorsOn(on) {
   localStorage.setItem('boats_cursors', on ? '1' : '0');
   if (!on) document.querySelectorAll('.remote-cursor').forEach(el => el.remove());
@@ -6483,7 +6581,10 @@ function delPCheck(meetingId, personId, idx) {
   if (!m?.checks?.[personId]) return;
   const chk = m.checks[personId][idx];
   // remove linked board task
-  if (chk?.linkId) state.tasks = state.tasks.filter(t => t.linkedCheck !== chk.linkId);
+  if (chk?.linkId) {
+    state.tasks.filter(t => t.linkedCheck === chk.linkId).forEach(t => markDeleted('tasks', t.id));
+    state.tasks = state.tasks.filter(t => t.linkedCheck !== chk.linkId);
+  }
   m.checks[personId].splice(idx, 1);
   save();
   renderMeetings();
@@ -6705,6 +6806,8 @@ function deleteMeeting(id) {
   if (!m) return;
   showConfirm('Delete this meeting and its checkboxes?', () => {
     // remove tasks linked to this meeting
+    state.tasks.filter(t => t.meetingId === id).forEach(t => markDeleted('tasks', t.id));
+    markDeleted('meetings', id);
     state.tasks = state.tasks.filter(t => t.meetingId !== id);
     state.meetings = state.meetings.filter(mm => mm.id !== id);
     save();
@@ -7218,6 +7321,11 @@ function renderAdminCursors() {
         silent above <input type="number" min="0" max="50" value="${pol.maxOnline}"
           onchange="setCursorMax(this.value)"> online</label>
     </div>
+    <label class="admin-toggle" style="margin:8px 0"
+      title="Show everyone's cursors regardless of the day or how many are online. This is the most expensive thing the app does.">
+      <input type="checkbox" ${pol.forceOn ? 'checked' : ''} onchange="setCursorForceOn(this.checked)">
+      <span>👀 All cursors on — override the rules below</span>
+    </label>
     <div style="font-size:11px;font-weight:800;color:var(--ocean-deep);margin:10px 0 5px">
       Days cursors are switched off entirely</div>
     <div class="cursor-days">
@@ -7233,6 +7341,49 @@ function renderAdminCursors() {
       Right now: <b>${cursorStatusText()}</b>
     </div>`;
 }
+function setCursorForceOn(on) {
+  if (!isAdmin()) return;
+  if (!state.cursorPolicy) state.cursorPolicy = {};
+  state.cursorPolicy.forceOn = !!on;
+  saveNow();
+  renderAdminCursors();
+  showToast(on
+    ? '👀 All cursors ON for everyone — watch the message budget'
+    : '👀 Back to the normal cursor rules');
+}
+
+/**
+ * Undo a deletion.
+ *
+ * Every removal now leaves a tombstone, and a tombstone is the only thing that
+ * can delete a row. Clearing one lets any device that still holds the record
+ * put it back on the next sync.
+ */
+function renderAdminGraves() {
+  const box = document.getElementById('admin-graves');
+  if (!box || !isAdmin()) return;
+  const g = (typeof tombstones === 'function') ? tombstones() : {};
+  const keys = Object.keys(g).sort((a, b) => g[b] - g[a]);
+  box.innerHTML = keys.length ? `
+    <div style="font-size:12px;font-weight:700;color:var(--ink-light);margin-bottom:8px">
+      Clearing one lets any device that still has the record restore it.</div>
+    ${keys.slice(0, 40).map(k => `
+      <div class="grave-row">
+        <span>${escHtml(k)}</span>
+        <span class="grave-when">${new Date(g[k]).toLocaleString()}</span>
+        <button class="btn-secondary" onclick="unDelete('${escAttr(k)}')">↩ restore</button>
+      </div>`).join('')}`
+    : '<div class="nb-empty">Nothing has been deleted.</div>';
+}
+function unDelete(key) {
+  if (!isAdmin()) return;
+  const g = tombstones();
+  delete g[key];
+  saveNow();
+  renderAdminGraves();
+  showToast(`↩ ${key} un-deleted — any device still holding it will restore it`);
+}
+
 function setCursorMax(v) {
   if (!isAdmin()) return;
   if (!state.cursorPolicy) state.cursorPolicy = {};
@@ -7341,6 +7492,7 @@ function renderAdmin() {
   renderAdminWinners();
   try { renderAdminBank(); } catch (e) {}
   try { renderAdminCursors(); } catch (e) {}
+  try { renderAdminGraves(); } catch (e) {}
 }
 
 function renderAdminMeetings() {
@@ -7381,6 +7533,7 @@ function adminClearDoneFromMeeting() {
 function adminDoClearDone(doomed) {
   const ids = new Set(doomed.map(t => t.id));
   const links = new Set(doomed.map(t => t.linkedCheck).filter(Boolean));
+  ids.forEach(id => markDeleted('tasks', id));
   state.tasks = state.tasks.filter(t => !ids.has(t.id));
   // drop the matching meeting checklist rows so nothing dangles
   (state.meetings || []).forEach(mm => {
@@ -7720,6 +7873,7 @@ function toggleTask(id) {
 function deleteTask(id) {
   const t = state.tasks.find(x => x.id === id);
   if (t && t.linkedCheck) removeLinkedCheck(t);
+  markDeleted('tasks', id);   // explicit: the ✕ was pressed
   state.tasks = state.tasks.filter(x => x.id !== id);
   save();
   renderTasks();
@@ -9036,8 +9190,10 @@ function addPersonConfig() {
 }
 
 function removePerson(pid) {
+  markDeleted('people', pid);   // explicit: someone removed this crew member
   state.people = state.people.filter(p => p.id !== pid);
   // also clean up their tasks
+  state.tasks.filter(t => t.assigneeId === pid).forEach(t => markDeleted('tasks', t.id));
   state.tasks = state.tasks.filter(t => t.assigneeId !== pid);
   openPeopleConfig();
 }
@@ -9054,6 +9210,8 @@ function commitPeopleInputs() {
 function savePeople() {
   commitPeopleInputs();
   // drop any blank-named people
+  // dropping unnamed rows is a local tidy-up, never a deletion for the room —
+  // no tombstone, so nobody else loses anybody
   state.people = state.people.filter(p => p.name.trim().length > 0);
   save();
   closeModal('people-modal');
@@ -9207,9 +9365,57 @@ const RENDER_STEPS = [
   ['pomodoro size',   () => loadPomoSize()],
   ['admin visibility',() => refreshAdminVisibility()],
   ['admin panel',     () => renderAdmin()],
+  ['crew prompt',     () => renderCrewPrompt()],
 ];
 
 let lastRenderFailures = [];
+let crewPromptDismissed = false;
+
+/**
+ * A nudge for someone who has named themselves and is sitting in an empty room.
+ *
+ * Two different situations look identical from here: a genuinely new crew, and
+ * someone whose sync isn't connected so the rest of the team hasn't arrived
+ * yet. The second is far more alarming if you don't know that's what you're
+ * looking at, so the prompt offers both doors rather than assuming.
+ *
+ * It only shows once a name is set — before that the app already asks for one,
+ * and two prompts at once is noise.
+ */
+function renderCrewPrompt() {
+  const host = document.body;
+  let el = document.getElementById('crew-prompt');
+  const named = !!(state.myName || '').trim();
+  const crew = (typeof visiblePeople === 'function' ? visiblePeople() : (state.people || [])).length;
+  const alone = named && crew <= 1 && !crewPromptDismissed;
+
+  if (!alone) { if (el) el.remove(); return; }
+  if (el) return;                       // already up; don't rebuild and restart the animation
+
+  el = document.createElement('div');
+  el.id = 'crew-prompt';
+  el.innerHTML = `
+    <button class="cp-x" onclick="dismissCrewPrompt()" title="Hide this">×</button>
+    <div class="cp-boat">⛵</div>
+    <div class="cp-body">
+      <b>It's just you aboard.</b>
+      <span>Add your crewmates! Or sync back to your session.</span>
+      <div class="cp-acts">
+        <button class="btn-primary" onclick="openPeopleConfig()"
+          title="Add the people you work with">👥 Add crewmates</button>
+        <button class="btn-secondary" onclick="openSyncModal()"
+          title="Reconnect to the room your team already shares">🔗 Sync to a session</button>
+      </div>
+    </div>`;
+  host.appendChild(el);
+}
+
+/** Hidden until something changes — not stored, so a reload offers it again. */
+function dismissCrewPrompt() {
+  crewPromptDismissed = true;
+  const el = document.getElementById('crew-prompt');
+  if (el) el.remove();
+}
 
 function renderAll() {
   const failed = [];
@@ -11142,7 +11348,6 @@ function startPausePomo() {
     stopPomoTick();
     pomoInterval = setInterval(pomoTick, 250); // finer tick; real time comes from the clock
   }
-  updatePipView();
 }
 function showTimerConflict(lock) {
   const m = document.getElementById('timer-conflict');
@@ -11488,74 +11693,6 @@ function renderPomo() {
   if (auto) auto.checked = autoOpenCatches();
 
   updateTabTitle();
-  updatePipView();
-}
-
-// ══════════════════════════════════════════════
-// FLOAT-ON-TOP TIMER  (Document Picture-in-Picture)
-// A tiny always-on-top window that mirrors the real timer so you can watch it
-// while you're on another tab or app entirely (YouTube, Google, …). It owns NO
-// state: the buttons call the same startPausePomo()/resetPomo() the panel does,
-// and renderPomo() pushes every change back here through updatePipView().
-// Chrome/Edge only — documentPictureInPicture is Chromium-only for now.
-// ══════════════════════════════════════════════
-let pipWindow = null;
-
-async function popOutPomo() {
-  if (!('documentPictureInPicture' in window)) {
-    showToast('Floating timer needs Chrome or Edge — Safari and Firefox don\'t support it yet.');
-    return;
-  }
-  if (pipWindow) { try { pipWindow.focus(); } catch (e) {} return; }
-  try {
-    const pw = await documentPictureInPicture.requestWindow({ width: 240, height: 260 });
-    pw.document.head.insertAdjacentHTML('beforeend', `<style>
-      @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Kalam:wght@400;700&display=swap');
-      *{box-sizing:border-box;margin:0}
-      body{font-family:'Nunito',sans-serif;background:#FFFEF9;color:#2876B0;height:100vh;
-           display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
-           padding:16px;border:3px solid #8FD0F0;user-select:none}
-      #pip-goal{font-size:12px;font-weight:800;color:#2876B0;text-align:center;min-height:15px;
-                max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-      #pip-time{font-family:'Kalam',cursive;font-size:54px;font-weight:700;line-height:1;color:#2876B0}
-      body.running #pip-time{color:#E85F22}
-      .pip-row{display:flex;gap:8px;width:100%;margin-top:4px}
-      .pip-btn{flex:1;padding:10px 0;border:0;border-radius:30px;font-family:'Nunito',sans-serif;
-               font-size:14px;font-weight:800;cursor:pointer;background:#FF7A3C;color:#fff;
-               box-shadow:0 3px 0 #E85F22;transition:all .1s}
-      .pip-btn:active{transform:translateY(2px);box-shadow:none}
-      .pip-btn.ghost{flex:0 0 46px;background:#fff;color:#3B9BD4;border:2px solid #8FD0F0;box-shadow:none}
-    </style>`);
-    pw.document.body.innerHTML = `
-      <div id="pip-goal"></div>
-      <div id="pip-time">--:--</div>
-      <div class="pip-row">
-        <button class="pip-btn" id="pip-start">🎣 Cast</button>
-        <button class="pip-btn ghost" id="pip-reset" title="Reset">↺</button>
-      </div>`;
-    pw.document.getElementById('pip-start').addEventListener('click', () => startPausePomo());
-    pw.document.getElementById('pip-reset').addEventListener('click', () => resetPomo());
-    pw.addEventListener('pagehide', () => { pipWindow = null; });
-    pipWindow = pw;
-    updatePipView();
-  } catch (e) {
-    showToast('Could not open the floating timer.');
-  }
-}
-
-function updatePipView() {
-  if (!pipWindow) return;
-  const doc = pipWindow.document;
-  const m = Math.floor(pomoRemaining / 60);
-  const s = pomoRemaining % 60;
-  const t = doc.getElementById('pip-time');
-  if (t) t.textContent = `${m}:${String(s).padStart(2, '0')}`;
-  const g = doc.getElementById('pip-goal');
-  if (g) g.textContent = pomoGoal ? '🎯 ' + pomoGoal : '';
-  const b = doc.getElementById('pip-start');
-  if (b) b.textContent = pomoRunning ? '⏸ Pause'
-        : (pomoRemaining < pomoMinutes * 60 ? '🎣 Resume' : '🎣 Cast');
-  doc.body.classList.toggle('running', pomoRunning);
 }
 // When returning to the tab, immediately re-sync the display.
 document.addEventListener('visibilitychange', () => {
@@ -12747,6 +12884,7 @@ function deleteProject(id) {
 
   askConfirm(`Delete "${p.name}" and everything in it? ${cost}Archiving keeps it all instead.`, () => {
     const taskIds = new Set(tasks.map(t => t.id));
+    taskIds.forEach(id => markDeleted('tasks', id));
     state.tasks = state.tasks.filter(t => !taskIds.has(t.id));
 
     // unpin the doomed tasks from anywhere that points at them
