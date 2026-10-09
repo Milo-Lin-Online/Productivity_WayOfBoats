@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <!-- Stop phones serving a stale copy of the app from cache. The version below is
      also used by the in-app update check. Bump APP_VERSION on every deploy. -->
-<meta name="app-version" content="2026.08.30-1">
+<meta name="app-version" content="2026.08.20-2">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -93,7 +93,6 @@
     <div class="pomo-rs top"    onpointerdown="pomoResizeDown(event,'top')"    ondblclick="resetPomoSize()" title="Drag to grow taller · double-click to reset"></div>
     <div class="pomo-rs corner" onpointerdown="pomoResizeDown(event,'corner')" ondblclick="resetPomoSize()" title="Drag to resize · double-click to reset"></div>
     <div class="pomo-title">🎣 Cast a Focus Line</div>
-    <button id="pomo-popout" class="pomo-popout" onclick="popOutPomo()" title="Float the timer on top of other tabs &amp; apps">⧉</button>
 
     <!-- goal -->
     <input id="pomo-goal" class="pomo-goal" placeholder="What are you fishing for? (your goal)" maxlength="80">
@@ -663,6 +662,11 @@
           to send and again to every person who receives it. Choose when they're allowed.
         </div>
         <div id="admin-cursors"></div>
+      </div>
+
+      <div class="paper-card">
+        <div class="nb-sub"><div class="nb-sub-label">🪦 Deleted things</div></div>
+        <div id="admin-graves"></div>
       </div>
 
       <div class="paper-card">

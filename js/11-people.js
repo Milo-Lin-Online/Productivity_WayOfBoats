@@ -143,9 +143,57 @@ const RENDER_STEPS = [
   ['pomodoro size',   () => loadPomoSize()],
   ['admin visibility',() => refreshAdminVisibility()],
   ['admin panel',     () => renderAdmin()],
+  ['crew prompt',     () => renderCrewPrompt()],
 ];
 
 let lastRenderFailures = [];
+let crewPromptDismissed = false;
+
+/**
+ * A nudge for someone who has named themselves and is sitting in an empty room.
+ *
+ * Two different situations look identical from here: a genuinely new crew, and
+ * someone whose sync isn't connected so the rest of the team hasn't arrived
+ * yet. The second is far more alarming if you don't know that's what you're
+ * looking at, so the prompt offers both doors rather than assuming.
+ *
+ * It only shows once a name is set — before that the app already asks for one,
+ * and two prompts at once is noise.
+ */
+function renderCrewPrompt() {
+  const host = document.body;
+  let el = document.getElementById('crew-prompt');
+  const named = !!(state.myName || '').trim();
+  const crew = (typeof visiblePeople === 'function' ? visiblePeople() : (state.people || [])).length;
+  const alone = named && crew <= 1 && !crewPromptDismissed;
+
+  if (!alone) { if (el) el.remove(); return; }
+  if (el) return;                       // already up; don't rebuild and restart the animation
+
+  el = document.createElement('div');
+  el.id = 'crew-prompt';
+  el.innerHTML = `
+    <button class="cp-x" onclick="dismissCrewPrompt()" title="Hide this">×</button>
+    <div class="cp-boat">⛵</div>
+    <div class="cp-body">
+      <b>It's just you aboard.</b>
+      <span>Add your crewmates! Or sync back to your session.</span>
+      <div class="cp-acts">
+        <button class="btn-primary" onclick="openPeopleConfig()"
+          title="Add the people you work with">👥 Add crewmates</button>
+        <button class="btn-secondary" onclick="openSyncModal()"
+          title="Reconnect to the room your team already shares">🔗 Sync to a session</button>
+      </div>
+    </div>`;
+  host.appendChild(el);
+}
+
+/** Hidden until something changes — not stored, so a reload offers it again. */
+function dismissCrewPrompt() {
+  crewPromptDismissed = true;
+  const el = document.getElementById('crew-prompt');
+  if (el) el.remove();
+}
 
 function renderAll() {
   const failed = [];
